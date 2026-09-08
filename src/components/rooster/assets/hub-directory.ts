@@ -1,0 +1,18 @@
+// Diretório de setores e usuários vindos do Rooster Hub.
+// Usado pelo Rooster Assets para vincular cada equipamento a um setor
+// cadastrado no Hub e ao usuário responsável pelo bem.
+export type HubSector = { id: string; name: string; description?: string | null };
+export type HubUser = { id: string; name: string; email: string; sectorId?: string };
+
+export const HUB_SECTORS: HubSector[] = [];
+export const HUB_USERS: HubUser[] = [];
+
+export const hubSectorNames = HUB_SECTORS.map((s) => s.name);
+
+export const hubUsersOfSector = (sectorName?: string) => {
+  if (!sectorName) return HUB_USERS;
+  const sector = HUB_SECTORS.find((s) => s.name === sectorName);
+  if (!sector) return HUB_USERS;
+  const inSector = HUB_USERS.filter((u) => u.sectorId === sector.id);
+  return inSector.length ? inSector : HUB_USERS;
+};
