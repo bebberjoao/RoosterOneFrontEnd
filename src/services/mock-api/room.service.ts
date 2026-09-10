@@ -27,6 +27,8 @@ export const roomService = {
   removeReservation: async (id: string) => {
     try { await httpClient.delete<void>(`/reservas/${id}`); return true; } catch { return false; }
   },
+  updateReservationStatus: (id: string, status: Reservation["status"]) =>
+    httpClient.patch<ApiReservation>(`/reservas/${id}/status`, { status }).then(toReservation),
   getCampuses: () => httpClient.get<ApiCampus[]>("/campus").then((rows) => rows.map(toCampus)),
   createCampus: (dto: Omit<Campus, "id">) => httpClient.post<ApiCampus>("/campus", toApiCampus(dto)).then(toCampus),
   updateCampus: async (id: string, dto: Partial<Campus>) => {
@@ -53,7 +55,7 @@ type ApiReservation = { id: string; codigo: string; ambienteId: string; responsa
 const toRoom = (value: ApiRoom): Room => ({ id: value.id, name: value.nome, code: value.codigo, campusId: value.campusId, blockId: value.blocoId, floor: value.andar, number: value.numero ?? "", type: value.tipo, capacity: value.capacidade, area: Number(value.area ?? 0), description: value.descricao ?? "", cover: value.capa ?? "", gallery: value.galeria ?? [], resources: [], status: value.status, openingHours: value.horarioAbertura ?? "", weekdays: value.diasFuncionamento ?? [], slotMinutes: value.duracaoMinutos ?? undefined });
 const toCampus = (value: ApiCampus): Campus => ({ id: value.id, name: value.nome, code: value.codigo, address: value.endereco ?? "", city: value.cidade ?? "", state: value.estado ?? "", zip: value.cep ?? "", manager: value.responsavel ?? "", active: value.ativo !== false, notes: value.observacoes ?? undefined, color: value.cor ?? "" });
 const toBlock = (value: ApiBlock): Block => ({ id: value.id, campusId: value.campusId, name: value.nome, code: value.codigo, floors: value.andares, manager: value.responsavel ?? "", active: value.ativo !== false });
-const toReservation = (value: ApiReservation): Reservation => ({ id: value.id, code: value.codigo, spaceId: value.ambienteId, responsible: value.responsavel, sector: value.setor ?? "", event: value.evento, purpose: value.finalidade ?? "", date: value.data.slice(0, 10), start: value.horarioInicio, end: value.horarioFim, participants: value.participantes, status: value.status, recurrence: value.recorrencia, notes: value.observacoes ?? undefined });
+const toReservation = (value: ApiReservation): Reservation => ({ id: value.id, code: value.codigo, spaceId: value.ambienteId, roomId: value.ambienteId, responsible: value.responsavel, sector: value.setor ?? "", event: value.evento, purpose: value.finalidade ?? "", date: value.data.slice(0, 10), start: value.horarioInicio, end: value.horarioFim, participants: value.participantes, status: value.status, recurrence: value.recorrencia, notes: value.observacoes ?? undefined });
 const toCampusTree = (value: ApiCampus & { blocks: Array<ApiBlock & { rooms: ApiRoom[] }> }) => ({ ...toCampus(value), blocks: value.blocks.map((block) => ({ ...toBlock(block), rooms: block.rooms.map(toRoom) })) });
 const toApiCampus = (value: Partial<Campus>) => ({ nome: value.name, codigo: value.code, endereco: value.address, cidade: value.city, estado: value.state, cep: value.zip, responsavel: value.manager, ativo: value.active, observacoes: value.notes, cor: value.color });
 const toApiBlock = (value: Partial<Block>) => ({ campusId: value.campusId, nome: value.name, codigo: value.code, andares: value.floors, responsavel: value.manager, ativo: value.active });

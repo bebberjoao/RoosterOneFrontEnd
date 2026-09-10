@@ -105,13 +105,13 @@ function RoomsDashboard() {
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <SectionCard
           title="Próximas reservas"
-          className="lg:col-span-2 !p-0"
+          className="lg:col-span-2"
           action={<Link to="/rooms/reservations" className="text-xs font-medium text-muted-foreground hover:text-foreground">Ver todas</Link>}
         >
           {upcoming.length === 0 ? (
             <EmptyState icon={Inbox} title="Nenhuma reserva futura" />
           ) : (
-            <ul className="divide-y">
+            <ul className="-mx-5 -mb-5 divide-y border-t">
               {upcoming.map((r) => {
                 const s = roomById(r.spaceId);
                 if (!s) return null;
@@ -141,15 +141,15 @@ function RoomsDashboard() {
 
         <SectionCard
           title="Agenda do dia"
-          className="!p-0"
           action={<Link to="/rooms/reservations" className="text-xs font-medium text-muted-foreground hover:text-foreground">Abrir agenda</Link>}
         >
-          <ul className="divide-y">
-            {todayAgenda.length === 0 ? (
-              <li className="px-5 py-6 text-center text-xs text-muted-foreground">Nenhuma reserva confirmada para hoje.</li>
-            ) : (
-              todayAgenda.map((r) => {
+          {todayAgenda.length === 0 ? (
+            <p className="py-6 text-center text-xs text-muted-foreground">Nenhuma reserva confirmada para hoje.</p>
+          ) : (
+            <ul className="-mx-5 -mb-5 divide-y border-t">
+              {todayAgenda.map((r) => {
                 const s = roomById(r.spaceId);
+                if (!s) return null;
                 return (
                   <li key={r.id} className="px-5 py-3">
                     <div className="flex items-center justify-between">
@@ -160,9 +160,9 @@ function RoomsDashboard() {
                     <div className="mt-0.5 truncate text-xs text-muted-foreground">{s.name} · {r.responsible}</div>
                   </li>
                 );
-              })
-            )}
-          </ul>
+              })}
+            </ul>
+          )}
         </SectionCard>
       </div>
 
@@ -170,12 +170,11 @@ function RoomsDashboard() {
         <SectionCard
           title="Ambientes indisponíveis"
           description={`${unavailable.length} ambientes em manutenção ou bloqueados`}
-          className="!p-0"
         >
           {unavailable.length === 0 ? (
             <EmptyState icon={AlertTriangle} title="Todos os ambientes disponíveis" />
           ) : (
-            <ul className="divide-y">
+            <ul className="-mx-5 -mb-5 divide-y border-t">
               {unavailable.map((s) => (
                 <li key={s.id} className="flex items-center gap-3 px-5 py-3">
                   <span className="h-9 w-14 flex-none rounded-md" style={{ background: s.cover }} />

@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/rooster/rooms/badges";
 import {
   STATUS_LABEL, STATUS_TONE, formatDate, isoOf, startOfWeek, hourToMinutes, findConflicts,
 } from "@/components/rooster/rooms/labels";
-import { ChevronLeft, ChevronRight, CalendarDays, Plus, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Plus, AlertTriangle, CheckCircle2, Check, X } from "lucide-react";
 
 export const Route = createFileRoute("/rooms/reservations")({
   component: ReservationsPage,
@@ -43,6 +43,22 @@ function ReservationsPage() {
   useEffect(reload, []);
 
   const roomById = (id: string) => rooms.find((r) => r.id === id);
+
+  const [acting, setActing] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function decide(id: string, next: Reservation["status"]) {
+    setActing(id);
+    setActionError(null);
+    try {
+      await roomService.updateReservationStatus(id, next);
+      reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Não foi possível atualizar a reserva.");
+    } finally {
+      setActing(null);
+    }
+  }
 
   const filteredList = useMemo(
     () =>
@@ -81,6 +97,32 @@ function ReservationsPage() {
     { key: "date", header: "Data", cell: (r) => <span className="tabular-nums text-xs">{formatDate(r.date)}</span>, sortValue: (r) => r.date },
     { key: "time", header: "Horário", cell: (r) => <span className="tabular-nums text-xs">{r.start}–{r.end}</span> },
     { key: "status", header: "Status", cell: (r) => <StatusBadge status={r.status} /> },
+    {
+      key: "acoes",
+      header: "Ações",
+      cell: (r) =>
+        r.status === "analise" ? (
+          <div className="flex gap-1.5">
+            <Btn
+              variant="solid"
+              className="px-2 py-1 text-xs"
+              disabled={acting === r.id}
+              onClick={() => decide(r.id, "confirmada")}
+            >
+              <Check className="h-3.5 w-3.5" /> Aprovar
+            </Btn>
+            <Btn
+              className="px-2 py-1 text-xs"
+              disabled={acting === r.id}
+              onClick={() => decide(r.id, "cancelada")}
+            >
+              <X className="h-3.5 w-3.5" /> Recusar
+            </Btn>
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+    },
   ];
 
   if (loading) return <p className="text-sm text-muted-foreground">Carregando reservas...</p>;
@@ -153,6 +195,11 @@ function ReservationsPage() {
               />
             }
           />
+          {actionError && (
+            <p className="mb-3 flex items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5" /> {actionError}
+            </p>
+          )}
           <DataTable rows={filteredList} columns={columns} />
         </>
       )}
