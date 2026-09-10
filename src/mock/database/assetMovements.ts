@@ -1,7 +1,7 @@
 // Table: asset_movements — seed movido de rooster/assets/mock-data.ts (INITIAL_MOVEMENTS). FK: assetId.
 import { LOCATIONS } from "@/mock/database/assets";
 
-export type MovementType = "setor" | "sala" | "emprestimo" | "devolucao" | "manutencao";
+export type MovementType = "setor" | "sala" | "emprestimo" | "devolucao" | "manutencao" | "baixa";
 
 export type AssetMovement = {
   id: string;
@@ -20,6 +20,7 @@ export const MOVEMENT_META: Record<MovementType, { label: string; tone: string }
   emprestimo: { label: "Empréstimo", tone: "oklch(0.68 0.18 40)" },
   devolucao: { label: "Devolução", tone: "oklch(0.62 0.18 155)" },
   manutencao: { label: "Envio para manutenção", tone: "oklch(0.72 0.14 90)" },
+  baixa: { label: "Baixa de patrimônio", tone: "oklch(0.5 0.02 260)" },
 };
 
 export const assetMovements: AssetMovement[] = [

@@ -16,7 +16,7 @@ import {
 import { assetsCan } from "@/components/rooster/assets/permissions";
 import { ROLE_META, useRole } from "@/components/rooster/role-context";
 import {
-  Boxes, Plus, Pencil, Trash2, Image as ImageIcon, Building2, Tags, ChevronRight, User, Link2,
+  Boxes, Plus, Pencil, Trash2, Image as ImageIcon, Building2, Tags, ChevronRight, User, Link2, PackageX,
 } from "lucide-react";
 
 export const Route = createFileRoute("/assets/inventory")({
@@ -123,7 +123,7 @@ function InventoryPage() {
   const { role } = useRole();
   const {
     assets, categories, categoryName, categoryTone,
-    createAsset, updateAsset, deleteAsset, movementsOf, registerMovement,
+    createAsset, updateAsset, deleteAsset, movementsOf, registerMovement, baixaAsset,
     createCategory, updateCategory, deleteCategory,
   } = useAssets();
   const me = ROLE_META[role].person.name;
@@ -141,6 +141,9 @@ function InventoryPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Asset | undefined>();
   const [toDelete, setToDelete] = useState<Asset | null>(null);
+  const [baixaTarget, setBaixaTarget] = useState<Asset | null>(null);
+  const [baixaMotivo, setBaixaMotivo] = useState("");
+  const [baixaError, setBaixaError] = useState<string | null>(null);
 
   const [catModal, setCatModal] = useState<{ open: boolean; editingId?: string }>({ open: false });
   const [catForm, setCatForm] = useState({ name: "", description: "", tone: TONES[0] });
@@ -335,6 +338,41 @@ function InventoryPage() {
       />
 
       <Modal
+        open={!!baixaTarget}
+        onClose={() => setBaixaTarget(null)}
+        title="Dar baixa no patrimônio"
+        description={`O item "${baixaTarget?.name}" passará para a situação "Baixado" e não poderá mais ser movimentado. A baixa fica registrada no histórico.`}
+        footer={
+          <>
+            <Btn onClick={() => setBaixaTarget(null)}>Cancelar</Btn>
+            <Btn
+              variant="solid"
+              className="text-destructive"
+              onClick={async () => {
+                if (!baixaTarget) return;
+                setBaixaError(null);
+                try {
+                  await baixaAsset(baixaTarget.id, baixaMotivo.trim() || undefined, me);
+                  setBaixaTarget(null);
+                } catch (err) {
+                  setBaixaError(err instanceof Error ? err.message : "Não foi possível dar baixa.");
+                }
+              }}
+            >
+              Confirmar baixa
+            </Btn>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Field label="Motivo da baixa" hint="Opcional, mas recomendado para o histórico.">
+            <TextArea rows={3} value={baixaMotivo} onChange={(e) => setBaixaMotivo(e.target.value)} placeholder="Ex.: Equipamento obsoleto / dano irreparável / furto." />
+          </Field>
+          {baixaError ? <p className="text-xs text-destructive">{baixaError}</p> : null}
+        </div>
+      </Modal>
+
+      <Modal
         open={catModal.open}
         onClose={() => setCatModal({ open: false })}
         title={catModal.editingId ? "Editar categoria" : "Nova categoria"}
@@ -369,6 +407,9 @@ function InventoryPage() {
           actions={
             <>
               {canEdit ? <Btn onClick={() => { setEditing(asset); setFormOpen(true); }}><Pencil className="h-4 w-4" /> Editar</Btn> : null}
+              {canEdit && asset.status !== "baixado" ? (
+                <Btn onClick={() => { setBaixaTarget(asset); setBaixaMotivo(""); setBaixaError(null); }}><PackageX className="h-4 w-4" /> Dar baixa</Btn>
+              ) : null}
               {canDelete ? <Btn className="text-destructive" onClick={() => setToDelete(asset)}><Trash2 className="h-4 w-4" /> Excluir</Btn> : null}
             </>
           }

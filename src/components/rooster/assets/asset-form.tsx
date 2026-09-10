@@ -37,13 +37,20 @@ export function AssetFormModal({
   onClose: () => void;
   asset?: Asset;
   defaults?: Partial<AssetDraft>;
-  onSubmit: (draft: AssetDraft) => void;
+  onSubmit: (draft: AssetDraft) => void | Promise<unknown>;
 }) {
   const { categories } = useAssets();
   const [draft, setDraft] = useState<AssetDraft>(empty(categories[0]?.id ?? ""));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Entrou a partir de uma categoria: trava o campo para o item não cair em outra.
+  const lockCategory = !asset && !!defaults?.categoryId;
 
   useEffect(() => {
     if (!open) return;
+    setError(null);
+    setSaving(false);
     if (asset) {
       const { id: _id, createdAt: _c, ...rest } = asset;
       setDraft(rest);
@@ -68,19 +75,32 @@ export function AssetFormModal({
           <Btn onClick={onClose}>Cancelar</Btn>
           <Btn
             variant="solid"
-            onClick={() => {
-              if (!valid) return;
-              onSubmit(draft);
-              onClose();
+            onClick={async () => {
+              if (!valid || saving) return;
+              setSaving(true);
+              setError(null);
+              try {
+                await onSubmit(draft);
+                onClose();
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Não foi possível salvar o item.");
+              } finally {
+                setSaving(false);
+              }
             }}
-            className={valid ? "" : "pointer-events-none opacity-50"}
+            className={valid && !saving ? "" : "pointer-events-none opacity-50"}
           >
-            {asset ? "Salvar alterações" : "Cadastrar"}
+            {saving ? "Salvando..." : asset ? "Salvar alterações" : "Cadastrar"}
           </Btn>
         </>
       }
     >
       <div className="grid gap-4 sm:grid-cols-2">
+        {error ? (
+          <div className="sm:col-span-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {error}
+          </div>
+        ) : null}
         <div className="sm:col-span-2">
           <Field label="Nome *">
             <input className={inputCls} value={draft.name} onChange={(e) => set("name", e.target.value)} placeholder="Ex.: Notebook Dell Latitude" />
@@ -89,8 +109,14 @@ export function AssetFormModal({
         <Field label="Número de patrimônio *">
           <input className={inputCls} value={draft.tag} onChange={(e) => set("tag", e.target.value)} placeholder="PAT-000000" />
         </Field>
-        <Field label="Categoria *">
-          <SelectInput className={inputCls} value={draft.categoryId} onChange={(e) => set("categoryId", e.target.value)} options={categories.map((c) => ({ value: c.id, label: c.name }))} />
+        <Field label="Categoria *" hint={lockCategory ? "Definida pela categoria em que você está." : undefined}>
+          <SelectInput
+            className={inputCls}
+            value={draft.categoryId}
+            onChange={(e) => set("categoryId", e.target.value)}
+            options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            disabled={lockCategory}
+          />
         </Field>
         <Field label="Marca">
           <input className={inputCls} value={draft.brand} onChange={(e) => set("brand", e.target.value)} />

@@ -26,6 +26,7 @@ type Ctx = {
   updateSector: (id: string, patch: Partial<AssetSector>) => Promise<void>;
   deleteSector: (id: string) => Promise<void>;
   registerMovement: (m: NewMovement) => Promise<void>;
+  baixaAsset: (id: string, motivo?: string, user?: string) => Promise<void>;
   categoryName: (id: string) => string;
   categoryTone: (id: string) => string;
   movementsOf: (assetId: string) => AssetMovement[];
@@ -105,39 +106,26 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
     setSectors((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
-  const registerMovement = useCallback(
-    async (m: NewMovement) => {
-      const asset = assets.find((a) => a.id === m.assetId);
-      const from =
-        m.type === "setor" ? asset?.sector : m.type === "emprestimo" || m.type === "devolucao" ? asset?.owner : asset?.location;
+  // O backend registra a movimentação e atualiza o patrimônio na mesma
+  // transação, devolvendo o novo estado do item — só refletimos aqui.
+  const registerMovement = useCallback(async (m: NewMovement) => {
+    const { movement, asset } = await assetService.registerMovement({
+      assetId: m.assetId,
+      type: m.type,
+      to: m.to,
+      user: m.user,
+      date: new Date().toISOString(),
+      notes: m.notes,
+    });
+    setMovements((prev) => [movement, ...prev]);
+    setAssets((prev) => prev.map((a) => (a.id === asset.id ? asset : a)));
+  }, []);
 
-      const created = await assetService.registerMovement({
-        assetId: m.assetId,
-        type: m.type,
-        from,
-        to: m.to,
-        user: m.user,
-        date: new Date().toISOString(),
-        notes: m.notes,
-      });
-      setMovements((prev) => [created, ...prev]);
-
-      const patch: Partial<Asset> =
-        m.type === "sala"
-          ? { location: m.to }
-          : m.type === "setor"
-            ? { sector: m.to }
-            : m.type === "emprestimo"
-              ? { status: "emprestado", owner: m.to }
-              : m.type === "devolucao"
-                ? { status: "disponivel", location: m.to }
-                : m.type === "manutencao"
-                  ? { status: "manutencao", location: m.to }
-                  : {};
-      await updateAsset(m.assetId, patch);
-    },
-    [assets, updateAsset],
-  );
+  const baixaAsset = useCallback(async (id: string, motivo?: string, user?: string) => {
+    const { movement, asset } = await assetService.baixaAsset(id, motivo, user);
+    setMovements((prev) => [movement, ...prev]);
+    setAssets((prev) => prev.map((a) => (a.id === asset.id ? asset : a)));
+  }, []);
 
   const value = useMemo<Ctx>(
     () => ({
@@ -156,11 +144,12 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
       updateSector,
       deleteSector,
       registerMovement,
+      baixaAsset,
       categoryName: (id) => categories.find((c) => c.id === id)?.name ?? "—",
       categoryTone: (id) => categories.find((c) => c.id === id)?.tone ?? "oklch(0.65 0.05 260)",
       movementsOf: (assetId) => movements.filter((m) => m.assetId === assetId).sort((a, b) => (a.date < b.date ? 1 : -1)),
     }),
-    [assets, categories, sectors, movements, loading, createSector, updateSector, deleteSector, createAsset, updateAsset, deleteAsset, createCategory, updateCategory, deleteCategory, registerMovement],
+    [assets, categories, sectors, movements, loading, createSector, updateSector, deleteSector, createAsset, updateAsset, deleteAsset, createCategory, updateCategory, deleteCategory, registerMovement, baixaAsset],
   );
 
   return <AssetsCtx.Provider value={value}>{children}</AssetsCtx.Provider>;

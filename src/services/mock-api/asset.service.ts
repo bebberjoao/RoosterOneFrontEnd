@@ -35,7 +35,14 @@ export const assetService = {
     try { await httpClient.delete<void>(`/patrimonio-setores/${id}`); return true; } catch { return false; }
   },
   getMovements: async (filters?: Filters<AssetMovement>) => (await httpClient.get<ApiMovement[]>("/patrimonio-movimentacoes", filters as Record<string, unknown> | undefined)).map(toMovement),
-  registerMovement: (dto: Omit<AssetMovement, "id">) => httpClient.post<ApiMovement>("/patrimonio-movimentacoes", toApiMovement(dto)).then(toMovement),
+  registerMovement: async (dto: Omit<AssetMovement, "id">) => {
+    const res = await httpClient.post<{ movimentacao: ApiMovement; patrimonio: ApiAsset }>("/patrimonio-movimentacoes", toApiMovement(dto));
+    return { movement: toMovement(res.movimentacao), asset: toAsset(res.patrimonio) };
+  },
+  baixaAsset: async (id: string, motivo?: string, usuario?: string) => {
+    const res = await httpClient.patch<{ movimentacao: ApiMovement; patrimonio: ApiAsset }>(`/patrimonio/${id}/baixa`, { motivo, usuario });
+    return { movement: toMovement(res.movimentacao), asset: toAsset(res.patrimonio) };
+  },
 };
 
 type ApiAsset = { id: string; nome: string; tag: string; categoriaId: string; marca?: string | null; modelo?: string | null; serial?: string | null; localizacao?: string | null; setor?: string | null; responsavelUserId?: string | null; responsavel?: string | null; status: Asset["status"]; condicao: Asset["condition"]; adquiridoEm: string; valor: number | string; observacoes?: string | null; foto?: string | null; chamadoManutencaoId?: string | null; criadoEm: string };

@@ -30,6 +30,7 @@ export const MOVEMENT_META: Record<MovementType, { label: string; tone: string }
   emprestimo: { label: "Empréstimo", tone: "oklch(0.72 0.16 90)" },
   devolucao: { label: "Devolução", tone: "oklch(0.62 0.18 155)" },
   manutencao: { label: "Manutenção", tone: "oklch(0.68 0.18 40)" },
+  baixa: { label: "Baixa de patrimônio", tone: "oklch(0.5 0.02 260)" },
 };
 
 export type { AssetCategory } from "@/mock/database/assetCategories";
