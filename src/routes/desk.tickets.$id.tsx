@@ -263,10 +263,14 @@ function TicketDetail() {
             <Textarea
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder={interno ? "Nota interna (visível apenas para a equipe)" : "Escreva uma mensagem para o chamado..."}
+              placeholder={
+                interno
+                  ? "Nota interna (visível apenas para a equipe) — Enter envia, Shift+Enter quebra linha"
+                  : "Escreva uma mensagem para o chamado... (Enter envia, Shift+Enter quebra linha)"
+              }
               className="min-h-[110px] resize-none border-border/60 bg-background"
               onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   enviarMensagem();
                 }
