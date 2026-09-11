@@ -102,10 +102,29 @@ type ApiCategory = { id: string; nome: string; descricao?: string | null; slaHor
 type ApiTicket = {
   id: string; protocolo?: string | null; titulo: string; descricao: string; categoriaId?: string | null;
   subcategoriaId?: string | null; prioridadeId?: string | null; statusId?: string | null;
-  criadoEm?: string | null; atualizadoEm?: string | null; usuario?: { id: string; nome: string } | null;
-  tecnico?: { nome: string } | null; categoria?: ApiCategory | null; subcategoria?: { nome: string } | null;
+  criadoEm?: string | null; atualizadoEm?: string | null; encerradoEm?: string | null; usuario?: { id: string; nome: string } | null;
+  tecnico?: { nome: string } | null; categoria?: ApiCategory | null; subcategoria?: { nome: string; slaHoras?: number | null } | null;
   prioridade?: { nome: string } | null; status?: { nome: string } | null;
 };
+
+/**
+ * Prazo de SLA = criação + horas configuradas na subcategoria (mais
+ * específica) ou, se não houver, na categoria. `%` é o tempo restante até
+ * o prazo; chamados encerrados congelam o cálculo no momento do
+ * encerramento em vez de continuar drenando contra o relógio atual.
+ */
+function calcularSla(criadoEm: string, encerradoEm: string | null | undefined, slaHoras: number) {
+  const inicio = new Date(criadoEm).getTime();
+  const prazo = inicio + slaHoras * 60 * 60 * 1000;
+  const referencia = encerradoEm ? new Date(encerradoEm).getTime() : Date.now();
+  const total = prazo - inicio;
+  const restante = prazo - referencia;
+  const percent = total > 0 ? Math.round((restante / total) * 100) : 0;
+  return {
+    slaDeadline: new Date(prazo).toISOString(),
+    slaPercent: Math.max(0, Math.min(100, percent)),
+  };
+}
 
 const toCategory = (value: ApiCategory): TicketCategory => ({
   id: value.id,
@@ -123,6 +142,8 @@ const toTicket = (value: ApiTicket): Ticket => {
   const statusByName: Record<string, Ticket["status"]> = {
     Aberto: "aberto", "Em atendimento": "atendimento", Pendente: "pendente", Resolvido: "resolvido", Encerrado: "encerrado",
   };
+  const slaHoras = value.subcategoria?.slaHoras ?? value.categoria?.slaHoras ?? 8;
+  const { slaDeadline, slaPercent } = calcularSla(openedAt, value.encerradoEm, slaHoras);
   return {
     id: value.id,
     number: value.protocolo ?? `#${value.id.slice(0, 8)}`,
@@ -136,8 +157,8 @@ const toTicket = (value: ApiTicket): Ticket => {
     assigneeId: value.tecnico?.id,
     priority: priority as Ticket["priority"],
     status: statusByName[value.status?.nome ?? "Aberto"] ?? "aberto",
-    slaPercent: 100,
-    slaDeadline: openedAt,
+    slaPercent,
+    slaDeadline,
     openedAt,
     updatedAt: value.atualizadoEm ?? openedAt,
     description: value.descricao,
