@@ -16,7 +16,7 @@ import {
   TextArea,
   SelectInput,
 } from "@/components/shared";
-import { CATEGORIES, STATUS_TONE, PRIORITY_LABEL, formatDate, categoryName } from "@/components/rooster/desk/mock-data";
+import { CATEGORIES, STATUS_TONE, PRIORITY_LABEL, formatDate } from "@/components/rooster/desk/mock-data";
 import type { TicketStatus } from "@/mock/database/tickets";
 import { StatusBadge, PriorityBadge, SlaBar } from "@/components/rooster/desk/badges";
 import { Plus } from "lucide-react";
@@ -143,7 +143,7 @@ function TicketsList() {
         </div>
       ),
     },
-    { key: "category", header: "Categoria", sortValue: (t) => categoryName(t.categoryId), cell: (t) => <span className="text-xs">{categoryName(t.categoryId)}</span> },
+    { key: "category", header: "Categoria", sortValue: (t) => t.categoryName ?? "", cell: (t) => <span className="text-xs">{t.categoryName ?? "Sem categoria"}</span> },
     {
       key: "requester",
       header: "Solicitante",

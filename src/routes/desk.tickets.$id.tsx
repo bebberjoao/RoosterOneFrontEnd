@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  categoryName,
   categoryColor,
   formatDate,
   STATUS_LABEL,
@@ -152,13 +151,13 @@ function TicketDetail() {
             <span>·</span>
             <span>Aberto {formatDate(ticket.openedAt)}</span>
             <span>·</span>
-            <span style={{ color: categoryColor(ticket.categoryId) }}>{categoryName(ticket.categoryId)} / {ticket.subcategory}</span>
+            <span style={{ color: categoryColor(ticket.categoryId) }}>{ticket.categoryName ?? "Sem categoria"} / {ticket.subcategory}</span>
           </div>
         </div>
         {souEquipe ? (
           <div className="flex flex-wrap items-center gap-2">
             {!ticket.assigneeId ? <Button variant="outline" size="sm" className="gap-1.5" onClick={() => ticketService.assign(ticket.id, getApiUserId() ?? "").then(() => navigate({ to: "/desk/tickets" }))}><UserCog className="h-4 w-4" /> Assumir atendimento</Button> : null}
-            <QuickSelect label="Categoria" options={[[ticket.categoryId, categoryName(ticket.categoryId)]]} defaultValue={ticket.categoryId} />
+            <QuickSelect label="Categoria" options={[[ticket.categoryId, ticket.categoryName ?? "Sem categoria"]]} defaultValue={ticket.categoryId} />
             <QuickSelect label="Subcategoria" options={[[ticket.subcategory, ticket.subcategory]]} defaultValue={ticket.subcategory} />
             <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90" onClick={encerrarChamado} disabled={encerrando}>
               <XCircle className="h-4 w-4" /> {encerrando ? "Encerrando..." : "Encerrar"}
@@ -186,7 +185,7 @@ function TicketDetail() {
               </div>
             </Field>
             <Field label="Categoria">
-              <span className="text-sm">{categoryName(ticket.categoryId)}</span>
+              <span className="text-sm">{ticket.categoryName ?? "Sem categoria"}</span>
               <div className="text-xs text-muted-foreground">{ticket.subcategory}</div>
             </Field>
           </SidebarCard>

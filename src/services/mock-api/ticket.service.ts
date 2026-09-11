@@ -128,6 +128,7 @@ const toTicket = (value: ApiTicket): Ticket => {
     number: value.protocolo ?? `#${value.id.slice(0, 8)}`,
     title: value.titulo,
     categoryId: value.categoriaId ?? "",
+    categoryName: value.categoria?.nome ?? "Sem categoria",
     requesterId: value.usuario?.id,
     subcategory: value.subcategoria?.nome ?? "Geral",
     requester: { name: value.usuario?.nome ?? "Não informado", role: "Solicitante", sector: "" },

@@ -41,7 +41,7 @@ type TicketSeed = {
   events: TicketEvent[];
 };
 
-export type Ticket = Omit<TicketSeed, "category"> & { categoryId: string; requesterId?: string; assigneeId?: string };
+export type Ticket = Omit<TicketSeed, "category"> & { categoryId: string; categoryName?: string; requesterId?: string; assigneeId?: string };
 
 export const CATEGORIES: TicketCategory[] = [
   { id: "ti", name: "Infraestrutura de TI", color: "oklch(0.6 0.18 260)", icon: "Server", slaHours: 8, owner: "Bruno Alves", subcategories: ["Rede", "Servidores", "Cloud"] },

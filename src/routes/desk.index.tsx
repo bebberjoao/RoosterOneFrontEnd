@@ -111,7 +111,7 @@ function DeskDashboard() {
                         <span className="w-14 text-xs font-medium tabular-nums text-muted-foreground">{t.number}</span>
                         <span className="flex-1 truncate text-sm">{t.title}</span>
                         <span className="hidden text-[11px] font-medium md:inline" style={{ color: categoryColor(t.categoryId) }}>
-                          {categoryName(t.categoryId).split(" ")[0]}
+                          {(t.categoryName ?? "Sem categoria").split(" ")[0]}
                         </span>
                         <PriorityBadge priority={t.priority} />
                         <StatusBadge status={t.status} />
