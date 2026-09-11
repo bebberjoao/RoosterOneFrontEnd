@@ -32,14 +32,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, senha }),
     });
     if (!response.ok) throw new Error("Login ou senha inválidos.");
-    const data = (await response.json()) as { accessToken: string; usuario: { id: string; nome: string; email: string }; acesso?: { perfis?: Array<{ nome: string }> } };
+    const data = (await response.json()) as {
+      accessToken: string;
+      usuario: { id: string; nome: string; email: string };
+      acesso?: { perfis?: Array<{ nome: string }>; modulos?: Array<{ nome: string }> };
+    };
     setApiToken(data.accessToken);
     setApiUserId((data as { usuario?: { id?: string } }).usuario?.id ?? null);
     const nextUser = { id: data.usuario.id, name: data.usuario.nome, email: data.usuario.email };
     setUser(nextUser);
     localStorage.setItem("rooster.user", JSON.stringify(nextUser));
     const isAdmin = data.acesso?.perfis?.some((profile) => profile.nome === "Administrador");
-    localStorage.setItem("rooster.role", isAdmin ? "admin" : "tecnico");
+    const modulos = new Set(data.acesso?.modulos?.map((m) => m.nome));
+    // O menu ainda usa o sistema de papéis mockado (professor/aluno/financeiro...)
+    // herdado do protótipo — não corresponde aos perfis reais do Hub. Mapeamos pra
+    // o papel existente com a navegação mais próxima da permissão de verdade, em
+    // vez de jogar todo mundo não-admin em "tecnico" (que enxerga Assets inteiro).
+    const role = isAdmin
+      ? "admin"
+      : modulos.has("Rooster Assets")
+        ? "tecnico"
+        : modulos.has("Rooster Rooms")
+          ? "aluno"
+          : "professor"; // única role sem acesso a Assets no menu além de "aluno"
+    localStorage.setItem("rooster.role", role);
     window.dispatchEvent(new Event("rooster-auth-change"));
     localStorage.setItem(KEY, "1");
     setAuthed(true);
