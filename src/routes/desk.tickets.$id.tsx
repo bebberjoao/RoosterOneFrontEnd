@@ -1,5 +1,8 @@
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { ticketService } from "@/services/mock-api";
+import { ticketService, type ApiMensagemChamado, type TicketMessage } from "@/services/mock-api";
+import { toTicketMessage } from "@/services/mock-api/ticket.service";
+import { useTicketSocket } from "@/hooks/use-ticket-socket";
 import { Breadcrumbs } from "@/components/shared";
 import { getApiUserId } from "@/services/http";
 import { Button } from "@/components/ui/button";
@@ -27,7 +30,9 @@ import {
   RotateCcw,
   XCircle,
   Clock,
-  
+  AlertTriangle,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 export const Route = createFileRoute("/desk/tickets/$id")({
@@ -48,7 +53,84 @@ export const Route = createFileRoute("/desk/tickets/$id")({
 function TicketDetail() {
   const ticket = Route.useLoaderData() as Ticket;
   const navigate = useNavigate();
-  const isRequester = ticket.requesterId === getApiUserId();
+  const meuId = getApiUserId();
+  const isRequester = ticket.requesterId === meuId;
+  // Aproximação: quem não é o solicitante vê as ações de atendimento (a API
+  // segue sendo a autoridade — nota interna de quem não pode vira 403).
+  const souEquipe = !isRequester;
+
+  const [mensagens, setMensagens] = useState<TicketMessage[]>([]);
+  const [carregandoMensagens, setCarregandoMensagens] = useState(true);
+  const [carregandoMais, setCarregandoMais] = useState(false);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [texto, setTexto] = useState("");
+  const [interno, setInterno] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [encerrando, setEncerrando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    setCarregandoMensagens(true);
+    ticketService.getMessages(ticket.id).then(({ mensagens: pagina, proximoCursor }) => {
+      if (!ativo) return;
+      setMensagens(pagina);
+      setCursor(proximoCursor);
+      setCarregandoMensagens(false);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [ticket.id]);
+
+  const { conectado } = useTicketSocket(ticket.id, (payload) => {
+    const nova = toTicketMessage(payload as ApiMensagemChamado);
+    setMensagens((prev) => (prev.some((m) => m.id === nova.id) ? prev : [...prev, nova]));
+  });
+
+  useEffect(() => {
+    timelineRef.current?.scrollTo({ top: timelineRef.current.scrollHeight, behavior: "smooth" });
+  }, [mensagens.length]);
+
+  async function carregarMensagensAntigas() {
+    if (!cursor || carregandoMais) return;
+    setCarregandoMais(true);
+    const { mensagens: pagina, proximoCursor } = await ticketService.getMessages(ticket.id, cursor);
+    setMensagens((prev) => [...pagina, ...prev]);
+    setCursor(proximoCursor);
+    setCarregandoMais(false);
+  }
+
+  async function enviarMensagem() {
+    const conteudo = texto.trim();
+    if (!conteudo || enviando) return;
+    setEnviando(true);
+    setErro(null);
+    try {
+      const nova = await ticketService.sendMessage(ticket.id, conteudo, interno);
+      setMensagens((prev) => (prev.some((m) => m.id === nova.id) ? prev : [...prev, nova]));
+      setTexto("");
+      setInterno(false);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Não foi possível enviar a mensagem.");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function encerrarChamado() {
+    if (encerrando) return;
+    setEncerrando(true);
+    setErro(null);
+    try {
+      await ticketService.closeTicket(ticket.id);
+      navigate({ to: "/desk/tickets" });
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Não foi possível encerrar o chamado.");
+      setEncerrando(false);
+    }
+  }
 
   return (
     <>
@@ -64,7 +146,6 @@ function TicketDetail() {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="truncate text-2xl font-semibold tracking-tight">{ticket.title}</h1>
-            
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span className="tabular-nums">{ticket.number}</span>
@@ -74,15 +155,23 @@ function TicketDetail() {
             <span style={{ color: categoryColor(ticket.categoryId) }}>{categoryName(ticket.categoryId)} / {ticket.subcategory}</span>
           </div>
         </div>
-        {!isRequester ? (
+        {souEquipe ? (
           <div className="flex flex-wrap items-center gap-2">
-            {!isRequester && !ticket.assigneeId ? <Button variant="outline" size="sm" className="gap-1.5" onClick={() => ticketService.assign(ticket.id, getApiUserId() ?? "").then(() => navigate({ to: "/desk/tickets" }))}><UserCog className="h-4 w-4" /> Assumir atendimento</Button> : null}
+            {!ticket.assigneeId ? <Button variant="outline" size="sm" className="gap-1.5" onClick={() => ticketService.assign(ticket.id, getApiUserId() ?? "").then(() => navigate({ to: "/desk/tickets" }))}><UserCog className="h-4 w-4" /> Assumir atendimento</Button> : null}
             <QuickSelect label="Categoria" options={[[ticket.categoryId, categoryName(ticket.categoryId)]]} defaultValue={ticket.categoryId} />
             <QuickSelect label="Subcategoria" options={[[ticket.subcategory, ticket.subcategory]]} defaultValue={ticket.subcategory} />
-            <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90"><XCircle className="h-4 w-4" /> Encerrar</Button>
+            <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90" onClick={encerrarChamado} disabled={encerrando}>
+              <XCircle className="h-4 w-4" /> {encerrando ? "Encerrando..." : "Encerrar"}
+            </Button>
           </div>
         ) : null}
       </div>
+
+      {erro ? (
+        <p className="mb-4 flex items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <AlertTriangle className="h-3.5 w-3.5" /> {erro}
+        </p>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* Sidebar */}
@@ -123,33 +212,86 @@ function TicketDetail() {
         {/* Timeline */}
         <section className="rounded-xl border border-border/60 bg-card">
           <div className="border-b border-border/60 px-5 py-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <Lock className="h-3.5 w-3.5" /> Histórico interno
+                <Lock className="h-3.5 w-3.5" /> Conversa do chamado
+              </span>
+              <span className={`inline-flex items-center gap-1 text-[11px] ${conectado ? "text-emerald-600" : "text-muted-foreground"}`}>
+                {conectado ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                {conectado ? "ao vivo" : "reconectando..."}
               </span>
             </div>
           </div>
 
-          <div className="max-h-[540px] space-y-5 overflow-y-auto px-5 py-5">
+          <div ref={timelineRef} className="max-h-[540px] space-y-5 overflow-y-auto px-5 py-5">
             <p className="rounded-lg bg-muted/40 p-3 text-sm text-foreground/90">{ticket.description}</p>
-            {ticket.events
-              .filter((e: TicketEvent) => e.kind !== "message" || e.internal)
-              .map((e: TicketEvent, i: number) => (
-                <TimelineEvent key={i} event={e} />
-              ))}
+
+            {cursor ? (
+              <button
+                type="button"
+                onClick={carregarMensagensAntigas}
+                disabled={carregandoMais}
+                className="mx-auto block text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+              >
+                {carregandoMais ? "Carregando..." : "Carregar mensagens anteriores"}
+              </button>
+            ) : null}
+
+            {carregandoMensagens ? (
+              <p className="text-center text-xs text-muted-foreground">Carregando conversa...</p>
+            ) : mensagens.length === 0 ? (
+              <p className="text-center text-xs text-muted-foreground">Nenhuma mensagem ainda. Comece a conversa abaixo.</p>
+            ) : (
+              mensagens.map((m) => (
+                <TimelineEvent
+                  key={m.id}
+                  event={{
+                    kind: "message",
+                    author: m.autor,
+                    role: m.autorId === ticket.requesterId ? "solicitante" : "tecnico",
+                    body: m.texto,
+                    at: m.criadoEm,
+                    internal: m.interno,
+                  }}
+                />
+              ))
+            )}
           </div>
 
           <Separator />
 
           <div className="p-4">
-            <Textarea placeholder="Adicionar anotação interna (visível apenas para a equipe)" className="min-h-[110px] resize-none border-border/60 bg-background" />
+            <Textarea
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder={interno ? "Nota interna (visível apenas para a equipe)" : "Escreva uma mensagem para o chamado..."}
+              className="min-h-[110px] resize-none border-border/60 bg-background"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  enviarMensagem();
+                }
+              }}
+            />
             <div className="mt-2 flex items-center justify-between">
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" className="gap-1.5"><Paperclip className="h-4 w-4" /> Anexar</Button>
-                <span className="ml-1 inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground"><Lock className="h-3 w-3" /> Interno</span>
+                <Button variant="ghost" size="sm" className="gap-1.5" disabled title="Upload de anexo ainda não implementado">
+                  <Paperclip className="h-4 w-4" /> Anexar
+                </Button>
+                {souEquipe ? (
+                  <button
+                    type="button"
+                    onClick={() => setInterno((v) => !v)}
+                    className={`ml-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors ${
+                      interno ? "bg-yellow-500/15 text-yellow-700" : "bg-muted text-muted-foreground hover:bg-muted/70"
+                    }`}
+                  >
+                    <Lock className="h-3 w-3" /> Interno
+                  </button>
+                ) : null}
               </div>
-              <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90">
-                <Send className="h-4 w-4" /> Enviar
+              <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90" onClick={enviarMensagem} disabled={enviando || !texto.trim()}>
+                <Send className="h-4 w-4" /> {enviando ? "Enviando..." : "Enviar"}
               </Button>
             </div>
           </div>

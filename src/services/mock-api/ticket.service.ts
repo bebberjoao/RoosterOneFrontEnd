@@ -50,7 +50,53 @@ export const ticketService = {
   async getByCategory(categoryId: string) {
     return httpClient.get<Ticket[]>("/chamados", { categoryId }, deskHeaders());
   },
+
+  // Conversa do chamado
+  async getMessages(ticketId: string, antes?: string, limite?: number): Promise<{ mensagens: TicketMessage[]; proximoCursor: string | null }> {
+    const res = await httpClient.get<{ mensagens: ApiMensagemChamado[]; proximoCursor: string | null }>(
+      `/chamados/${ticketId}/mensagens`,
+      { antes, limite },
+      deskHeaders(),
+    );
+    return { mensagens: res.mensagens.map(toTicketMessage), proximoCursor: res.proximoCursor };
+  },
+  async sendMessage(ticketId: string, mensagem: string, interno = false): Promise<TicketMessage> {
+    const created = await httpClient.post<ApiMensagemChamado>(`/chamados/${ticketId}/mensagens`, { mensagem, interno }, deskHeaders());
+    return toTicketMessage(created);
+  },
+  async closeTicket(ticketId: string): Promise<void> {
+    const statuses = await httpClient.get<Array<{ id: string; nome: string }>>("/chamados-status", undefined, deskHeaders());
+    const encerrado = statuses.find((s) => s.nome === "Encerrado");
+    if (!encerrado) throw new Error('Status "Encerrado" não está cadastrado.');
+    await httpClient.patch(`/chamados/${ticketId}/status`, { statusId: encerrado.id, encerradoEm: new Date().toISOString() }, deskHeaders());
+  },
 };
+
+export type ApiMensagemChamado = {
+  id: string;
+  mensagem: string;
+  interno: boolean;
+  criadoEm: string;
+  usuario: { id: string; nome: string } | null;
+};
+
+export type TicketMessage = {
+  id: string;
+  autorId: string;
+  autor: string;
+  texto: string;
+  interno: boolean;
+  criadoEm: string;
+};
+
+export const toTicketMessage = (value: ApiMensagemChamado): TicketMessage => ({
+  id: value.id,
+  autorId: value.usuario?.id ?? "",
+  autor: value.usuario?.nome ?? "Usuário",
+  texto: value.mensagem,
+  interno: value.interno,
+  criadoEm: value.criadoEm,
+});
 
 type ApiCategory = { id: string; nome: string; descricao?: string | null; slaHoras?: number | null; subcategorias?: Array<{ id: string; nome: string }> };
 type ApiTicket = {
