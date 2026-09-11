@@ -222,7 +222,7 @@ function TicketDetail() {
             </div>
           </div>
 
-          <div ref={timelineRef} className="max-h-[540px] space-y-5 overflow-y-auto px-5 py-5">
+          <div ref={timelineRef} className="h-[540px] space-y-5 overflow-y-auto px-5 py-5">
             <p className="rounded-lg bg-muted/40 p-3 text-sm text-foreground/90">{ticket.description}</p>
 
             {cursor ? (
