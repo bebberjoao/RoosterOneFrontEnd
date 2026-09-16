@@ -1,9 +1,11 @@
-// Cliente HTTP do Rooster Hub.
+// Cliente HTTP do Rooster One (Hub, Desk, Rooms e Assets).
 //
 // Aponta para a API NestJS real via `VITE_API_URL`. Quando a API não está
 // acessível (preview sem backend rodando), cada recurso cai automaticamente
 // para um armazenamento em memória com os mesmos contratos, e a interface
-// exibe o aviso de "modo offline".
+// exibe o aviso de "modo offline". Toda chamada envia o JWT da sessão
+// (ver session.ts); um 401 limpa a sessão para o app voltar à tela de login.
+import { session } from "./session";
 
 export const API_URL: string =
   (import.meta.env["VITE_API_URL"] as string | undefined) ?? "http://localhost:3000";
@@ -39,11 +41,15 @@ export async function request<T>(
   path: string,
   init?: { method?: string; body?: unknown; signal?: AbortSignal },
 ): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (init?.body) headers["Content-Type"] = "application/json";
+  if (session.token) headers["Authorization"] = `Bearer ${session.token}`;
+
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
       method: init?.method ?? "GET",
-      headers: init?.body ? { "Content-Type": "application/json" } : undefined,
+      headers,
       body: init?.body ? JSON.stringify(init.body) : undefined,
       signal: init?.signal,
     });
@@ -58,6 +64,9 @@ export async function request<T>(
           ? ((data as { message: string[] }).message).join(", ")
           : String((data as { message: unknown }).message)
         : undefined) ?? `Erro ${res.status}`;
+    // Token ausente/expirado/inválido: a sessão não é mais válida em lugar
+    // nenhum do app — limpa aqui para toda tela reagir (ver auth-context).
+    if (res.status === 401 && session.token) session.clear();
     throw new ApiError(res.status, message);
   }
   return data as T;

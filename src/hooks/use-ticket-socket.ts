@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import { API_BASE_URL, getApiToken } from "@/services/http";
+import { API_URL } from "@/services/hub/client";
+import { getApiToken } from "@/services/hub/session";
 
 /**
  * Conecta no gateway do Desk (`/desk`) e entra na sala do chamado enquanto o
@@ -24,7 +25,7 @@ export function useTicketSocket(ticketId: string, onNovaMensagem: (mensagem: unk
       const token = await getApiToken().catch(() => null);
       if (!ativo || !token) return;
 
-      socket = io(`${API_BASE_URL}/desk`, { auth: { token }, transports: ["websocket"] });
+      socket = io(`${API_URL}/desk`, { auth: { token }, transports: ["websocket"] });
 
       socket.on("connect", () => {
         setConectado(true);
