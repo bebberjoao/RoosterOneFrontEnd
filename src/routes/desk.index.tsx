@@ -11,7 +11,7 @@ import {
   EmptyState,
   TONE,
 } from "@/components/shared";
-import { categoryName, categoryColor, formatDate, relative } from "@/components/rooster/desk/mock-data";
+import { formatDate, relative } from "@/components/rooster/desk/mock-data";
 import { StatusBadge, PriorityBadge, SlaBar } from "@/components/rooster/desk/badges";
 import {
   Ticket as TicketIcon,
@@ -32,6 +32,8 @@ function DeskDashboard() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [categories, setCategories] = useState<TicketCategory[]>([]);
   const [tab, setTab] = useState("geral");
+  const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
+  const categoryColor = (id: string) => categories.find((c) => c.id === id)?.color ?? "oklch(0.6 0.1 260)";
 
   useEffect(() => {
     ticketService.getAll().then(setTickets);

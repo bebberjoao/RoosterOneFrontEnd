@@ -16,7 +16,7 @@ import {
   TextArea,
   SelectInput,
 } from "@/components/shared";
-import { CATEGORIES, STATUS_TONE, PRIORITY_LABEL, formatDate, categoryName } from "@/components/rooster/desk/mock-data";
+import { STATUS_TONE, PRIORITY_LABEL, formatDate } from "@/components/rooster/desk/mock-data";
 import type { TicketStatus } from "@/mock/database/tickets";
 import { StatusBadge, PriorityBadge, SlaBar } from "@/components/rooster/desk/badges";
 import { Plus } from "lucide-react";
@@ -94,7 +94,8 @@ function TicketsList() {
   const navigate = useNavigate();
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [categories, setCategories] = useState<TicketCategory[]>(CATEGORIES);
+  const [categories, setCategories] = useState<TicketCategory[]>([]);
+  const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
   const [status, setStatus] = useState("all");

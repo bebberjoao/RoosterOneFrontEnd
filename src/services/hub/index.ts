@@ -1,9 +1,8 @@
 // Camada de serviços do Rooster Hub.
 // Cada recurso expõe list/get/create/update/remove mapeados 1:1 nos endpoints
-// REST do backend NestJS. Se a API estiver indisponível, o recurso opera em
-// memória com os dados de `seed.ts` (modo offline sinalizado na interface).
+// REST do backend NestJS. Se a API estiver indisponível, a interface mostra
+// erro/vazio (não há mais fallback com dado mockado — ver offlineState).
 import { ApiUnavailableError, request } from "./client";
-import * as seed from "./seed";
 import type {
   LogAuditoria, Modulo, Notificacao, Permissao,
   Sessao, Setor, Usuario, UsuarioPermissao, UsuarioSetor,
@@ -96,15 +95,15 @@ export function createResource<T extends { id: string }>(path: string, prefix: s
   };
 }
 
-export const usuariosService = createResource<Usuario>("/usuarios", "u", seed.seedUsuarios);
-export const setoresService = createResource<Setor>("/setores", "s", seed.seedSetores);
-export const modulosService = createResource<Modulo>("/modulos", "m", seed.seedModulos);
-export const permissoesService = createResource<Permissao>("/permissoes", "pm", seed.seedPermissoes);
-export const usuariosSetoresService = createResource<UsuarioSetor>("/usuarios-setores", "us", seed.seedUsuariosSetores);
-export const usuariosPermissoesService = createResource<UsuarioPermissao>("/usuarios-permissoes", "upm", seed.seedUsuariosPermissoes);
-export const notificacoesService = createResource<Notificacao>("/notificacoes", "n", seed.seedNotificacoes);
-export const sessoesService = createResource<Sessao>("/sessoes", "se", seed.seedSessoes);
-export const logsAuditoriaService = createResource<LogAuditoria>("/logs-auditoria", "lg", seed.seedLogs);
+export const usuariosService = createResource<Usuario>("/usuarios", "u", []);
+export const setoresService = createResource<Setor>("/setores", "s", []);
+export const modulosService = createResource<Modulo>("/modulos", "m", []);
+export const permissoesService = createResource<Permissao>("/permissoes", "pm", []);
+export const usuariosSetoresService = createResource<UsuarioSetor>("/usuarios-setores", "us", []);
+export const usuariosPermissoesService = createResource<UsuarioPermissao>("/usuarios-permissoes", "upm", []);
+export const notificacoesService = createResource<Notificacao>("/notificacoes", "n", []);
+export const sessoesService = createResource<Sessao>("/sessoes", "se", []);
+export const logsAuditoriaService = createResource<LogAuditoria>("/logs-auditoria", "lg", []);
 
 /** Atalhos de associação, conforme a especificação do backend. */
 export const createUsuarioSetor = (usuarioId: string, setorId: string) =>

@@ -1,21 +1,18 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { ticketService } from "@/services/mock-api";
 import { Breadcrumbs } from "@/components/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  CATEGORIES,
-  categoryName,
-  categoryColor,
   formatDate,
   STATUS_LABEL,
   PRIORITY_LABEL,
   type TicketEvent,
 } from "@/components/rooster/desk/mock-data";
-import type { Ticket } from "@/mock/database/tickets";
+import type { Ticket, TicketCategory } from "@/mock/database/tickets";
 import { StatusBadge, PriorityBadge, SlaBar } from "@/components/rooster/desk/badges";
 import {
   ArrowLeft,
@@ -55,10 +52,26 @@ function TicketDetail() {
   const [tab, setTab] = useState<"public" | "internal">("public");
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [agents, setAgents] = useState<Array<{ id: string; name: string }>>([]);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [categories, setCategories] = useState<TicketCategory[]>([]);
+  const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
+  const categoryColor = (id: string) => categories.find((c) => c.id === id)?.color ?? "oklch(0.6 0.1 260)";
+
+  useEffect(() => {
+    ticketService.getAgentsWithIds().then(setAgents).catch(() => setAgents([]));
+    ticketService.getCategories().then(setCategories).catch(() => setCategories([]));
+  }, []);
 
   async function reload() {
     const fresh = await ticketService.getById(ticket.id);
     if (fresh) setTicket(fresh);
+  }
+
+  async function handleTransfer(tecnicoId: string) {
+    setTransferOpen(false);
+    await ticketService.assignTicket(ticket.id, tecnicoId);
+    await reload();
   }
 
   async function handleSend() {
@@ -103,6 +116,16 @@ function TicketDetail() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {transferOpen ? (
+            <Select onValueChange={handleTransfer}>
+              <SelectTrigger className="h-8 w-48 text-xs"><SelectValue placeholder="Escolher técnico" /></SelectTrigger>
+              <SelectContent>
+                {agents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setTransferOpen(true)}><UserCog className="h-4 w-4" /> Transferir</Button>
+          )}
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => changeStatus("resolvido")}><CheckCircle2 className="h-4 w-4" /> Registrar solução</Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => changeStatus("aberto")}><RotateCcw className="h-4 w-4" /> Reabrir</Button>
           <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90" onClick={() => changeStatus("encerrado")}><XCircle className="h-4 w-4" /> Encerrar</Button>
@@ -130,7 +153,7 @@ function TicketDetail() {
           <SidebarCard title="Ações rápidas">
             <QuickSelect label="Alterar status" options={Object.entries(STATUS_LABEL)} defaultValue={ticket.status} />
             <QuickSelect label="Alterar prioridade" options={Object.entries(PRIORITY_LABEL)} defaultValue={ticket.priority} />
-            <QuickSelect label="Alterar categoria" options={CATEGORIES.map((c) => [c.id, c.name])} defaultValue={ticket.categoryId} />
+            <QuickSelect label="Alterar categoria" options={categories.map((c) => [c.id, c.name])} defaultValue={ticket.categoryId} />
           </SidebarCard>
 
           <SidebarCard title="Pessoas">

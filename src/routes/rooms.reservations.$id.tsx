@@ -55,9 +55,9 @@ function ReservationDetail() {
   if (!reservation) return <p className="text-sm text-muted-foreground">Carregando reserva...</p>;
 
 
-  async function send() { if (!reply.trim()) return; await roomService.addReservationMessage(id, { author: person.name, role: manager ? "gestor" : "solicitante", body: reply.trim() }); setReply(""); reload(); }
+  async function send() { if (!reply.trim()) return; await roomService.addReservationMessage(id, { body: reply.trim() }); setReply(""); reload(); }
   async function changeStatus(status: Reservation["status"], message?: string) { await roomService.changeReservationStatus(id, status, person.name, message); setDialog(null); setReason(""); reload(); }
-  async function changeSchedule() { if (!date || !start || !end) return; await roomService.changeReservationSchedule(id, date, start, end, person.name, reason || undefined); setDialog(null); setReason(""); reload(); }
+  async function changeSchedule() { if (!date || !start || !end) return; await roomService.changeReservationSchedule(id, date, start, end); setDialog(null); setReason(""); reload(); }
 
   return <>
     <Breadcrumbs items={[{ label: "Rooster Rooms" }, { label: manager ? "Gerenciar reservas" : "Minhas reservas", onClick: () => navigate({ to: manager ? "/rooms/manage" : "/rooms/reservations" }) }, { label: reservation.code }]} />

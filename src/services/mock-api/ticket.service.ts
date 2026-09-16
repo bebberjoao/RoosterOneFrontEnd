@@ -1,14 +1,12 @@
-// Rooster Desk — chamados ligados ao backend real via client HTTP
-// compartilhado. O modelo do backend é relacional (usuário/técnico por id,
-// categoria/subcategoria/prioridade/status por FK); o mock guardava tudo
-// embutido no próprio chamado (requester/assignee como objeto, timeline de
-// eventos). A tradução fica toda aqui, para as telas não precisarem mudar.
-//
-// Limitação conhecida: o backend não tem uma tabela de eventos do chamado
-// (status/prioridade/categoria/atribuição não viram uma linha do tempo) —
-// só o valor atual de cada campo. A conversa (mensagens) é real, via
-// /chamados/:id/mensagens; os demais tipos de evento não aparecem no
-// histórico ao vir do servidor.
+// Rooster Desk — 100% ligado ao backend real via client HTTP compartilhado
+// (sem fallback para dado mockado). O modelo do backend é relacional
+// (usuário/técnico por id, categoria/subcategoria/prioridade/status por FK);
+// o mock guardava tudo embutido no próprio chamado (requester/assignee como
+// objeto, timeline de eventos). A tradução fica toda aqui, para as telas não
+// precisarem mudar. A timeline é reconstruída a partir de duas fontes reais:
+// mensagens (/chamados/:id/mensagens) e histórico de campo alterado
+// (embutido em GET /chamados/:id), gravado pelo backend a cada troca real de
+// status/prioridade/categoria/técnico.
 import type { Ticket, TicketCategory, TicketStatus, TicketPriority, TicketEvent } from "@/mock/database/tickets";
 import { request } from "@/services/hub/client";
 import { session } from "@/services/hub/session";
@@ -33,6 +31,7 @@ type BackPrioridade = { id: string; nome: string };
 type BackUsuario = { id: string; nome: string };
 type BackSubcategoria = { id: string; nome: string; slaHoras?: number };
 type BackCategoria = { id: string; nome: string; slaHoras?: number; setor?: { nome: string } | null; subcategorias?: BackSubcategoria[] };
+type BackHistorico = { id: string; campo?: string | null; valorAntigo?: string | null; valorNovo?: string | null; criadoEm: string; usuario?: { id: string; nome: string } | null };
 type BackTicket = {
   id: string; protocolo?: string | null; titulo: string; descricao: string;
   usuario?: BackUsuario | null; tecnico?: BackUsuario | null;
@@ -40,6 +39,8 @@ type BackTicket = {
   subcategoriaId?: string | null; subcategoria?: BackSubcategoria | null;
   prioridade?: BackPrioridade | null; status?: BackStatus | null;
   criadoEm?: string | null; atualizadoEm?: string | null;
+  tags?: string[]; favorito?: boolean;
+  historico?: BackHistorico[];
 };
 
 let statusCache: BackStatus[] | null = null;
@@ -86,10 +87,27 @@ function toFrontTicket(b: BackTicket): Ticket {
     openedAt: criadoEm,
     updatedAt: b.atualizadoEm ?? criadoEm,
     description: b.descricao,
-    tags: [],
-    favorite: false,
+    tags: b.tags ?? [],
+    favorite: b.favorito ?? false,
     events: [],
   };
+}
+
+function historicoToEvent(h: BackHistorico): TicketEvent | null {
+  const author = h.usuario?.nome ?? "—";
+  if (h.campo === "status") {
+    return { kind: "status", author, at: h.criadoEm, from: STATUS_TO_SLUG[h.valorAntigo ?? ""] ?? "aberto", to: STATUS_TO_SLUG[h.valorNovo ?? ""] ?? "aberto" };
+  }
+  if (h.campo === "prioridade") {
+    return { kind: "priority", author, at: h.criadoEm, from: PRIORITY_TO_SLUG[h.valorAntigo ?? ""] ?? "media", to: PRIORITY_TO_SLUG[h.valorNovo ?? ""] ?? "media" };
+  }
+  if (h.campo === "categoria" && h.valorNovo) {
+    return { kind: "category", author, at: h.criadoEm, to: h.valorNovo };
+  }
+  if (h.campo === "tecnico" && h.valorNovo) {
+    return { kind: "assign", author, at: h.criadoEm, to: h.valorNovo };
+  }
+  return null; // "mensagem" já vem pela conversa real — não duplica aqui.
 }
 
 async function messagesAsEvents(ticketId: string, requesterId?: string | null): Promise<TicketEvent[]> {
@@ -113,7 +131,9 @@ export const ticketService = {
   async getById(id: string): Promise<Ticket | undefined> {
     const back = await request<BackTicket & { usuarioId?: string }>(`/chamados/${id}`).catch(() => undefined);
     if (!back) return undefined;
-    const events = await messagesAsEvents(id, back.usuarioId ?? back.usuario?.id);
+    const historicoEvents = (back.historico ?? []).map(historicoToEvent).filter((e): e is TicketEvent => e !== null);
+    const mensagens = await messagesAsEvents(id, back.usuarioId ?? back.usuario?.id);
+    const events = [...historicoEvents, ...mensagens].sort((a, b) => a.at.localeCompare(b.at));
     return { ...toFrontTicket(back), events };
   },
   async create(dto: Omit<Ticket, "id" | "number" | "events">): Promise<Ticket> {
@@ -129,6 +149,8 @@ export const ticketService = {
         subcategoriaId: sub?.id,
         usuarioId: session.usuario?.id,
         prioridadeId: SLUG_TO_PRIORIDADE_ID[dto.priority] ?? "2",
+        tags: dto.tags,
+        favorito: dto.favorite,
       },
     });
     return toFrontTicket({ ...created, categoria: cat, subcategoria: sub });
@@ -141,6 +163,8 @@ export const ticketService = {
     if (dto.categoryId !== undefined) body.categoriaId = dto.categoryId;
     if (dto.status !== undefined) body.statusId = status.find((s) => s.nome === SLUG_TO_STATUS_NAME[dto.status!])?.id;
     if (dto.priority !== undefined) body.prioridadeId = prioridade.find((p) => p.nome === SLUG_TO_PRIORITY_NAME[dto.priority!])?.id;
+    if (dto.tags !== undefined) body.tags = dto.tags;
+    if (dto.favorite !== undefined) body.favorito = dto.favorite;
     const updated = await request<BackTicket>(`/chamados/${id}`, { method: "PATCH", body });
     return toFrontTicket(updated);
   },
@@ -175,5 +199,13 @@ export const ticketService = {
 
   async sendMessage(ticketId: string, body: string, interno: boolean) {
     return request(`/chamados/${ticketId}/mensagens`, { method: "POST", body: { mensagem: body, interno } });
+  },
+
+  async getAgentsWithIds(): Promise<Array<{ id: string; name: string }>> {
+    const agentes = await request<BackUsuario[]>("/chamados-atendentes");
+    return agentes.map((a) => ({ id: a.id, name: a.nome }));
+  },
+  async assignTicket(ticketId: string, tecnicoId: string) {
+    return request(`/chamados/${ticketId}/atribuir`, { method: "PATCH", body: { tecnicoId } });
   },
 };

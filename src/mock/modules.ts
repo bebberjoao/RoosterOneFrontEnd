@@ -31,7 +31,7 @@ export const MODULE_MANIFEST: ModuleManifest[] = [
     basePath: "/hub",
     docs: "docs/modules/hub.md",
     routes: ["hub.tsx", "hub.index.tsx", "hub.usuarios.tsx", "hub.setores.tsx", "hub.acessos.tsx", "hub.modulos.tsx", "hub.auditoria.tsx"],
-    services: ["src/services/hub/index.ts", "src/services/hub/client.ts", "src/services/hub/seed.ts", "src/services/mock-api/user.service.ts"],
+    services: ["src/services/hub/index.ts", "src/services/hub/client.ts", "src/services/hub/session.ts"],
     tables: ["usuarios", "setores", "modulos", "permissoes", "usuariosSetores", "usuariosPermissoes", "sessoes", "logsAuditoria", "notificacoes"],
   },
   {

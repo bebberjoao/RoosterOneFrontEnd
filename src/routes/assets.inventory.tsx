@@ -8,7 +8,7 @@ import {
 import { AssetStatusBadge, CategoryChip, ConditionBadge, MovementBadge } from "@/components/rooster/assets/ui";
 import { AssetFormModal } from "@/components/rooster/assets/asset-form";
 import { useAssets } from "@/components/rooster/assets/store";
-import { HUB_SECTORS, HUB_USERS, hubUsersOfSector } from "@/components/rooster/assets/hub-directory";
+import { useHubDirectory, type HubSector, type HubUser } from "@/components/rooster/assets/hub-directory";
 import {
   LOCATIONS, PEOPLE, STATUS_META, MOVEMENT_META,
   fmtDate, fmtDateTime, money, type Asset, type MovementType,
@@ -33,9 +33,9 @@ export const Route = createFileRoute("/assets/inventory")({
   component: InventoryPage,
 });
 
-function targetOptions(type: MovementType) {
-  if (type === "setor") return HUB_SECTORS.map((s) => s.name);
-  if (type === "emprestimo") return HUB_USERS.map((u) => u.name);
+function targetOptions(type: MovementType, sectors: HubSector[], users: HubUser[]) {
+  if (type === "setor") return sectors.map((s) => s.name);
+  if (type === "emprestimo") return users.map((u) => u.name);
   return LOCATIONS;
 }
 
@@ -126,6 +126,7 @@ function InventoryPage() {
     createAsset, updateAsset, deleteAsset, movementsOf, registerMovement,
     createCategory, updateCategory, deleteCategory,
   } = useAssets();
+  const { sectors, users, usersOfSector } = useHubDirectory();
   const me = ROLE_META[role].person.name;
 
   // Navegação: categorias -> itens
@@ -207,7 +208,7 @@ function InventoryPage() {
 
   const changeMType = (t: MovementType) => {
     setMType(t);
-    setMTo(targetOptions(t)[0]);
+    setMTo(targetOptions(t, sectors, users)[0]);
   };
 
   const asset = selected ? assets.find((a) => a.id === selected.id) ?? selected : null;
@@ -270,7 +271,7 @@ function InventoryPage() {
               options={[
                 { value: "todos", label: "Todos os setores" },
                 { value: "sem", label: "Sem setor vinculado" },
-                ...HUB_SECTORS.map((s) => ({ value: s.name, label: s.name })),
+                ...sectors.map((s) => ({ value: s.name, label: s.name })),
               ]}
             />
             <Select value={status} onChange={setStatus} options={[{ value: "todos", label: "Todas as situações" }, ...Object.entries(STATUS_META).map(([k, v]) => ({ value: k, label: v.label }))]} />
@@ -407,14 +408,14 @@ function InventoryPage() {
                     <SelectInput
                       value={asset.sector ?? ""}
                       onChange={(e) => updateAsset(asset.id, { sector: e.target.value })}
-                      options={[{ value: "", label: "Sem setor vinculado" }, ...HUB_SECTORS.map((s) => ({ value: s.name, label: s.name }))]}
+                      options={[{ value: "", label: "Sem setor vinculado" }, ...sectors.map((s) => ({ value: s.name, label: s.name }))]}
                     />
                   </Field>
                   <Field label="Usuário responsável" hint="Usuários do setor selecionado aparecem primeiro.">
                     <SelectInput
                       value={asset.owner ?? ""}
                       onChange={(e) => updateAsset(asset.id, { owner: e.target.value })}
-                      options={[{ value: "", label: "Não atribuído" }, ...hubUsersOfSector(asset.sector).map((u) => ({ value: u.name, label: `${u.name} · ${u.email}` }))]}
+                      options={[{ value: "", label: "Não atribuído" }, ...usersOfSector(asset.sector).map((u) => ({ value: u.name, label: `${u.name} · ${u.email}` }))]}
                     />
                   </Field>
                 </div>
@@ -432,7 +433,7 @@ function InventoryPage() {
                       options={Object.entries(MOVEMENT_META).map(([k, v]) => ({ value: k, label: v.label }))} />
                   </Field>
                   <Field label={mType === "setor" ? "Novo setor *" : mType === "emprestimo" ? "Emprestado para *" : "Destino *"}>
-                    <SelectInput value={mTo} onChange={(e) => setMTo(e.target.value)} options={targetOptions(mType).map((o) => ({ value: o, label: o }))} />
+                    <SelectInput value={mTo} onChange={(e) => setMTo(e.target.value)} options={targetOptions(mType, sectors, users).map((o) => ({ value: o, label: o }))} />
                   </Field>
                   <Field label="Observações">
                     <TextArea rows={3} value={mNotes} onChange={(e) => setMNotes(e.target.value)} placeholder="Detalhes da movimentação..." />

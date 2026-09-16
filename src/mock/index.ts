@@ -1,21 +1,23 @@
 // ============================================================================
 // ROOSTER ONE — PONTO ÚNICO DE ENTRADA DOS DADOS MOCKADOS
 // ============================================================================
-// Este arquivo é o "índice mestre" de todo dado falso da aplicação. Ele existe
-// para que a integração com o backend real (NestJS + Prisma + PostgreSQL) seja
-// feita em um único lugar conhecido, sem caçar mocks espalhados pelo código.
+// Hub, Desk, Rooms e Assets já estão ligados ao backend real (sem fallback
+// de dado mockado — ver docs/integracao-backend.md). O que resta aqui serve
+// só aos módulos ainda sem backend: Academy, Learn, Finance, Boost, Student.
 //
 // Organização:
 //   src/mock/database/*      -> "tabelas" do banco mockado (arrays tipados)
 //   src/mock/index.ts        -> este arquivo: agrega tudo em `mockDatabase`
 //   src/services/mock-api/*  -> serviços (getAll/getById/create/update/remove)
-//   src/services/hub/seed.ts -> seed do Rooster Hub (usado no modo offline)
+//     dos módulos pendentes; Hub/Desk/Rooms/Assets usam
+//     src/services/hub/client.ts (HTTP real) em vez desta pasta.
 //
-// Como integrar com o backend:
+// Como integrar com o backend (para os módulos pendentes):
 //   1. Nenhuma tela importa dados daqui diretamente — sempre via serviços.
 //   2. Para migrar um recurso, troque o corpo do serviço correspondente em
-//      src/services/mock-api/<recurso>.service.ts por chamadas HTTP
-//      (src/services/http.ts). A assinatura pública deve permanecer igual.
+//      src/services/mock-api/<recurso>.service.ts por chamadas HTTP,
+//      seguindo o padrão já usado em ticket.service.ts/room.service.ts/
+//      asset.service.ts. A assinatura pública deve permanecer igual.
 //   3. O mapa MOCK_ENDPOINT_MAP abaixo indica o endpoint REST previsto para
 //      cada "tabela", servindo de contrato para o time de backend.
 //   4. Quando todos os recursos estiverem integrados, esta pasta inteira
@@ -26,25 +28,15 @@
 
 export * from "./database";
 import { db, type Database } from "./database";
-import * as hubSeed from "@/services/hub/seed";
 
-/** Todas as "tabelas" mockadas dos módulos operacionais. */
+/**
+ * Todas as "tabelas" mockadas dos módulos operacionais. Hub, Desk, Rooms e
+ * Assets não usam mais isso em tempo de execução (ligados ao backend real,
+ * sem fallback de dado mockado) — o que resta aqui é só para os módulos
+ * ainda sem backend (Academy, Learn, Finance, Boost, Student).
+ */
 export const mockDatabase = db;
 export type MockDatabase = Database;
-
-/** Seed do Rooster Hub (usuários, setores, permissões individuais, auditoria). */
-export const mockHubDatabase = {
-  usuarios: hubSeed.seedUsuarios,
-  setores: hubSeed.seedSetores,
-  modulos: hubSeed.seedModulos,
-  permissoes: hubSeed.seedPermissoes,
-  usuariosSetores: hubSeed.seedUsuariosSetores,
-  usuariosPermissoes: hubSeed.seedUsuariosPermissoes,
-  notificacoes: hubSeed.seedNotificacoes,
-  sessoes: hubSeed.seedSessoes,
-  logsAuditoria: hubSeed.seedLogs,
-};
-export type MockHubDatabase = typeof mockHubDatabase;
 
 /**
  * Contrato de integração: nome lógico da tabela -> endpoint REST esperado.

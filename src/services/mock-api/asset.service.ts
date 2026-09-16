@@ -1,8 +1,8 @@
-// Rooster Assets — ligado ao backend real (Patrimônio) via client HTTP
-// compartilhado. Os tipos de tela continuam em inglês (Asset, AssetCategory,
-// ...); os nomes de campo são traduzidos para os DTOs em português do
-// NestJS na fronteira do serviço (mapResource), não na UI.
-import { db } from "@/mock/database";
+// Rooster Assets — 100% ligado ao backend real (Patrimônio) via client HTTP
+// compartilhado (sem fallback para dado mockado). Os tipos de tela continuam
+// em inglês (Asset, AssetCategory, ...); os nomes de campo são traduzidos
+// para os DTOs em português do NestJS na fronteira do serviço
+// (mapResource), não na UI.
 import type { Asset, AssetStatus, AssetCondition } from "@/mock/database/assets";
 import type { AssetMovement, MovementType } from "@/mock/database/assetMovements";
 import type { AssetCategory } from "@/mock/database/assetCategories";
@@ -37,7 +37,7 @@ type PatrimonioBack = {
 const assetService_ = mapResource<Asset, PatrimonioBack>(
   "/patrimonio",
   "asset",
-  db.assets.map(toBackAsset),
+  [],
   (b) => ({
     id: b.id,
     name: b.nome,
@@ -78,21 +78,11 @@ const assetService_ = mapResource<Asset, PatrimonioBack>(
   }),
 );
 
-function toBackAsset(a: Asset): PatrimonioBack {
-  return {
-    id: a.id, nome: a.name, tag: a.tag, categoriaId: a.categoryId, marca: a.brand, modelo: a.model,
-    serial: a.serial, localizacaoId: a.locationId, localizacao: a.location, setor: a.sector,
-    responsavelUserId: a.ownerUserId, responsavel: a.owner, status: a.status, condicao: a.condition,
-    adquiridoEm: a.acquiredAt, valor: a.value, observacoes: a.notes, foto: a.photo,
-    chamadoManutencaoId: a.maintenanceTicketId, criadoEm: a.createdAt,
-  };
-}
-
 type CategoriaBack = { id: string; nome: string; descricao?: string | null; tom?: string | null; sistema?: boolean | null };
 const categoryService = mapResource<AssetCategory, CategoriaBack>(
   "/patrimonio-categorias",
   "cat",
-  db.assetCategories.map((c) => ({ id: c.id, nome: c.name, descricao: c.description, tom: c.tone, sistema: c.system })),
+  [],
   (b) => ({ id: b.id, name: b.nome, description: b.descricao ?? undefined, tone: b.tom ?? "", system: b.sistema ?? undefined }),
   (f) => ({
     ...(f.name !== undefined && { nome: f.name }),
@@ -105,7 +95,7 @@ type SetorBack = { id: string; nome: string; descricao?: string | null; responsa
 const sectorService = mapResource<AssetSector, SetorBack>(
   "/patrimonio-setores",
   "sec",
-  db.assetSectors.map((s) => ({ id: s.id, nome: s.name, descricao: s.description, responsavel: s.manager })),
+  [],
   (b) => ({ id: b.id, name: b.nome, description: b.descricao ?? undefined, manager: b.responsavel ?? undefined }),
   (f) => ({
     ...(f.name !== undefined && { nome: f.name }),
@@ -118,7 +108,7 @@ type MovimentoBack = { id: string; patrimonioId: string; tipo: string; origem?: 
 const movementService = mapResource<AssetMovement, MovimentoBack>(
   "/patrimonio-movimentacoes",
   "mov",
-  db.assetMovements.map((m) => ({ id: m.id, patrimonioId: m.assetId, tipo: m.type, origem: m.from, destino: m.to, usuario: m.user, observacoes: m.notes, criadoEm: m.date })),
+  [],
   (b) => ({ id: b.id, assetId: b.patrimonioId, type: b.tipo as MovementType, from: b.origem ?? undefined, to: b.destino ?? undefined, user: b.usuario, date: b.criadoEm, notes: b.observacoes ?? undefined }),
   (f) => ({
     ...(f.assetId !== undefined && { patrimonioId: f.assetId }),

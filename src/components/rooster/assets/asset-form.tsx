@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Btn } from "@/components/rooster/student/ui";
 import { Field, Modal, inputCls } from "./ui";
 import { SelectInput } from "@/components/shared";
-import { HUB_SECTORS, hubUsersOfSector } from "./hub-directory";
+import { useHubDirectory } from "./hub-directory";
 import { LOCATIONS, CONDITION_META, STATUS_META, type Asset, type AssetCondition, type AssetStatus } from "./mock-data";
 import { useAssets } from "./store";
 
@@ -40,6 +40,7 @@ export function AssetFormModal({
   onSubmit: (draft: AssetDraft) => void;
 }) {
   const { categories } = useAssets();
+  const { sectors, usersOfSector } = useHubDirectory();
   const [draft, setDraft] = useState<AssetDraft>(empty(categories[0]?.id ?? ""));
 
   useEffect(() => {
@@ -105,10 +106,10 @@ export function AssetFormModal({
           <SelectInput className={inputCls} value={draft.location} onChange={(e) => set("location", e.target.value)} options={LOCATIONS.map((l) => ({ value: l, label: l }))} />
         </Field>
         <Field label="Setor vinculado" hint="Somente setores cadastrados no Rooster Hub.">
-          <SelectInput className={inputCls} value={draft.sector} onChange={(e) => set("sector", e.target.value)} options={[{ value: "", label: "Sem setor vinculado" }, ...HUB_SECTORS.map((s) => ({ value: s.name, label: s.name }))]} />
+          <SelectInput className={inputCls} value={draft.sector} onChange={(e) => set("sector", e.target.value)} options={[{ value: "", label: "Sem setor vinculado" }, ...sectors.map((s) => ({ value: s.name, label: s.name }))]} />
         </Field>
         <Field label="Usuário responsável">
-          <SelectInput className={inputCls} value={draft.owner} onChange={(e) => set("owner", e.target.value)} options={[{ value: "", label: "Não atribuído" }, ...hubUsersOfSector(draft.sector).map((u) => ({ value: u.name, label: `${u.name} · ${u.email}` }))]} />
+          <SelectInput className={inputCls} value={draft.owner} onChange={(e) => set("owner", e.target.value)} options={[{ value: "", label: "Não atribuído" }, ...usersOfSector(draft.sector).map((u) => ({ value: u.name, label: `${u.name} · ${u.email}` }))]} />
         </Field>
         <Field label="Situação">
           <SelectInput className={inputCls} value={draft.status} onChange={(e) => set("status", e.target.value as AssetStatus)} options={Object.entries(STATUS_META).map(([k, v]) => ({ value: k, label: v.label }))} />

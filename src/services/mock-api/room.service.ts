@@ -1,23 +1,16 @@
-// Rooster Rooms — ligado ao backend real via client HTTP compartilhado.
-//
-// Limitação conhecida: o backend (Rooster Rooms) não tem endpoints para a
-// conversa/histórico da reserva (mensagens, troca de horário e motivo de
-// cancelamento são só o `status`/`data`/`horario` do registro — não existe
-// tabela de eventos). Essas informações continuam vivendo só nesta aba do
-// navegador (não persistem em outra sessão nem sobrevivem a um F5) até que
-// o backend ganhe esse recurso; o que muda de verdade no servidor a cada
-// ação (status, data/horário) usa a API real.
-import { db } from "@/mock/database";
+// Rooster Rooms — 100% ligado ao backend real via client HTTP compartilhado
+// (sem fallback para dado mockado: se a API estiver fora do ar, as telas
+// mostram erro/vazio, não dado fake).
 import type { Room } from "@/mock/database/rooms";
 import type { Reservation } from "@/mock/database/reservations";
-import type { ReservationEvent, SpaceType, SpaceStatus, Resource, ReservationStatus } from "@/components/rooster/rooms/mock-data";
+import type { ReservationEvent, SpaceType, SpaceStatus, ReservationStatus } from "@/components/rooster/rooms/mock-data";
 import type { Campus } from "@/mock/database/campuses";
 import type { Block } from "@/mock/database/blocks";
 import { mapResource } from "@/services/hub/mapped-resource";
 import { createResource as createRawResource } from "@/services/hub/index";
 import { request } from "@/services/hub/client";
 import { session } from "@/services/hub/session";
-import { nextId, applyFilters, type Filters } from "./utils";
+import { applyFilters, type Filters } from "./utils";
 
 type CampusBack = {
   id: string; nome: string; codigo: string; endereco?: string | null; cidade?: string | null;
@@ -25,8 +18,7 @@ type CampusBack = {
   observacoes?: string | null; cor?: string | null;
 };
 const campusService = mapResource<Campus, CampusBack>(
-  "/campus", "cp",
-  db.campuses.map((c) => ({ id: c.id, nome: c.name, codigo: c.code, endereco: c.address, cidade: c.city, estado: c.state, cep: c.zip, responsavel: c.manager, ativo: c.active, observacoes: c.notes, cor: c.color })),
+  "/campus", "cp", [],
   (b) => ({ id: b.id, name: b.nome, code: b.codigo, address: b.endereco ?? "", city: b.cidade ?? "", state: b.estado ?? "", zip: b.cep ?? "", manager: b.responsavel ?? "", active: b.ativo, notes: b.observacoes ?? undefined, color: b.cor ?? "oklch(0.6 0.18 260)" }),
   (f) => ({
     ...(f.name !== undefined && { nome: f.name }),
@@ -44,8 +36,7 @@ const campusService = mapResource<Campus, CampusBack>(
 
 type BlocoBack = { id: string; nome: string; codigo: string; campusId: string; andares: number; responsavel?: string | null; ativo: boolean };
 const blockService = mapResource<Block, BlocoBack>(
-  "/blocos", "bl",
-  db.blocks.map((b) => ({ id: b.id, nome: b.name, codigo: b.code, campusId: b.campusId, andares: b.floors, responsavel: b.manager, ativo: b.active })),
+  "/blocos", "bl", [],
   (b) => ({ id: b.id, name: b.nome, code: b.codigo, campusId: b.campusId, floors: b.andares, manager: b.responsavel ?? "", active: b.ativo }),
   (f) => ({
     ...(f.name !== undefined && { nome: f.name }),
@@ -60,24 +51,18 @@ const blockService = mapResource<Block, BlocoBack>(
 type AmbienteBack = {
   id: string; nome: string; codigo: string; campusId: string; blocoId: string; andar: number; numero?: string | null;
   tipo: string; capacidade: number; area?: number | null; descricao?: string | null; capa?: string | null;
-  galeria: string[]; status: string; horarioAbertura?: string | null; diasFuncionamento: string[]; duracaoMinutos?: number | null;
+  galeria: string[]; recursos: string[]; status: string; horarioAbertura?: string | null; diasFuncionamento: string[]; duracaoMinutos?: number | null;
 };
-// resources/slots não existem no backend (Ambiente não tem essas colunas) — ficam só de exibição local.
-const roomExtras = new Map<string, { resources: Resource[]; slots?: string[] }>(db.rooms.map((r) => [r.id, { resources: r.resources, slots: r.slots }]));
-
 const roomResource = mapResource<Room, AmbienteBack>(
-  "/ambientes", "room",
-  db.rooms.map((r) => ({ id: r.id, nome: r.name, codigo: r.code, campusId: r.campusId, blocoId: r.blockId, andar: r.floor, numero: r.number, tipo: r.type, capacidade: r.capacity, area: r.area, descricao: r.description, capa: r.cover, galeria: r.gallery, status: r.status, horarioAbertura: r.openingHours, diasFuncionamento: r.weekdays, duracaoMinutos: r.slotMinutes })),
-  (b) => {
-    const extra = roomExtras.get(b.id);
-    return {
-      id: b.id, name: b.nome, code: b.codigo, campusId: b.campusId, blockId: b.blocoId, floor: b.andar,
-      number: b.numero ?? "", type: b.tipo as SpaceType, capacity: b.capacidade, area: b.area ?? 0,
-      description: b.descricao ?? "", cover: b.capa ?? "", gallery: b.galeria ?? [], resources: extra?.resources ?? [],
-      status: b.status as SpaceStatus, openingHours: b.horarioAbertura ?? "", weekdays: b.diasFuncionamento ?? [],
-      slots: extra?.slots, slotMinutes: b.duracaoMinutos ?? undefined,
-    };
-  },
+  "/ambientes", "room", [],
+  (b) => ({
+    id: b.id, name: b.nome, code: b.codigo, campusId: b.campusId, blockId: b.blocoId, floor: b.andar,
+    number: b.numero ?? "", type: b.tipo as SpaceType, capacity: b.capacidade, area: b.area ?? 0,
+    description: b.descricao ?? "", cover: b.capa ?? "", gallery: b.galeria ?? [], resources: (b.recursos ?? []) as Room["resources"],
+    status: b.status as SpaceStatus, openingHours: b.horarioAbertura ?? "", weekdays: b.diasFuncionamento ?? [],
+    // slots não tem coluna — é sempre gerado a partir de openingHours/duracaoMinutos quando ausente (por design).
+    slots: undefined, slotMinutes: b.duracaoMinutos ?? undefined,
+  }),
   (f) => ({
     ...(f.name !== undefined && { nome: f.name }),
     ...(f.code !== undefined && { codigo: f.code }),
@@ -91,56 +76,61 @@ const roomResource = mapResource<Room, AmbienteBack>(
     ...(f.description !== undefined && { descricao: f.description }),
     ...(f.cover !== undefined && { capa: f.cover }),
     ...(f.gallery !== undefined && { galeria: f.gallery }),
+    ...(f.resources !== undefined && { recursos: f.resources }),
     ...(f.status !== undefined && { status: f.status }),
     ...(f.openingHours !== undefined && { horarioAbertura: f.openingHours }),
     ...(f.weekdays !== undefined && { diasFuncionamento: f.weekdays }),
     ...(f.slotMinutes !== undefined && { duracaoMinutos: f.slotMinutes }),
   }),
 );
-async function createRoom(dto: Omit<Room, "id">): Promise<Room> {
-  const created = await roomResource.create(dto as Partial<Room>);
-  roomExtras.set(created.id, { resources: dto.resources ?? [], slots: dto.slots });
-  return { ...created, resources: dto.resources ?? [], slots: dto.slots };
-}
-async function updateRoom(id: string, dto: Partial<Room>): Promise<Room | undefined> {
-  if (dto.resources !== undefined || dto.slots !== undefined) {
-    const prev = roomExtras.get(id) ?? { resources: [] as Resource[] };
-    roomExtras.set(id, { resources: dto.resources ?? prev.resources, slots: dto.slots ?? prev.slots });
-  }
-  return roomResource.update(id, dto);
-}
 
+type BackHistorico = { id: string; campo?: string | null; valorAntigo?: string | null; valorNovo?: string | null; criadoEm: string; usuario?: { id: string; nome: string } | null };
 type ReservaBack = {
   id: string; codigo: string; ambienteId: string; responsavelId?: string | null; responsavel: string;
   setorId?: string | null; setor?: string | null; evento: string; finalidade?: string | null; data: string;
   horarioInicio: string; horarioFim: string; participantes: number; status: string; recorrencia: string;
   observacoes?: string | null; decididoPor?: string | null; decididoEm?: string | null;
+  motivoCancelamento?: string | null; historico?: BackHistorico[];
 };
-/** Conversa/histórico local — o backend não tem tabela para isso (ver comentário no topo do arquivo). */
-const reservationExtras = new Map<string, { events: ReservationEvent[]; cancellationReason?: string; decidedBy?: string }>(
-  db.reservations.map((r) => [r.id, { events: r.events, cancellationReason: r.cancellationReason, decidedBy: r.decidedBy }]),
-);
+
+function historicoToEvent(h: BackHistorico): ReservationEvent | null {
+  if (h.campo === 'status') {
+    return { id: h.id, kind: "status", author: h.usuario?.nome ?? "—", at: h.criadoEm, from: (h.valorAntigo ?? "analise") as ReservationStatus, to: (h.valorNovo ?? "analise") as ReservationStatus };
+  }
+  if (h.campo === 'horario') {
+    return { id: h.id, kind: "schedule", author: h.usuario?.nome ?? "—", at: h.criadoEm, from: h.valorAntigo ?? "", to: h.valorNovo ?? "" };
+  }
+  return null;
+}
 
 function reservaToFront(b: ReservaBack): Reservation {
-  const extra = reservationExtras.get(b.id) ?? { events: [] };
+  const historicoEvents = (b.historico ?? []).map(historicoToEvent).filter((e): e is ReservationEvent => e !== null);
+  const ultimoStatus = [...(b.historico ?? [])].reverse().find((h) => h.campo === 'status');
   return {
     id: b.id, code: b.codigo, spaceId: b.ambienteId, roomId: b.ambienteId, responsible: b.responsavel,
     sector: b.setor ?? "", event: b.evento, purpose: b.finalidade ?? "", date: b.data, start: b.horarioInicio,
     end: b.horarioFim, participants: b.participantes, status: b.status as ReservationStatus,
     recurrence: b.recorrencia as Reservation["recurrence"], notes: b.observacoes ?? undefined,
-    events: extra.events, cancellationReason: extra.cancellationReason, decidedBy: extra.decidedBy,
+    events: historicoEvents, cancellationReason: b.motivoCancelamento ?? undefined, decidedBy: ultimoStatus?.usuario?.nome,
   };
 }
 
-const reservaResource = createRawResource<ReservaBack>(
-  "/reservas", "res",
-  db.reservations.map((r) => ({
-    id: r.id, codigo: r.code, ambienteId: r.roomId, responsavelId: undefined, responsavel: r.responsible,
-    setor: r.sector, evento: r.event, finalidade: r.purpose, data: r.date, horarioInicio: r.start,
-    horarioFim: r.end, participantes: r.participants, status: r.status, recorrencia: r.recurrence ?? "unica",
-    observacoes: r.notes, decididoPor: r.decidedBy, decididoEm: undefined,
-  })),
-);
+async function reservaComMensagens(id: string): Promise<Reservation> {
+  const [back, mensagens] = await Promise.all([
+    request<ReservaBack>(`/reservas/${id}`),
+    request<Array<{ id: string; mensagem: string; criadoEm: string; usuario?: { id: string; nome: string } | null }>>(`/reservas/${id}/mensagens`).catch(() => []),
+  ]);
+  const reserva = reservaToFront(back);
+  const mensagemEvents: ReservationEvent[] = mensagens.map((m) => ({
+    id: m.id, kind: "message", author: m.usuario?.nome ?? "—",
+    role: m.usuario?.id && m.usuario.id === back.responsavelId ? "solicitante" : "gestor",
+    at: m.criadoEm, body: m.mensagem,
+  }));
+  reserva.events = [...reserva.events, ...mensagemEvents].sort((a, b) => a.at.localeCompare(b.at));
+  return reserva;
+}
+
+const reservaResource = createRawResource<ReservaBack>("/reservas", "res", []);
 
 export const roomService = {
   async getAll(filters?: Filters<Room>): Promise<Room[]> {
@@ -149,11 +139,14 @@ export const roomService = {
   async getById(id: string): Promise<Room | undefined> {
     return roomResource.get(id).catch(() => undefined);
   },
-  create: createRoom,
-  update: updateRoom,
+  async create(dto: Omit<Room, "id">): Promise<Room> {
+    return roomResource.create(dto as Partial<Room>);
+  },
+  async update(id: string, dto: Partial<Room>): Promise<Room | undefined> {
+    return roomResource.update(id, dto);
+  },
   async remove(id: string): Promise<boolean> {
     await roomResource.remove(id);
-    roomExtras.delete(id);
     return true;
   },
   async search(query: string): Promise<Room[]> {
@@ -181,7 +174,6 @@ export const roomService = {
       horarioFim: dto.end, participantes: dto.participants, status: dto.status, recorrencia: dto.recurrence ?? "unica",
       observacoes: dto.notes,
     } as Partial<ReservaBack>);
-    reservationExtras.set(created.id, { events: dto.events ?? [], cancellationReason: dto.cancellationReason, decidedBy: dto.decidedBy });
     return reservaToFront(created);
   },
   async updateReservation(id: string, dto: Partial<Reservation>): Promise<Reservation | undefined> {
@@ -202,45 +194,22 @@ export const roomService = {
     return reservaToFront(updated);
   },
   async getReservationById(id: string): Promise<Reservation | undefined> {
-    return reservaResource.get(id).then(reservaToFront).catch(() => undefined);
+    return reservaComMensagens(id).catch(() => undefined);
   },
-  async addReservationMessage(id: string, message: Pick<Extract<ReservationEvent, { kind: "message" }>, "author" | "role" | "body">) {
-    const event: ReservationEvent = { ...message, id: nextId("reservation-message"), kind: "message", at: new Date().toISOString() };
-    const extra = reservationExtras.get(id) ?? { events: [] };
-    reservationExtras.set(id, { ...extra, events: [...extra.events, event] });
+  async addReservationMessage(id: string, message: { body: string }) {
+    await request(`/reservas/${id}/mensagens`, { method: "POST", body: { mensagem: message.body } });
     return this.getReservationById(id);
   },
-  async changeReservationSchedule(id: string, date: string, start: string, end: string, author: string, reason?: string) {
-    const current = await this.getReservationById(id);
-    if (!current) return undefined;
+  async changeReservationSchedule(id: string, date: string, start: string, end: string) {
     await reservaResource.update(id, { data: date, horarioInicio: start, horarioFim: end });
-    const event: ReservationEvent = {
-      id: nextId("reservation-schedule"), kind: "schedule", author, at: new Date().toISOString(),
-      from: `${current.date} · ${current.start}–${current.end}`, to: `${date} · ${start}–${end}`, reason,
-    };
-    const extra = reservationExtras.get(id) ?? { events: [] };
-    reservationExtras.set(id, { ...extra, events: [...extra.events, event] });
     return this.getReservationById(id);
   },
-  async changeReservationStatus(id: string, status: Reservation["status"], author: string, reason?: string) {
-    const current = await this.getReservationById(id);
-    if (!current) return undefined;
-    await request(`/reservas/${id}/status`, { method: "PATCH", body: { status } });
-    const event: ReservationEvent = {
-      id: nextId("reservation-status"), kind: "status", author, at: new Date().toISOString(),
-      from: current.status, to: status, reason,
-    };
-    const extra = reservationExtras.get(id) ?? { events: [] };
-    reservationExtras.set(id, {
-      events: [...extra.events, event],
-      cancellationReason: status === "cancelada" ? reason : extra.cancellationReason,
-      decidedBy: author,
-    });
+  async changeReservationStatus(id: string, status: Reservation["status"], _author: string, reason?: string) {
+    await request(`/reservas/${id}/status`, { method: "PATCH", body: { status, motivo: reason } });
     return this.getReservationById(id);
   },
   async removeReservation(id: string): Promise<boolean> {
     await reservaResource.remove(id);
-    reservationExtras.delete(id);
     return true;
   },
 
