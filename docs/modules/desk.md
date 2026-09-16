@@ -2,7 +2,7 @@
 
 ## Objetivo do módulo
 
-O Rooster Desk é o sistema de chamados (helpdesk/tickets) do Rooster One. Permite abrir, listar, filtrar e acompanhar chamados internos, com categorias, SLA, prioridade, status, histórico de eventos (timeline) e comentários públicos/internos. Atualmente opera sobre dados mockados em memória (`src/mock/database` e `src/services/mock-api`), simulando uma futura API real de tickets.
+O Rooster Desk é o sistema de chamados (helpdesk/tickets) do Rooster One. Permite abrir, listar, filtrar e acompanhar chamados internos, com categorias, SLA, prioridade, status, histórico de eventos (timeline) e comentários públicos/internos. Ligado ao backend real (`/chamados*`) desde a integração de RBAC/JWT — ver `docs/integracao-backend.md` para as limitações conhecidas (a conversa é real; o restante da timeline de eventos não tem tabela no backend e continua só no navegador).
 
 ## Rotas
 
@@ -124,19 +124,23 @@ Superfície REST prevista para a taxonomia de chamados. Opera sobre o store reat
 | `getSectors` | `() => Promise<string[]>` | `GET /chamados-setores` |
 | `setAgentSubcategories` | `(agent: string, subIds: string[]) => Promise<boolean>` | `PUT /chamados-atendentes/:id/subcategorias` |
 
-As telas de categorias/atendentes hoje mutam o store diretamente (`categoriesApi`) para manter a reatividade instantânea; na integração, cada chamada de `categoriesApi` deve ser substituída pelo método equivalente de `deskCategoryService`.
+As telas de categorias/atendentes mutam o store diretamente (`categoriesApi`) para manter a reatividade instantânea; cada chamada de `categoriesApi` (`upsert`/`remove`/`addSub`/`updateSub`/`removeSub`) agora chama o método real de `deskCategoryService` e recarrega o store a partir do backend em seguida — não é mais mutação local.
 
-## Dados mockados do módulo
+## Dados mockados do módulo (fallback offline)
 
-| Tabela (`db`) | Arquivo | Conteúdo | Endpoint previsto |
+`src/mock/database/tickets.ts` e `deskCategories.ts` continuam existindo, mas
+só como dado de exemplo — nenhum serviço do Desk lê deles em tempo de
+execução; `ticket.service.ts` e `desk-category.service.ts` chamam
+`/chamados*` direto. Os tipos (`Ticket`, `DeskCategory`, `DeskSubcategory`...)
+continuam sendo reexportados de lá.
+
+| Tabela (`db`) | Arquivo | Conteúdo | Endpoint real |
 |---|---|---|---|
 | `tickets` | `src/mock/database/tickets.ts` | Chamados (com `categoryId` e `events`). | `/chamados` |
 | `ticketCategories` | `src/mock/database/tickets.ts` | Categorias usadas pela fila de chamados. | `/chamados-categorias` |
-| `deskCategories` | `src/mock/database/deskCategories.ts` | Categorias + subcategorias (SLA e atendentes). | `/chamados-categorias` |
+| `deskCategories` | `src/mock/database/deskCategories.ts` | Categorias + subcategorias (SLA e atendentes). | `/chamados-categorias`, `/chamados-subcategorias` |
 | `deskSectors` | `src/mock/database/deskCategories.ts` | Setores donos de categorias. | `/chamados-setores` |
 | `deskAgents` | `src/mock/database/deskCategories.ts` | Atendentes disponíveis (36 registros). | `/chamados-atendentes` |
-
-Para remover o mock após a integração: apague `src/mock/database/tickets.ts` e `src/mock/database/deskCategories.ts`, tire as entradas de `src/mock/database/index.ts` e de `MOCK_ENDPOINT_MAP`, e troque o corpo de `ticket.service.ts`/`desk-category.service.ts` por chamadas `http`. Nenhuma tela do Desk importa `src/mock` diretamente, exceto os tipos reexportados.
 
 ## Estado
 
@@ -176,4 +180,8 @@ Para remover o mock após a integração: apague `src/mock/database/tickets.ts` 
 | "Anexar" | `/desk/tickets/$id`, caixa de resposta | Botão visual, sem ação implementada | Nenhum |
 | "Enviar" (resposta) | `/desk/tickets/$id`, caixa de resposta | Botão visual, sem ação implementada (não persiste `reply`) | Nenhum |
 
-Observação: diversas ações de detalhe do chamado (transferir, registrar solução, reabrir, encerrar, alterar status/prioridade/categoria via ações rápidas, enviar resposta/anexo) existem apenas como elementos de interface nesta versão; não há integração com `ticketService` para essas operações.
+Observação: "Registrar solução", "Reabrir", "Encerrar" e o envio de mensagem
+(pública/interna) chamam `ticketService.update`/`sendMessage` de verdade. As
+ações rápidas de status/prioridade/categoria na barra lateral e "Transferir
+chamado" continuam sem `onClick` — precisam de um seletor (de status/
+prioridade/categoria ou de técnico) que ainda não existe na tela.

@@ -5,7 +5,7 @@ Documento de referência do padrão descrito em [README.md](./README.md).
 ## 1. Visão geral
 
 O Rooster Hub é o módulo de **identidade e controle de acesso** da
-plataforma: cadastra usuários, setores, perfis (papéis), módulos do sistema,
+plataforma: cadastra usuários, setores, módulos do sistema,
 permissões e as associações entre eles (RBAC), além de registrar
 notificações, sessões de login e trilha de auditoria.
 
@@ -24,15 +24,12 @@ por outros módulos (Rooms, Assets, Desk, etc.).
 └─────┬─────┘        └──────┬─────┘        └─────┬─────┘
       │ 1:N                 │ N:M               │ N:M
       ▼                     ▼                     ▼
-┌────────────┐   ┌─────────────────────┐  ┌─────────────────────┐
-│ permissoes │   │  usuarios_perfis    │  │  usuarios_setores    │
-└─────┬──────┘   │ usuarioId, perfilId │  │ usuarioId, setorId   │
-      │ N:M      └──────────┬──────────┘  └──────────────────────┘
-      ▼                     │
-┌───────────────────┐       ▼
-│ perfis_permissoes │  ┌──────────┐
-│ perfilId, permId  │◀─┤  perfis  │
-└────────────────────┘  └──────────┘
+┌────────────┐   ┌──────────────────────┐  ┌──────────────────────┐
+│ permissoes │   │ usuarios_permissoes  │  │  usuarios_setores    │
+└─────┬──────┘   │ usuarioId, permId    │  │ usuarioId, setorId   │
+      │ N:M      └──────────────────────┘  └──────────────────────┘
+      └──────────────────▲
+                 (autorização direta usuário → permissão)
 
 usuarios ──1:N──▶ notificacoes
 usuarios ──1:N──▶ sessoes
@@ -72,18 +69,6 @@ Constraints: `unique (email)`; `unique (cpf)` (parcial, `where cpf is not null`)
 
 Constraints: `unique (nome)`.
 
-### 3.3 `perfis` — tipo TS `Perfil`
-
-| Coluna | Tipo SQL | Nulo | Default | Descrição |
-|---|---|---|---|---|
-| `id` | uuid | não | `gen_random_uuid()` | PK |
-| `nome` | text | não | — | Nome do perfil/papel (UNIQUE) |
-| `descricao` | text | sim | — | Descrição |
-| `ativo` | boolean | não | `true` | Perfil ativo |
-| `criado_em` | timestamptz | não | `now()` | Auditoria |
-
-Constraints: `unique (nome)`.
-
 ### 3.4 `modulos` — tipo TS `Modulo`
 
 | Coluna | Tipo SQL | Nulo | Default | Descrição |
@@ -111,17 +96,6 @@ Constraints: `unique (nome)`.
 
 Constraints: `unique (nome)`. Índice: `idx_permissoes_modulo(modulo_id)`.
 
-### 3.6 `usuarios_perfis` — tipo TS `UsuarioPerfil`
-
-| Coluna | Tipo SQL | Nulo | Default | Descrição |
-|---|---|---|---|---|
-| `id` | uuid | não | `gen_random_uuid()` | PK |
-| `usuario_id` | uuid | não | — | FK → `usuarios(id)` `on delete cascade` |
-| `perfil_id` | uuid | não | — | FK → `perfis(id)` `on delete cascade` |
-| `criado_em` | timestamptz | não | `now()` | Auditoria |
-
-Constraints: `unique (usuario_id, perfil_id)`.
-
 ### 3.7 `usuarios_setores` — tipo TS `UsuarioSetor`
 
 | Coluna | Tipo SQL | Nulo | Default | Descrição |
@@ -132,17 +106,6 @@ Constraints: `unique (usuario_id, perfil_id)`.
 | `criado_em` | timestamptz | não | `now()` | Auditoria |
 
 Constraints: `unique (usuario_id, setor_id)`.
-
-### 3.8 `perfis_permissoes` — tipo TS `PerfilPermissao`
-
-| Coluna | Tipo SQL | Nulo | Default | Descrição |
-|---|---|---|---|---|
-| `id` | uuid | não | `gen_random_uuid()` | PK |
-| `perfil_id` | uuid | não | — | FK → `perfis(id)` `on delete cascade` |
-| `permissao_id` | uuid | não | — | FK → `permissoes(id)` `on delete cascade` |
-| `criado_em` | timestamptz | não | `now()` | Auditoria |
-
-Constraints: `unique (perfil_id, permissao_id)`.
 
 ### 3.9 `notificacoes` — tipo TS `Notificacao`
 
@@ -201,15 +164,16 @@ por convenção deve usar os valores:
 ## 5. Regras de negócio
 
 1. `email` e `cpf` (quando informado) de `usuarios` são únicos.
-2. Um usuário pode ter múltiplos perfis (`usuarios_perfis`) e pertencer a
-   múltiplos setores (`usuarios_setores`); a UI usa o primeiro setor
-   encontrado como setor "principal" (ver `hub-directory.ts`).
-3. Permissões efetivas de um usuário = união das permissões de todos os seus
-   perfis (`usuarios_perfis` → `perfis_permissoes` → `permissoes`).
+2. Um usuário pode pertencer a múltiplos setores (`usuarios_setores`); a UI usa o
+   primeiro setor encontrado como setor "principal" (ver `hub-directory.ts`). O
+   vínculo é gerenciado exclusivamente na tela `/hub/setores`.
+3. Permissões efetivas de um usuário = linhas de `usuarios_permissoes` do próprio
+   usuário (chave `modulo.tela.acao` em `permissoes`). Não existe perfil/papel
+   intermediário; setor não concede permissão.
 4. Excluir um `modulo` não deve remover as `permissoes` associadas
    (`on delete set null`) para preservar o histórico de auditoria.
-5. Excluir `perfil` ou `usuario` cascateia nas tabelas de associação
-   (`usuarios_perfis`, `usuarios_setores`, `perfis_permissoes`).
+5. Excluir um `usuario` cascateia nas tabelas de associação
+   (`usuarios_setores`, `usuarios_permissoes`).
 6. `sessoes.revogada = true` ou `expira_em` no passado invalidam o
    `refresh_token` imediatamente.
 7. Toda operação de escrita (`create`/`update`/`remove`) feita por um
@@ -227,12 +191,10 @@ Devem coincidir com `MOCK_ENDPOINT_MAP` em `src/mock/index.ts` e com os
 |---|---|---|
 | Usuários | `/usuarios` | `GET`, `GET /:id`, `POST`, `PATCH /:id`, `DELETE /:id` |
 | Setores | `/setores` | idem |
-| Perfis | `/perfis` | idem |
 | Módulos | `/modulos` | idem |
 | Permissões | `/permissoes` | idem |
-| Usuário × Perfil | `/usuarios-perfis` | `GET`, `POST`, `DELETE /:id` |
 | Usuário × Setor | `/usuarios-setores` | `GET`, `POST`, `DELETE /:id` |
-| Perfil × Permissão | `/perfis-permissoes` | `GET`, `POST`, `DELETE /:id` |
+| Usuário × Permissão | `/usuarios-permissoes` | `GET`, `POST`, `DELETE /:id` |
 | Notificações | `/notificacoes` | `GET`, `GET /:id`, `POST`, `PATCH /:id`, `DELETE /:id` |
 | Sessões | `/sessoes` | `GET`, `GET /:id`, `DELETE /:id` |
 | Logs de auditoria | `/logs-auditoria` | `GET`, `GET /:id` |
@@ -243,12 +205,10 @@ Devem coincidir com `MOCK_ENDPOINT_MAP` em `src/mock/index.ts` e com os
 |---|---|---|
 | `Usuario` | `src/services/hub/seed.ts` (`seedUsuarios`) | `usuarios` |
 | `Setor` | `src/services/hub/seed.ts` (`seedSetores`) | `setores` |
-| `Perfil` | `src/services/hub/seed.ts` (`seedPerfis`) | `perfis` |
 | `Modulo` | `src/services/hub/seed.ts` (`seedModulos`) | `modulos` |
 | `Permissao` | `src/services/hub/seed.ts` (`seedPermissoes`) | `permissoes` |
-| `UsuarioPerfil` | `src/services/hub/seed.ts` (`seedUsuariosPerfis`) | `usuarios_perfis` |
 | `UsuarioSetor` | `src/services/hub/seed.ts` (`seedUsuariosSetores`) | `usuarios_setores` |
-| `PerfilPermissao` | `src/services/hub/seed.ts` (`seedPerfisPermissoes`) | `perfis_permissoes` |
+| `UsuarioPermissao` | `src/services/hub/seed.ts` (`seedUsuariosPermissoes`) | `usuarios_permissoes` |
 | `Notificacao` | `src/services/hub/seed.ts` (`seedNotificacoes`) | `notificacoes` |
 | `Sessao` | `src/services/hub/seed.ts` (`seedSessoes`) | `sessoes` |
 | `LogAuditoria` | `src/services/hub/seed.ts` (`seedLogs`) | `logs_auditoria` |

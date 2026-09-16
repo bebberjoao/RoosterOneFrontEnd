@@ -66,7 +66,10 @@ export const MODULE_MANIFEST: ModuleManifest[] = [
     name: "Rooster Rooms",
     basePath: "/rooms",
     docs: "docs/modules/rooms.md",
-    routes: ["rooms.tsx", "rooms.index.tsx", "rooms.structure.tsx", "rooms.reservations.tsx"],
+    routes: [
+      "rooms.tsx", "rooms.index.tsx", "rooms.structure.tsx", "rooms.book.tsx",
+      "rooms.reservations.index.tsx", "rooms.reservations.$id.tsx", "rooms.manage.tsx",
+    ],
     services: ["src/services/mock-api/room.service.ts"],
     tables: ["campuses", "blocks", "rooms", "reservations"],
   },

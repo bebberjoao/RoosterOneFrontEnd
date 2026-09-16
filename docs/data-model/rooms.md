@@ -263,3 +263,19 @@ Devem coincidir com `MOCK_ENDPOINT_MAP` em `src/mock/index.ts`.
 | `Space`/`Room` | `src/mock/database/rooms.ts` | `rooms` (+ `room_slots`, `room_resources`) |
 | `Reservation` | `src/mock/database/reservations.ts` | `reservations` (+ `reservation_equipment`) |
 | `roomService.*` | `src/services/mock-api/room.service.ts` | consumidor dos endpoints acima |
+
+## Acompanhamento e gestão de reservas
+
+- **Minhas reservas** lista as solicitações do usuário autenticado e abre o histórico compartilhado.
+- O solicitante pode enviar mensagens, solicitar nova data/horário e cancelar com motivo.
+- **Gerenciar reservas** é restrito a administrador, técnico, institucional e coordenador; mantém agenda e fila completa.
+- Gestores podem responder, aprovar, alterar horário ou cancelar informando o motivo.
+- Toda ação grava um `reservation_event`; a tela nunca lê seeds diretamente e usa apenas `roomService`.
+
+### Endpoints adicionais
+
+- `GET /reservas/:id`
+- `POST /reservas/:id/mensagens`
+- `PATCH /reservas/:id/horario`
+- `PATCH /reservas/:id/status`
+- `GET /reservas?responsible_id=me`

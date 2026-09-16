@@ -35,7 +35,9 @@ Cadastro e gestão do patrimônio institucional (equipamentos, mobiliário etc.)
 
 ## Serviços e funções usadas
 
-Serviço: `assetService` em `src/services/mock-api/asset.service.ts` (mock local em memória, com `delay()`).
+Serviço: `assetService` em `src/services/mock-api/asset.service.ts` — ligado
+ao backend real (`/patrimonio*`) via `mapResource` (ver
+`docs/integracao-backend.md`).
 
 | Função | Assinatura | Uso |
 |---|---|---|

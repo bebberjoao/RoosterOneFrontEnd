@@ -154,3 +154,20 @@ reservation_equipment N ─ 1 assets  (Rooster Assets) [assetId]
 Regra crítica: não pode haver duas `reservations` do mesmo `roomId` com
 intervalos sobrepostos na mesma `date` quando `status` for `confirmada` ou
 `andamento` (ver constraint de exclusão em [rooms.md §3.6](./rooms.md)).
+
+## reservation_events
+
+| coluna | tipo | regra |
+|---|---|---|
+| id | uuid | PK |
+| reservation_id | uuid | FK reservations.id, obrigatório, indexado |
+| kind | enum | message, status, schedule |
+| author_id | uuid | FK users.id |
+| author_name | varchar(160) | snapshot do autor |
+| author_role | enum | solicitante, gestor |
+| body | text | mensagem ou justificativa |
+| from_value | varchar(255) | valor anterior em eventos de auditoria |
+| to_value | varchar(255) | novo valor em eventos de auditoria |
+| created_at | timestamptz | obrigatório |
+
+As mensagens são compartilhadas entre solicitante e gestores. Alterações de horário e status geram eventos imutáveis. Cancelamentos exigem motivo e persistem `cancellation_reason`, `decided_by` e `decided_at` na reserva.

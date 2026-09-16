@@ -2,44 +2,60 @@
 
 ## Contrato da permissão
 
-Cada permissão pertence a um módulo e usa a forma `recurso.acao`:
+Não existe mais Perfil/Role como intermediário: um usuário recebe
+permissões diretamente (`usuarios_permissoes`). A fonte única do catálogo é
+`src/components/rooster/hub/permission-catalog.ts` — módulo → tela → ação,
+derivado de `module-config.ts` (não duplicado à mão). A chave canônica de
+uma permissão é `modulo.tela.acao` (`permissionKey()`), e toda tela tem a
+ação obrigatória `acessar`: sem ela, o menu esconde a tela e a rota mostra
+"Acesso negado" (`useCanAccess`/`RequireAccess` em `permission-context.tsx`).
 
-- `access`: entrada no módulo ou recurso.
-- `read`: leitura, listagem e consulta.
-- `create`: criação e envio.
-- `update`: edição, aprovação, lançamento ou mudança de status.
-- `delete`: exclusão, cancelamento ou revogação.
+Ao conceder uma permissão pela tela **Hub > Acessos e permissões**, o
+registro em `permissoes` é criado sob demanda (`recurso` = rota da tela,
+`acao` = id da ação) e o vínculo vai para `usuarios_permissoes`. É a mesma
+tabela que o backend consulta em `@RequirePermission` — conceder ali
+controla a API de verdade, não só a interface.
 
-O catálogo da tela **Hub > Acessos e permissões** é gerado em `src/services/hub/seed.ts` com IDs determinísticos no formato `modulo-recurso-acao`.
+## Telas e ações por módulo
 
-## Recursos mapeados
+Fonte de verdade em código: `permission-catalog.ts`. Resumo (cada tela tem,
+além do listado, a ação `acessar`):
 
-| Módulo | Recursos |
-| --- | --- |
-| Rooster Hub | usuários, setores, perfis, permissões, módulos, sessões, logs, notificações, vínculos |
-| Rooster Desk | tickets, categorias, subcategorias, prioridades, status, mensagens, anexos, histórico, avaliações, equipe |
-| Rooster Student | perfil, disciplinas, atividades, notas, frequência, histórico, calendário, cursos, financeiro, reservas, chamados, documentos, notificações |
-| Rooster Academy | disciplinas, turmas, professores, matrículas, calendário, frequência, conteúdos, notas, desempenho, períodos, documentos |
-| Rooster Rooms | campi, blocos, ambientes, reservas |
-| Rooster Assets | ativos, categorias, movimentações |
-| Rooster Finance | cobranças, mensalidades, boletos, produtos, serviços, notas fiscais, relatórios, descontos, configurações |
-| Rooster Learn | atividades, questões, turmas, notas, relatórios, entregas |
-| Rooster Boost | cursos, conteúdos, inscrições, certificados |
+| Módulo | Tela | Ações |
+| --- | --- | --- |
+| Rooster Hub | `/hub/usuarios` | criar, editar, excluir |
+| Rooster Hub | `/hub/setores` | criar, editar, excluir, gerenciar-usuarios |
+| Rooster Hub | `/hub/acessos` | gerenciar-permissoes, conceder, revogar |
+| Rooster Desk | `/desk/tickets` | criar, editar, encerrar, reabrir, transferir, registrar-solucao, anexar, nota-interna |
+| Rooster Desk | `/desk/categories` | criar, editar, excluir, subcategorias |
+| Rooster Desk | `/desk/team` | criar, editar, excluir, vincular-categoria |
+| Rooster Rooms | `/rooms/book` | solicitar |
+| Rooster Rooms | `/rooms/reservations` | mensagem, alterar-horario, cancelar |
+| Rooster Rooms | `/rooms/manage` | aprovar, responder, cancelar, alterar-horario |
+| Rooster Rooms | `/rooms/structure` | criar, editar, excluir, gerar-periodos |
+| Rooster Assets | `/assets/inventory` | criar, editar, excluir, movimentar, gerenciar-categorias |
+| Rooster Student, Academy, Finance, Learn, Boost | — | ver `permission-catalog.ts` (telas mapeadas, sem backend próprio ainda) |
 
-Todos os recursos têm as cinco ações do contrato. A aplicação pode restringir ações por perfil e por escopo do usuário (por exemplo, aluno consulta apenas os próprios dados), mas não deve remover a permissão estrutural do catálogo.
+## Estado da integração (backend)
 
-## Matriz inicial de perfis
+Hub, Desk, Rooms e Assets têm `PermissionGuard` + `@RequirePermission`
+registrados em **todos** os endpoints (não só no Desk) — ver
+[`RoosterOneBackend-main/docs/rbac.md`](../../RoosterOneBackend-main/docs/rbac.md)
+para o mapeamento completo `modulo/recurso/acao` de cada rota. O `recurso`
+usado pelo backend é a mesma rota de tela deste catálogo (ex.:
+`/rooms/manage`), não um nome de recurso genérico — as duas pontas falam a
+mesma linguagem.
 
-| Perfil | Módulos liberados |
-| --- | --- |
-| Administrador | Todos, com todas as ações |
-| Coordenador | Hub, Desk, Student, Academy, Rooms, Assets e Learn; sem exclusão |
-| Professor | Desk, Student, Academy, Rooms e Learn; sem exclusão |
-| Financeiro | Desk, Assets e Finance; sem exclusão |
-| Aluno | Desk, Student, Rooms, Learn e Boost; acesso de criação limitado ao próprio fluxo |
-| Técnico de TI | Desk, Rooms e Assets, incluindo exclusão operacional |
-| Usuário institucional | Desk, Student, Rooms e Assets; sem exclusão |
+Academy, Learn, Finance, Boost e Student têm telas mapeadas aqui (para a UI
+mostrar/ocultar corretamente), mas **nenhuma permissão deles é validada no
+servidor**, porque esses módulos não têm backend ainda.
 
-## Estado da integração
+## Matriz padrão de demonstração
 
-A tela frontend já lista o catálogo completo, permite associar o módulo ao cadastrar uma permissão e gera a matriz de vínculos para os sete perfis. O backend ainda aplica autorização de forma explícita apenas no Rooster Desk, em `hasPermission`; os demais controllers CRUD ainda precisam receber guards usando o mesmo contrato `modulo + recurso + acao` antes de considerar o RBAC pronto para produção.
+Quando um usuário não tem nenhuma permissão própria em `usuarios_permissoes`
+(`hasCustom === false` em `permission-context.tsx`), a navegação cai de
+volta para a matriz por papel de demonstração em `module-config.ts` +
+`role-context.tsx` (a mesma usada pelo `RoleSwitcher`, rotulado "Visão" —
+não é mais um papel do RBAC, só a persona ativa no ambiente de
+desenvolvimento). Isso existe só para o ambiente continuar navegável antes
+de qualquer permissão real ser concedida a alguém.

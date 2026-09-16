@@ -181,10 +181,11 @@ a sidebar quanto o breadcrumb da topbar.
 
 ### Dados
 - `HOME_ITEM` — item fixo "Início" (`/`).
-- `MODULES: ModuleItem[]` — lista de todos os módulos do sistema: Rooster
-  Hub, Desk, Student, Academy, Rooms, Assets, Finance, Learn, Boost — cada
-  um com ícone, cor de destaque (`accent`), perfis permitidos (`roles`) e
-  sub-itens de navegação (`children`).
+- `MODULES: ModuleItem[]` — lista de todos os módulos do sistema, **na ordem
+  exata em que aparecem na barra lateral**: Rooster Hub, Desk, Rooms, Assets,
+  Finance, Student, Academy, Learn, Boost — cada um com ícone, cor de destaque
+  (`accent`), perfis permitidos (`roles`) e sub-itens (`children`).
+  A ordem da sidebar é a ordem do array; não há ordenação em tempo de execução.
 - `ADMIN_ITEMS` — itens extras exibidos apenas para `admin` (hoje apenas
   "Configurações", `/settings`).
 
@@ -202,13 +203,14 @@ a sidebar quanto o breadcrumb da topbar.
 |---|---|
 | Rooster Hub | admin |
 | Rooster Desk | admin, professor, coordenador, financeiro, tecnico, institucional |
-| Rooster Student | admin, aluno, coordenador |
-| Rooster Academy | admin, professor, coordenador |
 | Rooster Rooms | admin, professor, coordenador, aluno, tecnico, institucional |
 | Rooster Assets | admin, tecnico, coordenador, financeiro, institucional |
 | Rooster Finance | admin, financeiro |
+| Rooster Student | admin, aluno, coordenador |
+| Rooster Academy | admin, professor, coordenador |
 | Rooster Learn | admin, professor, coordenador, aluno |
 | Rooster Boost | admin, aluno |
+
 
 ## `page-header.tsx`
 

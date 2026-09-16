@@ -32,16 +32,6 @@ ativo       boolean   (default true)
 criadoEm    datetime
 ```
 
-## perfis
-
-```
-id          string    (uuid, PK)
-nome        string    (único)
-descricao   string?
-ativo       boolean   (default true)
-criadoEm    datetime
-```
-
 ## modulos
 
 ```
@@ -65,16 +55,6 @@ acao        string?   ('read'|'create'|'update'|'delete'|'manage')
 criadoEm    datetime
 ```
 
-## usuarios_perfis
-
-```
-id          string    (uuid, PK)
-usuarioId   string    (FK -> usuarios.id, cascade)
-perfilId    string    (FK -> perfis.id, cascade)
-criadoEm    datetime
-```
-Único: `(usuarioId, perfilId)`.
-
 ## usuarios_setores
 
 ```
@@ -83,17 +63,7 @@ usuarioId   string    (FK -> usuarios.id, cascade)
 setorId     string    (FK -> setores.id, cascade)
 criadoEm    datetime
 ```
-Único: `(usuarioId, setorId)`.
-
-## perfis_permissoes
-
-```
-id            string  (uuid, PK)
-perfilId      string  (FK -> perfis.id, cascade)
-permissaoId   string  (FK -> permissoes.id, cascade)
-criadoEm      datetime
-```
-Único: `(perfilId, permissaoId)`.
+Único: `(usuarioId, setorId)`. Relação N:N preservada; gerenciada apenas na tela `/hub/setores`.
 
 ## notificacoes
 
@@ -132,3 +102,28 @@ ip            string?
 navegador     string?
 criadoEm      datetime
 ```
+
+## usuarios_permissoes
+
+```
+id            string   (uuid, PK)
+usuarioId     string   (FK -> usuarios.id, cascade)
+permissaoId   string   (FK -> permissoes.id, cascade)
+criadoEm      datetime
+```
+
+Único: `(usuarioId, permissaoId)`.
+
+Permissão concedida diretamente a um usuário pela tela `/hub/acessos`. O campo
+`permissoes.nome` guarda a chave canônica `modulo.tela.acao`
+(ex.: `rooms.rooms-manage.aprovar`), definida em
+`src/components/rooster/hub/permission-catalog.ts`.
+
+
+---
+
+## Removidas (remoção de perfis)
+
+`perfis`, `usuarios_perfis` e `perfis_permissoes` foram retiradas do modelo.
+A autorização é exclusivamente `usuarios_permissoes` + `permissoes`.
+Ver `alteracoes/remocao-perfis-setores/README.md`.
