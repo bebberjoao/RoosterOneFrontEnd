@@ -1,27 +1,46 @@
 // Store reativo (em memória) das categorias/subcategorias do Rooster Desk.
-// O DADO vive em src/mock/database/deskCategories.ts (ponto único de mock);
-// aqui ficam apenas o estado reativo e as mutações usadas pelas telas.
-// Na integração, troque as mutações por chamadas de `deskCategoryService`.
-import { useSyncExternalStore } from "react";
-import { deskCategories, deskSectors, deskAgents, deskAgentDirectory, deskAgentRoles } from "@/mock/database/deskCategories";
+// O dado agora vem do backend real via deskCategoryService; este arquivo só
+// mantém o estado local que a UI observa (useSyncExternalStore) e recarrega
+// depois de cada mutação, para telas que já esperavam esse padrão síncrono
+// (categoriesApi.upsert/remove/...) não precisarem mudar.
+import { useEffect, useSyncExternalStore } from "react";
+import { deskAgentDirectory, deskAgentRoles } from "@/mock/database/deskCategories";
 import type { DeskCategory, DeskSubcategory, DeskAgent } from "@/mock/database/deskCategories";
+import { deskCategoryService } from "@/services/mock-api/desk-category.service";
 
 export type { DeskCategory, DeskAgent };
 export type Subcategory = DeskSubcategory;
 
-export const SECTORS = deskSectors;
-export const AGENTS = deskAgents;
+export let SECTORS: string[] = [];
 export const AGENT_DIRECTORY = deskAgentDirectory;
 export const AGENT_ROLES = deskAgentRoles;
+export let AGENTS: string[] = [];
 
-let state: DeskCategory[] = deskCategories.map((c) => ({ ...c, subcategories: c.subcategories.map((s) => ({ ...s })) }));
+let state: DeskCategory[] = [];
+let loaded = false;
 
 const listeners = new Set<() => void>();
 function emit() {
   listeners.forEach((l) => l());
 }
 
+async function reload() {
+  const [cats, sectors, agents] = await Promise.all([
+    deskCategoryService.getAll(),
+    deskCategoryService.getSectors(),
+    deskCategoryService.getAgents(),
+  ]);
+  state = cats;
+  SECTORS = sectors;
+  AGENTS = agents;
+  loaded = true;
+  emit();
+}
+
 export function useDeskCategories() {
+  useEffect(() => {
+    if (!loaded) void reload();
+  }, []);
   return useSyncExternalStore(
     (l) => { listeners.add(l); return () => listeners.delete(l); },
     () => state,
@@ -36,31 +55,22 @@ export function getDeskCategoriesSnapshot() {
 
 export const categoriesApi = {
   upsert(cat: DeskCategory) {
-    state = state.some((c) => c.id === cat.id) ? state.map((c) => (c.id === cat.id ? cat : c)) : [cat, ...state];
-    emit();
+    const exists = state.some((c) => c.id === cat.id);
+    const op = exists
+      ? deskCategoryService.update(cat.id, cat)
+      : deskCategoryService.create(cat);
+    void op.then(() => reload());
   },
   remove(id: string) {
-    state = state.filter((c) => c.id !== id);
-    emit();
+    void deskCategoryService.remove(id).then(() => reload());
   },
   addSub(catId: string, sub: Omit<Subcategory, "id">) {
-    state = state.map((c) =>
-      c.id === catId ? { ...c, subcategories: [...c.subcategories, { ...sub, id: `${catId}-${Date.now()}` }] } : c,
-    );
-    emit();
+    void deskCategoryService.addSubcategory(catId, sub).then(() => reload());
   },
   updateSub(catId: string, subId: string, patch: Partial<Subcategory>) {
-    state = state.map((c) =>
-      c.id === catId
-        ? { ...c, subcategories: c.subcategories.map((s) => (s.id === subId ? { ...s, ...patch } : s)) }
-        : c,
-    );
-    emit();
+    void deskCategoryService.updateSubcategory(catId, subId, patch).then(() => reload());
   },
   removeSub(catId: string, subId: string) {
-    state = state.map((c) =>
-      c.id === catId ? { ...c, subcategories: c.subcategories.filter((s) => s.id !== subId) } : c,
-    );
-    emit();
+    void deskCategoryService.removeSubcategory(catId, subId).then(() => reload());
   },
 };

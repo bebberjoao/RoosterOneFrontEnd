@@ -49,10 +49,34 @@ export const Route = createFileRoute("/desk/tickets/$id")({
 });
 
 function TicketDetail() {
-  const ticket = Route.useLoaderData() as Ticket;
+  const initial = Route.useLoaderData() as Ticket;
   const navigate = useNavigate();
+  const [ticket, setTicket] = useState(initial);
   const [tab, setTab] = useState<"public" | "internal">("public");
   const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+
+  async function reload() {
+    const fresh = await ticketService.getById(ticket.id);
+    if (fresh) setTicket(fresh);
+  }
+
+  async function handleSend() {
+    if (!reply.trim()) return;
+    setSending(true);
+    try {
+      await ticketService.sendMessage(ticket.id, reply.trim(), tab === "internal");
+      setReply("");
+      await reload();
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function changeStatus(status: Ticket["status"]) {
+    await ticketService.update(ticket.id, { status });
+    await reload();
+  }
 
   return (
     <>
@@ -79,10 +103,9 @@ function TicketDetail() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5"><UserCog className="h-4 w-4" /> Transferir</Button>
-          <Button variant="outline" size="sm" className="gap-1.5"><CheckCircle2 className="h-4 w-4" /> Registrar solução</Button>
-          <Button variant="outline" size="sm" className="gap-1.5"><RotateCcw className="h-4 w-4" /> Reabrir</Button>
-          <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90"><XCircle className="h-4 w-4" /> Encerrar</Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => changeStatus("resolvido")}><CheckCircle2 className="h-4 w-4" /> Registrar solução</Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => changeStatus("aberto")}><RotateCcw className="h-4 w-4" /> Reabrir</Button>
+          <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90" onClick={() => changeStatus("encerrado")}><XCircle className="h-4 w-4" /> Encerrar</Button>
         </div>
       </div>
 
@@ -174,8 +197,8 @@ function TicketDetail() {
                   </span>
                 )}
               </div>
-              <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90">
-                <Send className="h-4 w-4" /> Enviar
+              <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90" disabled={sending || !reply.trim()} onClick={handleSend}>
+                <Send className="h-4 w-4" /> {sending ? "Enviando…" : "Enviar"}
               </Button>
             </div>
           </div>
