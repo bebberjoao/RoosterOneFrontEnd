@@ -38,7 +38,7 @@ export const offlineState = {
 
 const uid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 10)}`;
 
-function createResource<T extends { id: string }>(path: string, prefix: string, initial: T[]): HubResource<T> {
+export function createResource<T extends { id: string }>(path: string, prefix: string, initial: T[]): HubResource<T> {
   let local: T[] = initial.map((r) => ({ ...r }));
 
   async function withFallback<R>(remote: () => Promise<R>, fallback: () => R): Promise<R> {
