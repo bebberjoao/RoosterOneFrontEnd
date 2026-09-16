@@ -5,7 +5,7 @@ export const Route = createFileRoute("/hub")({
   head: () => ({
     meta: [
       { title: "Rooster Hub — Núcleo da plataforma" },
-      { name: "description", content: "Usuários, perfis, setores, módulos, permissões, sessões e auditoria do Rooster One." },
+      { name: "description", content: "Usuários, setores, módulos, permissões individuais, sessões e auditoria do Rooster One." },
       { property: "og:title", content: "Rooster Hub — Núcleo da plataforma" },
       { property: "og:description", content: "Gestão de identidade e acessos do ecossistema Rooster One." },
       { property: "og:type", content: "website" },

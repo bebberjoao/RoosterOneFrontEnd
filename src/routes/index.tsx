@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Rooster One — plataforma modular de gestão institucional. Acesse rapidamente os módulos disponíveis para o seu perfil.",
+          "Rooster One — plataforma modular de gestão institucional. Acesse rapidamente os módulos disponíveis para o seu acesso.",
       },
       { property: "og:title", content: "Início — Rooster One" },
       { property: "og:description", content: "Ecossistema integrado de gestão para instituições de ensino." },
@@ -61,13 +61,13 @@ function InicioPage() {
             </h1>
             <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
               Este é o seu ponto de partida no ecossistema institucional. Acesse os módulos disponíveis
-              para o seu perfil <span className="font-medium text-foreground">{ROLE_META[role].label}</span> e
+              para o seu acesso <span className="font-medium text-foreground">{ROLE_META[role].label}</span> e
               continue de onde parou — tudo em um único lugar.
             </p>
 
             <div className="mt-6 inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur">
               <Sparkles className="h-3.5 w-3.5" style={{ color: ROLE_META[role].tone }} />
-              {modules.length} módulos disponíveis para o seu perfil
+              {modules.length} módulos disponíveis para o seu acesso
             </div>
           </div>
 
@@ -132,7 +132,7 @@ function InicioPage() {
 
         {modules.length === 0 && (
           <div className="rounded-2xl border bg-card p-10 text-center text-sm text-muted-foreground">
-            Nenhum módulo disponível para este perfil.
+            Nenhum módulo disponível para este acesso.
           </div>
         )}
       </div>

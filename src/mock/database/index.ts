@@ -1,7 +1,6 @@
 // Barrel for the mock relational database. Re-exports every "table" module and
 // aggregates them into a single `db` object, mirroring how a real ORM client
 // (e.g. Prisma/TypeORM) groups repositories together.
-export * from "./roles";
 export * from "./users";
 export * from "./campuses";
 export * from "./blocks";
@@ -33,7 +32,6 @@ export * from "./notifications";
 export * from "./lessonContents";
 export * from "./academyDocs";
 
-import { roles } from "./roles";
 import { users } from "./users";
 import { campuses } from "./campuses";
 import { blocks } from "./blocks";
@@ -67,7 +65,6 @@ import { academyDocs } from "./academyDocs";
 
 /** Single object exposing every mock "table", analogous to a DB client instance. */
 export const db = {
-  roles,
   users,
   campuses,
   blocks,

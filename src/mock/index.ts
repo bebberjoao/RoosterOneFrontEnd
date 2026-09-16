@@ -32,16 +32,14 @@ import * as hubSeed from "@/services/hub/seed";
 export const mockDatabase = db;
 export type MockDatabase = Database;
 
-/** Seed do Rooster Hub (usuários, perfis, setores, permissões, auditoria). */
+/** Seed do Rooster Hub (usuários, setores, permissões individuais, auditoria). */
 export const mockHubDatabase = {
   usuarios: hubSeed.seedUsuarios,
   setores: hubSeed.seedSetores,
-  perfis: hubSeed.seedPerfis,
   modulos: hubSeed.seedModulos,
   permissoes: hubSeed.seedPermissoes,
-  usuariosPerfis: hubSeed.seedUsuariosPerfis,
   usuariosSetores: hubSeed.seedUsuariosSetores,
-  perfisPermissoes: hubSeed.seedPerfisPermissoes,
+  usuariosPermissoes: hubSeed.seedUsuariosPermissoes,
   notificacoes: hubSeed.seedNotificacoes,
   sessoes: hubSeed.seedSessoes,
   logsAuditoria: hubSeed.seedLogs,
@@ -56,12 +54,10 @@ export const MOCK_ENDPOINT_MAP = {
   // Hub (já espelhado em src/services/hub/index.ts)
   usuarios: "/usuarios",
   setores: "/setores",
-  perfis: "/perfis",
   modulos: "/modulos",
   permissoes: "/permissoes",
-  usuariosPerfis: "/usuarios-perfis",
   usuariosSetores: "/usuarios-setores",
-  perfisPermissoes: "/perfis-permissoes",
+  usuariosPermissoes: "/usuarios-permissoes",
   notificacoes: "/notificacoes",
   sessoes: "/sessoes",
   logsAuditoria: "/logs-auditoria",

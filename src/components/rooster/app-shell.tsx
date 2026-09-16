@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
 import { AppTopbar } from "./app-topbar";
 import { useAuth } from "./auth-context";
+import { PermissionProvider, RequireAccess } from "./hub/permission-context";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -19,16 +20,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
+    <PermissionProvider>
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="bg-background">
         <AppTopbar />
         <main className="flex-1 p-6 lg:p-8">
           <div key={pathname} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
-            {children}
+            <RequireAccess route={pathname}>{children}</RequireAccess>
           </div>
         </main>
       </SidebarInset>
     </SidebarProvider>
+    </PermissionProvider>
   );
 }

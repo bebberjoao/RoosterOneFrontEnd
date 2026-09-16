@@ -4,7 +4,6 @@ import type { User } from "@/mock/database/users";
 import { delay, nextId, applyFilters, type Filters } from "./utils";
 
 let users = [...db.users];
-const roles = [...db.roles];
 
 export const userService = {
   async getAll(filters?: Filters<User>): Promise<User[]> {
@@ -33,9 +32,6 @@ export const userService = {
   },
 
   // Domain-specific helpers
-  async getRoles() {
-    return delay(roles);
-  },
   async getByEmail(email: string) {
     return delay(users.find((u) => u.email === email));
   },

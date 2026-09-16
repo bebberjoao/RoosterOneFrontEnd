@@ -6,8 +6,9 @@ import { OfflineBanner } from "@/components/rooster/hub/crud-panel";
 import { useResource } from "@/components/rooster/hub/use-hub";
 import { fmtDateTime, initials } from "@/components/rooster/hub/format";
 import {
-  logsAuditoriaService, modulosService, notificacoesService, perfisService,
+  logsAuditoriaService, modulosService, notificacoesService,
   permissoesService, sessoesService, setoresService, usuariosService,
+  usuariosPermissoesService,
 } from "@/services/hub";
 
 export const Route = createFileRoute("/hub/")({
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/hub/")({
       { title: "Painel do Rooster Hub" },
       { name: "description", content: "Visão geral de identidade, acessos e auditoria da plataforma Rooster One." },
       { property: "og:title", content: "Painel do Rooster Hub" },
-      { property: "og:description", content: "Indicadores de usuários, perfis, sessões e auditoria." },
+      { property: "og:description", content: "Indicadores de usuários, setores, permissões, sessões e auditoria." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -32,10 +33,10 @@ const LINKS = [
 
 function HubDashboard() {
   const usuarios = useResource(usuariosService);
-  const perfis = useResource(perfisService);
   const setores = useResource(setoresService);
   const modulos = useResource(modulosService);
   const permissoes = useResource(permissoesService);
+  const concedidas = useResource(usuariosPermissoesService);
   const sessoes = useResource(sessoesService);
   const logs = useResource(logsAuditoriaService);
   const notificacoes = useResource(notificacoesService);
@@ -56,7 +57,7 @@ function HubDashboard() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Usuários" value={String(usuarios.rows.length)} hint={`${ativos} ativos`} icon={UsersIcon} tone={TONE.info} />
-        <StatCard label="Perfis de acesso" value={String(perfis.rows.length)} hint={`${permissoes.rows.length} permissões`} icon={Shield} tone={TONE.purple} />
+        <StatCard label="Permissões individuais" value={String(concedidas.rows.length)} hint={`${permissoes.rows.length} permissões catalogadas`} icon={Shield} tone={TONE.purple} />
         <StatCard label="Setores" value={String(setores.rows.length)} hint={`${modulos.rows.length} módulos ativos`} icon={Building} tone={TONE.cyan} />
         <StatCard label="Sessões ativas" value={String(sessoesAtivas)} hint={`${naoLidas} notificações não lidas`} icon={Monitor} tone={TONE.ok} />
       </div>

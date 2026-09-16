@@ -19,10 +19,10 @@ export function RoleSwitcher() {
         <button
           type="button"
           className="inline-flex h-9 items-center gap-2 rounded-lg border border-dashed px-2.5 text-xs font-medium text-muted-foreground shadow-xs transition-colors hover:border-foreground/30 hover:text-foreground"
-          title="Alternar perfil (dev)"
+          title="Alternar visão de demonstração (dev)"
         >
           <UserCog className="h-3.5 w-3.5" />
-          <span className="hidden md:inline">Perfil:</span>
+          <span className="hidden md:inline">Visão:</span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: meta.tone }} />
             <span className="font-semibold text-foreground">{meta.short}</span>
@@ -31,7 +31,7 @@ export function RoleSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-          Alternar perfil (dev)
+          Alternar visão (dev)
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {ROLES.map((r: Role) => {

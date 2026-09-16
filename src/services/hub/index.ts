@@ -5,8 +5,8 @@
 import { ApiUnavailableError, request } from "./client";
 import * as seed from "./seed";
 import type {
-  LogAuditoria, Modulo, Notificacao, Perfil, PerfilPermissao, Permissao,
-  Sessao, Setor, Usuario, UsuarioPerfil, UsuarioSetor,
+  LogAuditoria, Modulo, Notificacao, Permissao,
+  Sessao, Setor, Usuario, UsuarioPermissao, UsuarioSetor,
 } from "./types";
 
 export * from "./types";
@@ -98,20 +98,18 @@ function createResource<T extends { id: string }>(path: string, prefix: string, 
 
 export const usuariosService = createResource<Usuario>("/usuarios", "u", seed.seedUsuarios);
 export const setoresService = createResource<Setor>("/setores", "s", seed.seedSetores);
-export const perfisService = createResource<Perfil>("/perfis", "p", seed.seedPerfis);
 export const modulosService = createResource<Modulo>("/modulos", "m", seed.seedModulos);
 export const permissoesService = createResource<Permissao>("/permissoes", "pm", seed.seedPermissoes);
-export const usuariosPerfisService = createResource<UsuarioPerfil>("/usuarios-perfis", "up", seed.seedUsuariosPerfis);
 export const usuariosSetoresService = createResource<UsuarioSetor>("/usuarios-setores", "us", seed.seedUsuariosSetores);
-export const perfisPermissoesService = createResource<PerfilPermissao>("/perfis-permissoes", "pp", seed.seedPerfisPermissoes);
+export const usuariosPermissoesService = createResource<UsuarioPermissao>("/usuarios-permissoes", "upm", seed.seedUsuariosPermissoes);
 export const notificacoesService = createResource<Notificacao>("/notificacoes", "n", seed.seedNotificacoes);
 export const sessoesService = createResource<Sessao>("/sessoes", "se", seed.seedSessoes);
 export const logsAuditoriaService = createResource<LogAuditoria>("/logs-auditoria", "lg", seed.seedLogs);
 
 /** Atalhos de associação, conforme a especificação do backend. */
-export const createUsuarioPerfil = (usuarioId: string, perfilId: string) =>
-  usuariosPerfisService.create({ usuarioId, perfilId });
 export const createUsuarioSetor = (usuarioId: string, setorId: string) =>
   usuariosSetoresService.create({ usuarioId, setorId });
-export const createPerfilPermissao = (perfilId: string, permissaoId: string) =>
-  perfisPermissoesService.create({ perfilId, permissaoId });
+export const createUsuarioPermissao = (usuarioId: string, permissaoId: string) =>
+  usuariosPermissoesService.create({ usuarioId, permissaoId });
+/** Remove o vínculo de um usuário com um setor (gerenciado na tela de Setores). */
+export const removeUsuarioSetor = (vinculoId: string) => usuariosSetoresService.remove(vinculoId);

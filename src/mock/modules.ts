@@ -30,9 +30,9 @@ export const MODULE_MANIFEST: ModuleManifest[] = [
     name: "Rooster Hub",
     basePath: "/hub",
     docs: "docs/modules/hub.md",
-    routes: ["hub.tsx", "hub.index.tsx", "hub.usuarios.tsx", "hub.perfis.tsx", "hub.setores.tsx", "hub.modulos.tsx", "hub.auditoria.tsx"],
+    routes: ["hub.tsx", "hub.index.tsx", "hub.usuarios.tsx", "hub.setores.tsx", "hub.acessos.tsx", "hub.modulos.tsx", "hub.auditoria.tsx"],
     services: ["src/services/hub/index.ts", "src/services/hub/client.ts", "src/services/hub/seed.ts", "src/services/mock-api/user.service.ts"],
-    tables: ["usuarios", "setores", "perfis", "modulos", "permissoes", "usuariosPerfis", "usuariosSetores", "perfisPermissoes", "sessoes", "logsAuditoria", "notificacoes"],
+    tables: ["usuarios", "setores", "modulos", "permissoes", "usuariosSetores", "usuariosPermissoes", "sessoes", "logsAuditoria", "notificacoes"],
   },
   {
     id: "desk",

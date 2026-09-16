@@ -22,14 +22,6 @@ export interface Setor {
   criadoEm?: string | null;
 }
 
-export interface Perfil {
-  id: string;
-  nome: string;
-  descricao?: string | null;
-  ativo?: boolean;
-  criadoEm?: string | null;
-}
-
 export interface Modulo {
   id: string;
   nome: string;
@@ -49,24 +41,10 @@ export interface Permissao {
   criadoEm?: string | null;
 }
 
-export interface UsuarioPerfil {
-  id: string;
-  usuarioId: string;
-  perfilId: string;
-  criadoEm?: string | null;
-}
-
 export interface UsuarioSetor {
   id: string;
   usuarioId: string;
   setorId: string;
-  criadoEm?: string | null;
-}
-
-export interface PerfilPermissao {
-  id: string;
-  perfilId: string;
-  permissaoId: string;
   criadoEm?: string | null;
 }
 
@@ -99,5 +77,12 @@ export interface LogAuditoria {
   entidadeId?: string | null;
   ip?: string | null;
   navegador?: string | null;
+  criadoEm?: string | null;
+}
+/** Permissão concedida diretamente a um usuário (RBAC por tela/ação). */
+export interface UsuarioPermissao {
+  id: string;
+  usuarioId: string;
+  permissaoId: string;
   criadoEm?: string | null;
 }

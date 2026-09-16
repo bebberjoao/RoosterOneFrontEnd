@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/sidebar";
 import { HOME_ITEM, MODULES, ADMIN_ITEMS, modulesForRole, type ModuleItem, type SubItem } from "./module-config";
 import { useRole, ROLE_META } from "./role-context";
+import { usePermissions } from "./hub/permission-context";
+import { ACCESS_ACTION, findScreenByRoute, permissionKey } from "./hub/permission-catalog";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "rooster.sidebar.expanded";
@@ -51,7 +53,22 @@ export function AppSidebar() {
   const person = ROLE_META[role].person;
   const [query, setQuery] = useState("");
 
-  const visibleModules = useMemo(() => modulesForRole(role), [role]);
+  const { granted, hasCustom } = usePermissions();
+
+  const allowsRoute = useMemo(() => {
+    return (route: string) => {
+      if (!hasCustom) return true;
+      const match = findScreenByRoute(route);
+      if (!match) return true;
+      return granted.has(permissionKey(match.module.id, match.screen.id, ACCESS_ACTION.id));
+    };
+  }, [granted, hasCustom]);
+
+  const visibleModules = useMemo(() => {
+    return modulesForRole(role)
+      .map((m) => ({ ...m, children: (m.children ?? []).filter((c) => allowsRoute(c.to)) }))
+      .filter((m) => m.children.length > 0 || allowsRoute(m.path));
+  }, [role, allowsRoute]);
 
   const activeModule = useMemo(() => {
     return visibleModules.find((m) => m.path !== "/" && pathname.startsWith(m.path))?.id ?? null;
