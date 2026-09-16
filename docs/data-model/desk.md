@@ -2,6 +2,14 @@
 
 Documento de referência do padrão descrito em [README.md](./README.md).
 
+> **Nota de implementação (09/2026)**: no backend real, `tags`/`favorito`
+> são colunas de `Ticket`; o "histórico de eventos" é `historico_tickets`
+> (já existia para mensagens, passou a gravar também troca de
+> status/prioridade/categoria/técnico — ver
+> [RN011](../../../RoosterOneBackend-main/docs/regras-negocio/RN011-historico-de-chamados.md)),
+> não uma tabela `ticket_events` separada. Mensagens continuam em
+> `mensagens_tickets`, via `GET`/`POST /chamados/:id/mensagens`.
+
 ## 1. Visão geral
 
 O módulo persiste **categorias de chamado** (com subcategorias), o **diretório

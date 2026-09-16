@@ -2,6 +2,18 @@
 
 Documento de referência do padrão descrito em [README.md](./README.md).
 
+> **Nota de implementação (09/2026)**: este documento descreve o modelo
+> pensado para o mock; o schema real implementado no backend
+> (`RoosterOneBackend-main/prisma/schema.prisma`) é equivalente em espírito
+> mas usa nomes diferentes em alguns pontos — `recursos` é uma coluna
+> `String[]` direto em `Ambiente` (não uma tabela `room_resources`
+> separada), e a conversa/histórico da reserva vivem em `ReservaMensagem`/
+> `ReservaHistorico` (não `ticket_events`, que é do Desk). Para o contrato
+> real, ver
+> [`RoosterOneBackend-main/docs/rbac.md`](../../../RoosterOneBackend-main/docs/rbac.md),
+> [`contrato-frontend.md`](../../../RoosterOneBackend-main/docs/contrato-frontend.md)
+> e [RN010](../../../RoosterOneBackend-main/docs/regras-negocio/RN010-conversa-e-historico-reservas.md).
+
 ## 1. Visão geral
 
 O módulo persiste a **estrutura física** da instituição (campus → bloco →
