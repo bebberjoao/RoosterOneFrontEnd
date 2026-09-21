@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { CrudHeader, SectionCard, EmptyState, Btn, Field, TextInput, TextArea, SelectInput } from "@/components/shared";
+import { toast } from "sonner";
+import { CrudHeader, SectionCard, EmptyState, Btn, Field, TextInput, TextArea, SelectInput, LoadingCards } from "@/components/shared";
 import { roomService } from "@/services/mock-api";
+import { ApiError } from "@/services/hub/client";
 import type { Room } from "@/mock/database/rooms";
 import type { Reservation } from "@/mock/database/reservations";
 import type { Campus } from "@/mock/database/campuses";
@@ -10,6 +12,7 @@ import {
   SPACE_TYPE_LABEL, RESOURCE_LABEL, formatDate, isoOf, hourToMinutes, findConflicts, roomSlots,
 } from "@/components/rooster/rooms/labels";
 import { useRole, ROLE_META } from "@/components/rooster/role-context";
+import { session } from "@/services/hub/session";
 import {
   ChevronLeft, ChevronRight, Search, CalendarDays, CheckCircle2, AlertTriangle, DoorOpen, Users, MessageSquare, Send,
 } from "lucide-react";
@@ -45,7 +48,10 @@ function monthMatrix(cursor: Date) {
 
 function BookRoomPage() {
   const { role } = useRole();
-  const currentPerson = ROLE_META[role].person;
+  // Nome exibido na reserva é sempre o do usuário logado de verdade (session.usuario) — nunca a
+  // persona de demonstração do seletor "Visão" (ROLE_META[role].person), que não corresponde a
+  // quem está autenticado. O dono real da reserva (responsavelId) já vem do backend via JWT.
+  const currentPersonName = session.usuario?.nome ?? ROLE_META[role].person.name;
   const [rooms, setRooms] = useState<Room[]>([]);
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -59,6 +65,7 @@ function BookRoomPage() {
   const [tab, setTab] = useState<"detalhes" | "mensagem">("detalhes");
   const [sent, setSent] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     event: "",
@@ -68,6 +75,8 @@ function BookRoomPage() {
     participants: 20,
     message: "",
     extras: [] as string[],
+    recurrence: "unica" as "unica" | "diaria" | "semanal" | "mensal",
+    repeatUntil: "",
   });
 
   function reload() {
@@ -118,7 +127,11 @@ function BookRoomPage() {
   const conflicts = room ? findConflicts(reservations, room.id, date, form.start, form.end) : [];
   const invalidTime = hourToMinutes(form.end) <= hourToMinutes(form.start);
   const overCapacity = !!room && form.participants > room.capacity;
-  const canSubmit = !!room && !!form.event.trim() && !!slotValue && !invalidTime && !overCapacity && conflicts.length === 0 && !saving;
+  const isRecurring = form.recurrence !== "unica";
+  const invalidRepeatUntil = isRecurring && (!form.repeatUntil || form.repeatUntil < date);
+  const canSubmit =
+    !!room && !!form.event.trim() && !!slotValue && !invalidTime && !overCapacity && conflicts.length === 0 &&
+    !invalidRepeatUntil && !saving;
 
   const cells = useMemo(() => monthMatrix(cursor), [cursor]);
   const countByDay = useMemo(() => {
@@ -132,14 +145,15 @@ function BookRoomPage() {
   async function submit() {
     if (!room || !canSubmit) return;
     setSaving(true);
+    setSubmitError(null);
     const notes = [form.message.trim(), form.extras.length ? `Equipamentos extras: ${form.extras.join(", ")}` : ""]
       .filter(Boolean)
       .join(" | ");
-    const created = await roomService.createReservation({
+    const base = {
       code: `RS-${Date.now().toString().slice(-6)}`,
       spaceId: room.id,
       roomId: room.id,
-      responsible: currentPerson.name,
+      responsible: currentPersonName,
       sector: "Solicitação via portal",
       event: form.event.trim(),
       purpose: form.purpose,
@@ -147,18 +161,36 @@ function BookRoomPage() {
       start: form.start,
       end: form.end,
       participants: Number(form.participants) || 1,
-      status: "analise",
-      recurrence: "unica",
+      status: "analise" as const,
       notes,
-      events: [{ id: `message-${Date.now()}`, kind: "message", author: currentPerson.name, role: "solicitante", at: new Date().toISOString(), body: notes || "Solicitação enviada para análise da equipe de reservas." }],
-    });
-    setSaving(false);
-    setSent(created.code);
-    setForm((f) => ({ ...f, event: "", message: "", extras: [] }));
-    reload();
+      events: [{ id: `message-${Date.now()}`, kind: "message" as const, author: currentPersonName, role: "solicitante" as const, at: new Date().toISOString(), body: notes || "Solicitação enviada para análise da equipe de reservas." }],
+    };
+    try {
+      let code: string;
+      if (isRecurring) {
+        const { serieId, reservas } = await roomService.createReservationSeries(
+          { ...base, recurrence: form.recurrence as "diaria" | "semanal" | "mensal" },
+          form.repeatUntil,
+        );
+        code = `${serieId.slice(0, 8)} (${reservas.length} ocorrências)`;
+      } else {
+        const created = await roomService.createReservation({ ...base, recurrence: "unica" });
+        code = created.code;
+      }
+      setSent(code);
+      setForm((f) => ({ ...f, event: "", message: "", extras: [], recurrence: "unica", repeatUntil: "" }));
+      reload();
+      toast.success("Solicitação de reserva enviada com sucesso");
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Não foi possível enviar a solicitação. Tente novamente.";
+      setSubmitError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (loading) return <p className="text-sm text-muted-foreground">Carregando ambientes...</p>;
+  if (loading) return <LoadingCards />;
 
   return (
     <>
@@ -319,6 +351,26 @@ function BookRoomPage() {
                 <Field label="Participantes">
                   <TextInput type="number" value={String(form.participants)} onChange={(e) => setForm({ ...form, participants: Number(e.target.value) })} />
                 </Field>
+                <Field label="Repetição">
+                  <SelectInput
+                    value={form.recurrence}
+                    onChange={(e) => setForm({ ...form, recurrence: e.target.value as typeof form.recurrence })}
+                    options={[
+                      { value: "unica", label: "Não repetir" },
+                      { value: "diaria", label: "Diariamente" },
+                      { value: "semanal", label: "Semanalmente" },
+                      { value: "mensal", label: "Mensalmente" },
+                    ]}
+                  />
+                </Field>
+                {isRecurring && (
+                  <Field
+                    label="Repetir até"
+                    hint="Cada ocorrência é verificada individualmente; se alguma colidir, nenhuma reserva da série é criada (até 26 ocorrências)."
+                  >
+                    <TextInput type="date" value={form.repeatUntil} onChange={(e) => setForm({ ...form, repeatUntil: e.target.value })} />
+                  </Field>
+                )}
                 <div className="rounded-xl border bg-background/40 p-3 text-xs text-muted-foreground sm:col-span-2">
                   <p className="mb-1 flex items-center gap-1.5 font-medium text-foreground"><Users className="h-3.5 w-3.5" /> Horários ocupados</p>
                   {allSlots.length > 0 && freeSlots.length === 0 && (
@@ -381,8 +433,16 @@ function BookRoomPage() {
                   <AlertTriangle className="h-3.5 w-3.5" /> Conflito com {conflicts[0].event} ({conflicts[0].start}–{conflicts[0].end}).
                 </p>
               )}
-              {conflicts.length === 0 && !invalidTime && !overCapacity && form.event.trim() && (
+              {invalidRepeatUntil && (
+                <p className="flex items-center gap-1.5 text-xs text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> Informe até quando a repetição deve continuar.</p>
+              )}
+              {conflicts.length === 0 && !invalidTime && !overCapacity && !invalidRepeatUntil && form.event.trim() && (
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5" /> Horário livre para este ambiente.</p>
+              )}
+              {submitError && (
+                <p className="flex items-center gap-1.5 rounded-xl border border-destructive/40 bg-destructive/5 p-2.5 text-xs text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" /> {submitError}
+                </p>
               )}
               {sent && (
                 <p className="flex items-center gap-1.5 rounded-xl border bg-background/40 p-2.5 text-xs">

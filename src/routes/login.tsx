@@ -19,7 +19,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, requestPasswordReset } = useAuth();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [reset, setReset] = useState(false);
@@ -46,7 +46,12 @@ function LoginPage() {
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                setSent(true);
+                if (sent || enviando) return;
+                setEnviando(true);
+                requestPasswordReset(email)
+                  .then(() => setSent(true))
+                  .catch(() => setSent(true)) // resposta genérica mesmo em erro de rede — não expõe detalhes
+                  .finally(() => setEnviando(false));
               }}
             >
               <div>
@@ -56,7 +61,7 @@ function LoginPage() {
                 </p>
               </div>
               <input
-                type="text"
+                type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -65,14 +70,15 @@ function LoginPage() {
               />
               {sent ? (
                 <p className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white/80">
-                  Se o login existir, você receberá um e-mail com o link de redefinição.
+                  Se o e-mail existir, você receberá um e-mail com o link de redefinição.
                 </p>
               ) : null}
               <button
                 type="submit"
-                className="w-full rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-[oklch(0.19_0.06_265)] transition-opacity hover:opacity-90"
+                disabled={enviando || sent}
+                className="w-full rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-[oklch(0.19_0.06_265)] transition-opacity hover:opacity-90 disabled:opacity-60"
               >
-                Enviar instruções
+                {enviando ? "Enviando…" : "Enviar instruções"}
               </button>
               <button
                 type="button"

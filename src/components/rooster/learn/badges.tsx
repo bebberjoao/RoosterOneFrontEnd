@@ -1,7 +1,7 @@
 import {
   STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE, SUB_LABEL, SUB_TONE,
   type ActivityStatus, type ActivityType, type SubmissionStatus,
-} from "./mock-data";
+} from "@/services/mock-api/learn.service";
 
 export function TypeBadge({ type }: { type: ActivityType }) {
   const tone = TYPE_TONE[type];

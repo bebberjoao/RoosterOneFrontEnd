@@ -1,11 +1,6 @@
-import {
-  CHARGE_STATUS_LABEL, CHARGE_STATUS_TONE,
-  BOLETO_STATUS_LABEL, BOLETO_STATUS_TONE,
-  NFE_STATUS_LABEL, NFE_STATUS_TONE,
-  type ChargeStatus, type BoletoStatus, type NfeStatus,
-} from "./mock-data";
+import type { StatusCobranca, StatusNotaFiscal } from "@/services/mock-api/finance.service";
 
-function Pill({ tone, label }: { tone: string; label: string }) {
+function Chip({ tone, label }: { tone: string; label: string }) {
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium"
@@ -21,31 +16,27 @@ function Pill({ tone, label }: { tone: string; label: string }) {
   );
 }
 
-export function ChargeStatusBadge({ status }: { status: ChargeStatus }) {
-  return <Pill tone={CHARGE_STATUS_TONE[status]} label={CHARGE_STATUS_LABEL[status]} />;
-}
-export function BoletoStatusBadge({ status }: { status: BoletoStatus }) {
-  return <Pill tone={BOLETO_STATUS_TONE[status]} label={BOLETO_STATUS_LABEL[status]} />;
-}
-export function NfeStatusBadge({ status }: { status: NfeStatus }) {
-  return <Pill tone={NFE_STATUS_TONE[status]} label={NFE_STATUS_LABEL[status]} />;
+const COBRANCA_STATUS: Record<StatusCobranca, { label: string; tone: string }> = {
+  aberto: { label: "Em aberto", tone: "oklch(0.6 0.18 260)" },
+  pago: { label: "Pago", tone: "oklch(0.62 0.18 155)" },
+  vencido: { label: "Vencido", tone: "oklch(0.6 0.22 25)" },
+  negociado: { label: "Negociado", tone: "oklch(0.72 0.16 90)" },
+  cancelado: { label: "Cancelado", tone: "oklch(0.55 0.02 260)" },
+  processando: { label: "Processando", tone: "oklch(0.68 0.14 195)" },
+};
+
+/** Status único de Cobrança — cobre mensalidade, boleto, produto e serviço (o backend usa a mesma entidade para todos). */
+export function CobrancaStatusBadge({ status }: { status: StatusCobranca }) {
+  const it = COBRANCA_STATUS[status];
+  return <Chip tone={it.tone} label={it.label} />;
 }
 
-export function ProgressBar({ value, tone = "oklch(0.62 0.18 155)" }: { value: number; tone?: string }) {
-  return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-      <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, value))}%`, backgroundColor: tone }} />
-    </div>
-  );
-}
+const NFE_STATUS: Record<StatusNotaFiscal, { label: string; tone: string }> = {
+  emitida: { label: "Emitida", tone: "oklch(0.62 0.18 155)" },
+  cancelada: { label: "Cancelada", tone: "oklch(0.55 0.02 260)" },
+};
 
-export function Avatar({ initials, tone = "oklch(0.62 0.18 155)" }: { initials: string; tone?: string }) {
-  return (
-    <span
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium"
-      style={{ backgroundColor: `color-mix(in oklab, ${tone} 15%, transparent)`, color: tone }}
-    >
-      {initials}
-    </span>
-  );
+export function NotaFiscalStatusBadge({ status }: { status: StatusNotaFiscal }) {
+  const it = NFE_STATUS[status];
+  return <Chip tone={it.tone} label={it.label} />;
 }

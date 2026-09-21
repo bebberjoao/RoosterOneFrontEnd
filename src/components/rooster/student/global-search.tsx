@@ -1,35 +1,49 @@
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Search } from "lucide-react";
-import { DISCIPLINES, ACTIVITIES, DOCUMENTS, BOOST_COURSES, TICKETS, CHARGES, RESERVATIONS } from "./mock-data";
+import { DOCUMENTS } from "./mock-data";
+import { studentService } from "@/services/mock-api/student.service";
+import { learnService } from "@/services/mock-api/learn.service";
+import { financeService } from "@/services/mock-api/finance.service";
 
 type Hit = { id: string; label: string; group: string; to: string };
 
-function buildIndex(): Hit[] {
-  return [
-    ...DISCIPLINES.map((d) => ({ id: `d-${d.id}`, label: `${d.code} — ${d.name}`, group: "Disciplinas", to: "/student/disciplines" })),
-    ...ACTIVITIES.map((a) => ({ id: `a-${a.id}`, label: a.title, group: "Atividades", to: "/student/activities" })),
-    ...DOCUMENTS.map((d) => ({ id: `doc-${d.id}`, label: d.name, group: "Documentos", to: "/student/documents" })),
-    ...BOOST_COURSES.map((c) => ({ id: `c-${c.id}`, label: c.title, group: "Cursos", to: "/student/courses" })),
-    ...TICKETS.map((t) => ({ id: `t-${t.id}`, label: `${t.id} ${t.subject}`, group: "Chamados", to: "/student/tickets" })),
-    ...CHARGES.map((c) => ({ id: `f-${c.id}`, label: c.description, group: "Financeiro", to: "/student/finance" })),
-    ...RESERVATIONS.map((r) => ({ id: `r-${r.id}`, label: `${r.space} — ${r.purpose}`, group: "Reservas", to: "/student/reservations" })),
-    { id: "p-grades", label: "Boletim e desempenho", group: "Portal", to: "/student/grades" },
-    { id: "p-att", label: "Frequência e faltas", group: "Portal", to: "/student/attendance" },
-    { id: "p-hist", label: "Histórico acadêmico e CR", group: "Portal", to: "/student/history" },
-    { id: "p-cal", label: "Calendário acadêmico", group: "Portal", to: "/student/calendar" },
-    { id: "p-prof", label: "Perfil acadêmico", group: "Portal", to: "/student/profile" },
-    { id: "p-not", label: "Notificações", group: "Portal", to: "/student/notifications" },
-  ];
-}
+const STATIC_HITS: Hit[] = [
+  { id: "p-grades", label: "Boletim e desempenho", group: "Portal", to: "/student/grades" },
+  { id: "p-att", label: "Frequência e faltas", group: "Portal", to: "/student/attendance" },
+  { id: "p-hist", label: "Histórico acadêmico e CR", group: "Portal", to: "/student/history" },
+  { id: "p-cal", label: "Calendário acadêmico", group: "Portal", to: "/student/calendar" },
+  { id: "p-prof", label: "Perfil acadêmico", group: "Portal", to: "/student/profile" },
+  { id: "p-not", label: "Notificações", group: "Portal", to: "/student/notifications" },
+];
 
-const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 export function StudentGlobalSearch() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  const [index, setIndex] = useState<Hit[]>([
+    ...DOCUMENTS.map((d) => ({ id: `doc-${d.id}`, label: d.name, group: "Documentos", to: "/student/documents" })),
+    ...STATIC_HITS,
+  ]);
   const box = useRef<HTMLDivElement>(null);
-  const index = useMemo(buildIndex, []);
+
+  useEffect(() => {
+    Promise.all([
+      studentService.getMyEnrollments().catch(() => []),
+      learnService.getMyActivities().catch(() => []),
+      financeService.me.getCobrancas().catch(() => []),
+    ])
+      .then(([disciplines, activities, cobrancas]) => {
+        setIndex((prev) => [
+          ...disciplines.map((d) => ({ id: `d-${d.id}`, label: `${d.code} — ${d.name}`, group: "Disciplinas", to: "/student/disciplines" })),
+          ...activities.map((a) => ({ id: `a-${a.id}`, label: a.title, group: "Atividades", to: "/student/activities" })),
+          ...cobrancas.map((c) => ({ id: `f-${c.id}`, label: c.descricao, group: "Financeiro", to: "/student/finance" })),
+          ...prev,
+        ]);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -52,7 +66,7 @@ export function StudentGlobalSearch() {
         value={q}
         onChange={(e) => { setQ(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        placeholder="Buscar disciplinas, atividades, documentos, cursos…"
+        placeholder="Buscar disciplinas, atividades, documentos…"
         className="w-full rounded-lg border bg-card py-2 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/40"
       />
       {open && q.trim() ? (

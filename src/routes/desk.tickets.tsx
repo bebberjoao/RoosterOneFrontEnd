@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { ticketService } from "@/services/mock-api";
 import type { Ticket, TicketCategory, TicketPriority } from "@/mock/database/tickets";
 import {
@@ -252,26 +253,32 @@ function NewTicketModal({
   async function handleSubmit() {
     if (!title.trim() || !categoryId) return;
     setSaving(true);
-    const created = await ticketService.create({
-      title,
-      categoryId,
-      subcategory: subcategory || "Geral",
-      requester: { name: "Você", role: "Solicitante", sector: "Rooster Desk" },
-      assignee: null,
-      priority,
-      status: "aberto",
-      slaPercent: 100,
-      slaDeadline: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
-      openedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      description,
-      tags: [],
-      favorite: false,
-    });
-    setSaving(false);
-    onCreated(created);
-    reset();
-    onClose();
+    try {
+      const created = await ticketService.create({
+        title,
+        categoryId,
+        subcategory: subcategory || "Geral",
+        requester: { name: "Você", role: "Solicitante", sector: "Rooster Desk" },
+        assignee: null,
+        priority,
+        status: "aberto",
+        slaPercent: 100,
+        slaDeadline: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
+        openedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        description,
+        tags: [],
+        favorite: false,
+      });
+      onCreated(created);
+      reset();
+      onClose();
+      toast.success("Chamado aberto com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao abrir chamado");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (

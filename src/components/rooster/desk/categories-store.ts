@@ -59,18 +59,18 @@ export const categoriesApi = {
     const op = exists
       ? deskCategoryService.update(cat.id, cat)
       : deskCategoryService.create(cat);
-    void op.then(() => reload());
+    return op.then((r) => { void reload(); return r; });
   },
   remove(id: string) {
-    void deskCategoryService.remove(id).then(() => reload());
+    return deskCategoryService.remove(id).then((r) => { void reload(); return r; });
   },
   addSub(catId: string, sub: Omit<Subcategory, "id">) {
-    void deskCategoryService.addSubcategory(catId, sub).then(() => reload());
+    return deskCategoryService.addSubcategory(catId, sub).then((r) => { void reload(); return r; });
   },
   updateSub(catId: string, subId: string, patch: Partial<Subcategory>) {
-    void deskCategoryService.updateSubcategory(catId, subId, patch).then(() => reload());
+    return deskCategoryService.updateSubcategory(catId, subId, patch).then((r) => { void reload(); return r; });
   },
   removeSub(catId: string, subId: string) {
-    void deskCategoryService.removeSubcategory(catId, subId).then(() => reload());
+    return deskCategoryService.removeSubcategory(catId, subId).then((r) => { void reload(); return r; });
   },
 };

@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Clock3, MessageCircle, Send, UserRound, XCircle } from "lucide-react";
-import { Breadcrumbs, Btn, Field, Modal, TextArea } from "@/components/shared";
+import { Breadcrumbs, Btn, Field, Modal, TextArea, LoadingBlock } from "@/components/shared";
 import { useRole, ROLE_META } from "@/components/rooster/role-context";
 import { StatusBadge } from "@/components/rooster/rooms/badges";
 import { STATUS_LABEL, formatDate, roomSlots, hourToMinutes } from "@/components/rooster/rooms/labels";
@@ -52,12 +53,43 @@ function ReservationDetail() {
       free: !busy.some((r) => Math.max(hourToMinutes(s.start), hourToMinutes(r.start)) < Math.min(hourToMinutes(s.end), hourToMinutes(r.end))),
     }));
   }, [room, roomReservations, date, id]);
-  if (!reservation) return <p className="text-sm text-muted-foreground">Carregando reserva...</p>;
+  if (!reservation) return <LoadingBlock className="py-4" />;
 
 
-  async function send() { if (!reply.trim()) return; await roomService.addReservationMessage(id, { body: reply.trim() }); setReply(""); reload(); }
-  async function changeStatus(status: Reservation["status"], message?: string) { await roomService.changeReservationStatus(id, status, person.name, message); setDialog(null); setReason(""); reload(); }
-  async function changeSchedule() { if (!date || !start || !end) return; await roomService.changeReservationSchedule(id, date, start, end); setDialog(null); setReason(""); reload(); }
+  async function send() {
+    if (!reply.trim()) return;
+    try {
+      await roomService.addReservationMessage(id, { body: reply.trim() });
+      setReply("");
+      reload();
+      toast.success("Mensagem enviada com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar mensagem");
+    }
+  }
+  async function changeStatus(status: Reservation["status"], message?: string) {
+    try {
+      await roomService.changeReservationStatus(id, status, person.name, message);
+      setDialog(null);
+      setReason("");
+      reload();
+      toast.success(status === "confirmada" ? "Reserva aprovada com sucesso" : status === "cancelada" ? "Reserva cancelada com sucesso" : "Status da reserva atualizado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao atualizar reserva");
+    }
+  }
+  async function changeSchedule() {
+    if (!date || !start || !end) return;
+    try {
+      await roomService.changeReservationSchedule(id, date, start, end);
+      setDialog(null);
+      setReason("");
+      reload();
+      toast.success("Horário da reserva alterado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao alterar horário da reserva");
+    }
+  }
 
   return <>
     <Breadcrumbs items={[{ label: "Rooster Rooms" }, { label: manager ? "Gerenciar reservas" : "Minhas reservas", onClick: () => navigate({ to: manager ? "/rooms/manage" : "/rooms/reservations" }) }, { label: reservation.code }]} />

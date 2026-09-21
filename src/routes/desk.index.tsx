@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   ClipboardList,
+  Timer,
 } from "lucide-react";
 
 export const Route = createFileRoute("/desk/")({
@@ -45,6 +46,13 @@ function DeskDashboard() {
   const pending = tickets.filter((t) => t.status === "pendente").length;
   const resolved = tickets.filter((t) => t.status === "resolvido" || t.status === "encerrado").length;
   const avgSla = tickets.length ? Math.round(tickets.reduce((s, t) => s + t.slaPercent, 0) / tickets.length) : 0;
+
+  const closedTickets = tickets.filter((t) => t.closedAt);
+  const avgResolutionHours = closedTickets.length
+    ? closedTickets.reduce((s, t) => s + (new Date(t.closedAt!).getTime() - new Date(t.openedAt).getTime()) / 3_600_000, 0) / closedTickets.length
+    : null;
+  const avgResolutionLabel =
+    avgResolutionHours === null ? "—" : avgResolutionHours < 24 ? `${Math.round(avgResolutionHours)}h` : `${(avgResolutionHours / 24).toFixed(1)}d`;
 
   const latest = useMemo(() => [...tickets].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6), [tickets]);
   const critical = useMemo(
@@ -90,12 +98,19 @@ function DeskDashboard() {
 
       {tab === "geral" ? (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <StatCard label="Abertos" value={String(open)} icon={TicketIcon} tone={TONE.danger} />
             <StatCard label="Em atendimento" value={String(inProgress)} icon={PlayCircle} tone={TONE.info} />
             <StatCard label="Pendentes" value={String(pending)} icon={PauseCircle} tone={TONE.warn} />
             <StatCard label="Resolvidos" value={String(resolved)} icon={CheckCircle2} tone={TONE.ok} />
             <StatCard label="SLA médio" value={`${avgSla}%`} hint="meta 92%" icon={Gauge} tone={TONE.purple} />
+            <StatCard
+              label="Tempo médio de resolução"
+              value={avgResolutionLabel}
+              hint={closedTickets.length ? `${closedTickets.length} chamado(s) encerrado(s)` : "sem chamados encerrados"}
+              icon={Timer}
+              tone={TONE.cyan}
+            />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">

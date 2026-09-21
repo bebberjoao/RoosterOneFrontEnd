@@ -13,11 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AcademyRouteImport } from './routes/academy'
 import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as BoostRouteImport } from './routes/boost'
+import { Route as BoostPortalRouteImport } from './routes/boost-portal'
 import { Route as DeskRouteImport } from './routes/desk'
 import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as HubRouteImport } from './routes/hub'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as RoomsRouteImport } from './routes/rooms'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StudentRouteImport } from './routes/student'
@@ -27,6 +29,10 @@ import { Route as AcademyGradesRouteImport } from './routes/academy.grades'
 import { Route as AcademyManageRouteImport } from './routes/academy.manage'
 import { Route as AssetsIndexRouteImport } from './routes/assets.index'
 import { Route as AssetsInventoryRouteImport } from './routes/assets.inventory'
+import { Route as BoostPortalIndexRouteImport } from './routes/boost-portal.index'
+import { Route as BoostPortalCadastroRouteImport } from './routes/boost-portal.cadastro'
+import { Route as BoostPortalEntrarRouteImport } from './routes/boost-portal.entrar'
+import { Route as BoostPortalPainelRouteImport } from './routes/boost-portal.painel'
 import { Route as BoostIndexRouteImport } from './routes/boost.index'
 import { Route as DeskIndexRouteImport } from './routes/desk.index'
 import { Route as DeskCategoriesRouteImport } from './routes/desk.categories'
@@ -36,12 +42,10 @@ import { Route as FinanceIndexRouteImport } from './routes/finance.index'
 import { Route as FinanceBoletosRouteImport } from './routes/finance.boletos'
 import { Route as FinanceChargesRouteImport } from './routes/finance.charges'
 import { Route as FinanceDiscountsRouteImport } from './routes/finance.discounts'
-import { Route as FinanceManageRouteImport } from './routes/finance.manage'
 import { Route as FinanceNfeRouteImport } from './routes/finance.nfe'
 import { Route as FinanceProductsRouteImport } from './routes/finance.products'
 import { Route as FinanceReportsRouteImport } from './routes/finance.reports'
 import { Route as FinanceServicesRouteImport } from './routes/finance.services'
-import { Route as FinanceSettingsRouteImport } from './routes/finance.settings'
 import { Route as FinanceTuitionsRouteImport } from './routes/finance.tuitions'
 import { Route as HubIndexRouteImport } from './routes/hub.index'
 import { Route as HubAcessosRouteImport } from './routes/hub.acessos'
@@ -58,7 +62,6 @@ import { Route as StudentIndexRouteImport } from './routes/student.index'
 import { Route as StudentActivitiesRouteImport } from './routes/student.activities'
 import { Route as StudentAttendanceRouteImport } from './routes/student.attendance'
 import { Route as StudentCalendarRouteImport } from './routes/student.calendar'
-import { Route as StudentCoursesRouteImport } from './routes/student.courses'
 import { Route as StudentDisciplinesRouteImport } from './routes/student.disciplines'
 import { Route as StudentDocumentsRouteImport } from './routes/student.documents'
 import { Route as StudentFinanceRouteImport } from './routes/student.finance'
@@ -66,9 +69,9 @@ import { Route as StudentGradesRouteImport } from './routes/student.grades'
 import { Route as StudentHistoryRouteImport } from './routes/student.history'
 import { Route as StudentNotificationsRouteImport } from './routes/student.notifications'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
-import { Route as StudentReservationsRouteImport } from './routes/student.reservations'
-import { Route as StudentTicketsRouteImport } from './routes/student.tickets'
-import { Route as BoostCoursesIdRouteImport } from './routes/boost.courses.$id'
+import { Route as BoostPortalCursosSlugRouteImport } from './routes/boost-portal.cursos.$slug'
+import { Route as BoostPortalPainelMatriculaIdRouteImport } from './routes/boost-portal.painel.$matriculaId'
+import { Route as BoostManageIdRouteImport } from './routes/boost.manage.$id'
 import { Route as DeskCategoriesIndexRouteImport } from './routes/desk.categories.index'
 import { Route as DeskCategoriesIdRouteImport } from './routes/desk.categories.$id'
 import { Route as DeskTicketsIdRouteImport } from './routes/desk.tickets.$id'
@@ -96,6 +99,11 @@ const BoostRoute = BoostRouteImport.update({
   path: '/boost',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BoostPortalRoute = BoostPortalRouteImport.update({
+  id: '/boost-portal',
+  path: '/boost-portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DeskRoute = DeskRouteImport.update({
   id: '/desk',
   path: '/desk',
@@ -119,6 +127,11 @@ const LearnRoute = LearnRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoomsRoute = RoomsRouteImport.update({
@@ -166,6 +179,26 @@ const AssetsInventoryRoute = AssetsInventoryRouteImport.update({
   path: '/inventory',
   getParentRoute: () => AssetsRoute,
 } as any)
+const BoostPortalIndexRoute = BoostPortalIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BoostPortalRoute,
+} as any)
+const BoostPortalCadastroRoute = BoostPortalCadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
+  getParentRoute: () => BoostPortalRoute,
+} as any)
+const BoostPortalEntrarRoute = BoostPortalEntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
+  getParentRoute: () => BoostPortalRoute,
+} as any)
+const BoostPortalPainelRoute = BoostPortalPainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => BoostPortalRoute,
+} as any)
 const BoostIndexRoute = BoostIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -211,11 +244,6 @@ const FinanceDiscountsRoute = FinanceDiscountsRouteImport.update({
   path: '/discounts',
   getParentRoute: () => FinanceRoute,
 } as any)
-const FinanceManageRoute = FinanceManageRouteImport.update({
-  id: '/manage',
-  path: '/manage',
-  getParentRoute: () => FinanceRoute,
-} as any)
 const FinanceNfeRoute = FinanceNfeRouteImport.update({
   id: '/nfe',
   path: '/nfe',
@@ -234,11 +262,6 @@ const FinanceReportsRoute = FinanceReportsRouteImport.update({
 const FinanceServicesRoute = FinanceServicesRouteImport.update({
   id: '/services',
   path: '/services',
-  getParentRoute: () => FinanceRoute,
-} as any)
-const FinanceSettingsRoute = FinanceSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
   getParentRoute: () => FinanceRoute,
 } as any)
 const FinanceTuitionsRoute = FinanceTuitionsRouteImport.update({
@@ -321,11 +344,6 @@ const StudentCalendarRoute = StudentCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => StudentRoute,
 } as any)
-const StudentCoursesRoute = StudentCoursesRouteImport.update({
-  id: '/courses',
-  path: '/courses',
-  getParentRoute: () => StudentRoute,
-} as any)
 const StudentDisciplinesRoute = StudentDisciplinesRouteImport.update({
   id: '/disciplines',
   path: '/disciplines',
@@ -361,19 +379,20 @@ const StudentProfileRoute = StudentProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => StudentRoute,
 } as any)
-const StudentReservationsRoute = StudentReservationsRouteImport.update({
-  id: '/reservations',
-  path: '/reservations',
-  getParentRoute: () => StudentRoute,
+const BoostPortalCursosSlugRoute = BoostPortalCursosSlugRouteImport.update({
+  id: '/cursos/$slug',
+  path: '/cursos/$slug',
+  getParentRoute: () => BoostPortalRoute,
 } as any)
-const StudentTicketsRoute = StudentTicketsRouteImport.update({
-  id: '/tickets',
-  path: '/tickets',
-  getParentRoute: () => StudentRoute,
-} as any)
-const BoostCoursesIdRoute = BoostCoursesIdRouteImport.update({
-  id: '/courses/$id',
-  path: '/courses/$id',
+const BoostPortalPainelMatriculaIdRoute =
+  BoostPortalPainelMatriculaIdRouteImport.update({
+    id: '/$matriculaId',
+    path: '/$matriculaId',
+    getParentRoute: () => BoostPortalPainelRoute,
+  } as any)
+const BoostManageIdRoute = BoostManageIdRouteImport.update({
+  id: '/manage/$id',
+  path: '/manage/$id',
   getParentRoute: () => BoostRoute,
 } as any)
 const DeskCategoriesIndexRoute = DeskCategoriesIndexRouteImport.update({
@@ -412,11 +431,13 @@ export interface FileRoutesByFullPath {
   '/academy': typeof AcademyRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
   '/boost': typeof BoostRouteWithChildren
+  '/boost-portal': typeof BoostPortalRouteWithChildren
   '/desk': typeof DeskRouteWithChildren
   '/finance': typeof FinanceRouteWithChildren
   '/hub': typeof HubRouteWithChildren
   '/learn': typeof LearnRouteWithChildren
   '/login': typeof LoginRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/rooms': typeof RoomsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/student': typeof StudentRouteWithChildren
@@ -424,18 +445,19 @@ export interface FileRoutesByFullPath {
   '/academy/grades': typeof AcademyGradesRoute
   '/academy/manage': typeof AcademyManageRoute
   '/assets/inventory': typeof AssetsInventoryRoute
+  '/boost-portal/cadastro': typeof BoostPortalCadastroRoute
+  '/boost-portal/entrar': typeof BoostPortalEntrarRoute
+  '/boost-portal/painel': typeof BoostPortalPainelRouteWithChildren
   '/desk/categories': typeof DeskCategoriesRouteWithChildren
   '/desk/team': typeof DeskTeamRoute
   '/desk/tickets': typeof DeskTicketsRouteWithChildren
   '/finance/boletos': typeof FinanceBoletosRoute
   '/finance/charges': typeof FinanceChargesRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
-  '/finance/manage': typeof FinanceManageRoute
   '/finance/nfe': typeof FinanceNfeRoute
   '/finance/products': typeof FinanceProductsRoute
   '/finance/reports': typeof FinanceReportsRoute
   '/finance/services': typeof FinanceServicesRoute
-  '/finance/settings': typeof FinanceSettingsRoute
   '/finance/tuitions': typeof FinanceTuitionsRoute
   '/hub/acessos': typeof HubAcessosRoute
   '/hub/setores': typeof HubSetoresRoute
@@ -448,7 +470,6 @@ export interface FileRoutesByFullPath {
   '/student/activities': typeof StudentActivitiesRoute
   '/student/attendance': typeof StudentAttendanceRoute
   '/student/calendar': typeof StudentCalendarRoute
-  '/student/courses': typeof StudentCoursesRoute
   '/student/disciplines': typeof StudentDisciplinesRoute
   '/student/documents': typeof StudentDocumentsRoute
   '/student/finance': typeof StudentFinanceRoute
@@ -456,10 +477,9 @@ export interface FileRoutesByFullPath {
   '/student/history': typeof StudentHistoryRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
-  '/student/reservations': typeof StudentReservationsRoute
-  '/student/tickets': typeof StudentTicketsRoute
   '/academy/': typeof AcademyIndexRoute
   '/assets/': typeof AssetsIndexRoute
+  '/boost-portal/': typeof BoostPortalIndexRoute
   '/boost/': typeof BoostIndexRoute
   '/desk/': typeof DeskIndexRoute
   '/finance/': typeof FinanceIndexRoute
@@ -467,7 +487,9 @@ export interface FileRoutesByFullPath {
   '/learn/': typeof LearnIndexRoute
   '/rooms/': typeof RoomsIndexRoute
   '/student/': typeof StudentIndexRoute
-  '/boost/courses/$id': typeof BoostCoursesIdRoute
+  '/boost-portal/cursos/$slug': typeof BoostPortalCursosSlugRoute
+  '/boost-portal/painel/$matriculaId': typeof BoostPortalPainelMatriculaIdRoute
+  '/boost/manage/$id': typeof BoostManageIdRoute
   '/desk/categories/$id': typeof DeskCategoriesIdRoute
   '/desk/tickets/$id': typeof DeskTicketsIdRoute
   '/learn/activities/$id': typeof LearnActivitiesIdRoute
@@ -478,22 +500,24 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/settings': typeof SettingsRoute
   '/academy/attendance': typeof AcademyAttendanceRoute
   '/academy/grades': typeof AcademyGradesRoute
   '/academy/manage': typeof AcademyManageRoute
   '/assets/inventory': typeof AssetsInventoryRoute
+  '/boost-portal/cadastro': typeof BoostPortalCadastroRoute
+  '/boost-portal/entrar': typeof BoostPortalEntrarRoute
+  '/boost-portal/painel': typeof BoostPortalPainelRouteWithChildren
   '/desk/team': typeof DeskTeamRoute
   '/desk/tickets': typeof DeskTicketsRouteWithChildren
   '/finance/boletos': typeof FinanceBoletosRoute
   '/finance/charges': typeof FinanceChargesRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
-  '/finance/manage': typeof FinanceManageRoute
   '/finance/nfe': typeof FinanceNfeRoute
   '/finance/products': typeof FinanceProductsRoute
   '/finance/reports': typeof FinanceReportsRoute
   '/finance/services': typeof FinanceServicesRoute
-  '/finance/settings': typeof FinanceSettingsRoute
   '/finance/tuitions': typeof FinanceTuitionsRoute
   '/hub/acessos': typeof HubAcessosRoute
   '/hub/setores': typeof HubSetoresRoute
@@ -506,7 +530,6 @@ export interface FileRoutesByTo {
   '/student/activities': typeof StudentActivitiesRoute
   '/student/attendance': typeof StudentAttendanceRoute
   '/student/calendar': typeof StudentCalendarRoute
-  '/student/courses': typeof StudentCoursesRoute
   '/student/disciplines': typeof StudentDisciplinesRoute
   '/student/documents': typeof StudentDocumentsRoute
   '/student/finance': typeof StudentFinanceRoute
@@ -514,10 +537,9 @@ export interface FileRoutesByTo {
   '/student/history': typeof StudentHistoryRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
-  '/student/reservations': typeof StudentReservationsRoute
-  '/student/tickets': typeof StudentTicketsRoute
   '/academy': typeof AcademyIndexRoute
   '/assets': typeof AssetsIndexRoute
+  '/boost-portal': typeof BoostPortalIndexRoute
   '/boost': typeof BoostIndexRoute
   '/desk': typeof DeskIndexRoute
   '/finance': typeof FinanceIndexRoute
@@ -525,7 +547,9 @@ export interface FileRoutesByTo {
   '/learn': typeof LearnIndexRoute
   '/rooms': typeof RoomsIndexRoute
   '/student': typeof StudentIndexRoute
-  '/boost/courses/$id': typeof BoostCoursesIdRoute
+  '/boost-portal/cursos/$slug': typeof BoostPortalCursosSlugRoute
+  '/boost-portal/painel/$matriculaId': typeof BoostPortalPainelMatriculaIdRoute
+  '/boost/manage/$id': typeof BoostManageIdRoute
   '/desk/categories/$id': typeof DeskCategoriesIdRoute
   '/desk/tickets/$id': typeof DeskTicketsIdRoute
   '/learn/activities/$id': typeof LearnActivitiesIdRoute
@@ -539,11 +563,13 @@ export interface FileRoutesById {
   '/academy': typeof AcademyRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
   '/boost': typeof BoostRouteWithChildren
+  '/boost-portal': typeof BoostPortalRouteWithChildren
   '/desk': typeof DeskRouteWithChildren
   '/finance': typeof FinanceRouteWithChildren
   '/hub': typeof HubRouteWithChildren
   '/learn': typeof LearnRouteWithChildren
   '/login': typeof LoginRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/rooms': typeof RoomsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/student': typeof StudentRouteWithChildren
@@ -551,18 +577,19 @@ export interface FileRoutesById {
   '/academy/grades': typeof AcademyGradesRoute
   '/academy/manage': typeof AcademyManageRoute
   '/assets/inventory': typeof AssetsInventoryRoute
+  '/boost-portal/cadastro': typeof BoostPortalCadastroRoute
+  '/boost-portal/entrar': typeof BoostPortalEntrarRoute
+  '/boost-portal/painel': typeof BoostPortalPainelRouteWithChildren
   '/desk/categories': typeof DeskCategoriesRouteWithChildren
   '/desk/team': typeof DeskTeamRoute
   '/desk/tickets': typeof DeskTicketsRouteWithChildren
   '/finance/boletos': typeof FinanceBoletosRoute
   '/finance/charges': typeof FinanceChargesRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
-  '/finance/manage': typeof FinanceManageRoute
   '/finance/nfe': typeof FinanceNfeRoute
   '/finance/products': typeof FinanceProductsRoute
   '/finance/reports': typeof FinanceReportsRoute
   '/finance/services': typeof FinanceServicesRoute
-  '/finance/settings': typeof FinanceSettingsRoute
   '/finance/tuitions': typeof FinanceTuitionsRoute
   '/hub/acessos': typeof HubAcessosRoute
   '/hub/setores': typeof HubSetoresRoute
@@ -575,7 +602,6 @@ export interface FileRoutesById {
   '/student/activities': typeof StudentActivitiesRoute
   '/student/attendance': typeof StudentAttendanceRoute
   '/student/calendar': typeof StudentCalendarRoute
-  '/student/courses': typeof StudentCoursesRoute
   '/student/disciplines': typeof StudentDisciplinesRoute
   '/student/documents': typeof StudentDocumentsRoute
   '/student/finance': typeof StudentFinanceRoute
@@ -583,10 +609,9 @@ export interface FileRoutesById {
   '/student/history': typeof StudentHistoryRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
-  '/student/reservations': typeof StudentReservationsRoute
-  '/student/tickets': typeof StudentTicketsRoute
   '/academy/': typeof AcademyIndexRoute
   '/assets/': typeof AssetsIndexRoute
+  '/boost-portal/': typeof BoostPortalIndexRoute
   '/boost/': typeof BoostIndexRoute
   '/desk/': typeof DeskIndexRoute
   '/finance/': typeof FinanceIndexRoute
@@ -594,7 +619,9 @@ export interface FileRoutesById {
   '/learn/': typeof LearnIndexRoute
   '/rooms/': typeof RoomsIndexRoute
   '/student/': typeof StudentIndexRoute
-  '/boost/courses/$id': typeof BoostCoursesIdRoute
+  '/boost-portal/cursos/$slug': typeof BoostPortalCursosSlugRoute
+  '/boost-portal/painel/$matriculaId': typeof BoostPortalPainelMatriculaIdRoute
+  '/boost/manage/$id': typeof BoostManageIdRoute
   '/desk/categories/$id': typeof DeskCategoriesIdRoute
   '/desk/tickets/$id': typeof DeskTicketsIdRoute
   '/learn/activities/$id': typeof LearnActivitiesIdRoute
@@ -609,11 +636,13 @@ export interface FileRouteTypes {
     | '/academy'
     | '/assets'
     | '/boost'
+    | '/boost-portal'
     | '/desk'
     | '/finance'
     | '/hub'
     | '/learn'
     | '/login'
+    | '/redefinir-senha'
     | '/rooms'
     | '/settings'
     | '/student'
@@ -621,18 +650,19 @@ export interface FileRouteTypes {
     | '/academy/grades'
     | '/academy/manage'
     | '/assets/inventory'
+    | '/boost-portal/cadastro'
+    | '/boost-portal/entrar'
+    | '/boost-portal/painel'
     | '/desk/categories'
     | '/desk/team'
     | '/desk/tickets'
     | '/finance/boletos'
     | '/finance/charges'
     | '/finance/discounts'
-    | '/finance/manage'
     | '/finance/nfe'
     | '/finance/products'
     | '/finance/reports'
     | '/finance/services'
-    | '/finance/settings'
     | '/finance/tuitions'
     | '/hub/acessos'
     | '/hub/setores'
@@ -645,7 +675,6 @@ export interface FileRouteTypes {
     | '/student/activities'
     | '/student/attendance'
     | '/student/calendar'
-    | '/student/courses'
     | '/student/disciplines'
     | '/student/documents'
     | '/student/finance'
@@ -653,10 +682,9 @@ export interface FileRouteTypes {
     | '/student/history'
     | '/student/notifications'
     | '/student/profile'
-    | '/student/reservations'
-    | '/student/tickets'
     | '/academy/'
     | '/assets/'
+    | '/boost-portal/'
     | '/boost/'
     | '/desk/'
     | '/finance/'
@@ -664,7 +692,9 @@ export interface FileRouteTypes {
     | '/learn/'
     | '/rooms/'
     | '/student/'
-    | '/boost/courses/$id'
+    | '/boost-portal/cursos/$slug'
+    | '/boost-portal/painel/$matriculaId'
+    | '/boost/manage/$id'
     | '/desk/categories/$id'
     | '/desk/tickets/$id'
     | '/learn/activities/$id'
@@ -675,22 +705,24 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/redefinir-senha'
     | '/settings'
     | '/academy/attendance'
     | '/academy/grades'
     | '/academy/manage'
     | '/assets/inventory'
+    | '/boost-portal/cadastro'
+    | '/boost-portal/entrar'
+    | '/boost-portal/painel'
     | '/desk/team'
     | '/desk/tickets'
     | '/finance/boletos'
     | '/finance/charges'
     | '/finance/discounts'
-    | '/finance/manage'
     | '/finance/nfe'
     | '/finance/products'
     | '/finance/reports'
     | '/finance/services'
-    | '/finance/settings'
     | '/finance/tuitions'
     | '/hub/acessos'
     | '/hub/setores'
@@ -703,7 +735,6 @@ export interface FileRouteTypes {
     | '/student/activities'
     | '/student/attendance'
     | '/student/calendar'
-    | '/student/courses'
     | '/student/disciplines'
     | '/student/documents'
     | '/student/finance'
@@ -711,10 +742,9 @@ export interface FileRouteTypes {
     | '/student/history'
     | '/student/notifications'
     | '/student/profile'
-    | '/student/reservations'
-    | '/student/tickets'
     | '/academy'
     | '/assets'
+    | '/boost-portal'
     | '/boost'
     | '/desk'
     | '/finance'
@@ -722,7 +752,9 @@ export interface FileRouteTypes {
     | '/learn'
     | '/rooms'
     | '/student'
-    | '/boost/courses/$id'
+    | '/boost-portal/cursos/$slug'
+    | '/boost-portal/painel/$matriculaId'
+    | '/boost/manage/$id'
     | '/desk/categories/$id'
     | '/desk/tickets/$id'
     | '/learn/activities/$id'
@@ -735,11 +767,13 @@ export interface FileRouteTypes {
     | '/academy'
     | '/assets'
     | '/boost'
+    | '/boost-portal'
     | '/desk'
     | '/finance'
     | '/hub'
     | '/learn'
     | '/login'
+    | '/redefinir-senha'
     | '/rooms'
     | '/settings'
     | '/student'
@@ -747,18 +781,19 @@ export interface FileRouteTypes {
     | '/academy/grades'
     | '/academy/manage'
     | '/assets/inventory'
+    | '/boost-portal/cadastro'
+    | '/boost-portal/entrar'
+    | '/boost-portal/painel'
     | '/desk/categories'
     | '/desk/team'
     | '/desk/tickets'
     | '/finance/boletos'
     | '/finance/charges'
     | '/finance/discounts'
-    | '/finance/manage'
     | '/finance/nfe'
     | '/finance/products'
     | '/finance/reports'
     | '/finance/services'
-    | '/finance/settings'
     | '/finance/tuitions'
     | '/hub/acessos'
     | '/hub/setores'
@@ -771,7 +806,6 @@ export interface FileRouteTypes {
     | '/student/activities'
     | '/student/attendance'
     | '/student/calendar'
-    | '/student/courses'
     | '/student/disciplines'
     | '/student/documents'
     | '/student/finance'
@@ -779,10 +813,9 @@ export interface FileRouteTypes {
     | '/student/history'
     | '/student/notifications'
     | '/student/profile'
-    | '/student/reservations'
-    | '/student/tickets'
     | '/academy/'
     | '/assets/'
+    | '/boost-portal/'
     | '/boost/'
     | '/desk/'
     | '/finance/'
@@ -790,7 +823,9 @@ export interface FileRouteTypes {
     | '/learn/'
     | '/rooms/'
     | '/student/'
-    | '/boost/courses/$id'
+    | '/boost-portal/cursos/$slug'
+    | '/boost-portal/painel/$matriculaId'
+    | '/boost/manage/$id'
     | '/desk/categories/$id'
     | '/desk/tickets/$id'
     | '/learn/activities/$id'
@@ -804,11 +839,13 @@ export interface RootRouteChildren {
   AcademyRoute: typeof AcademyRouteWithChildren
   AssetsRoute: typeof AssetsRouteWithChildren
   BoostRoute: typeof BoostRouteWithChildren
+  BoostPortalRoute: typeof BoostPortalRouteWithChildren
   DeskRoute: typeof DeskRouteWithChildren
   FinanceRoute: typeof FinanceRouteWithChildren
   HubRoute: typeof HubRouteWithChildren
   LearnRoute: typeof LearnRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RoomsRoute: typeof RoomsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
   StudentRoute: typeof StudentRouteWithChildren
@@ -844,6 +881,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BoostRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/boost-portal': {
+      id: '/boost-portal'
+      path: '/boost-portal'
+      fullPath: '/boost-portal'
+      preLoaderRoute: typeof BoostPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/desk': {
       id: '/desk'
       path: '/desk'
@@ -877,6 +921,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rooms': {
@@ -942,6 +993,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssetsInventoryRouteImport
       parentRoute: typeof AssetsRoute
     }
+    '/boost-portal/': {
+      id: '/boost-portal/'
+      path: '/'
+      fullPath: '/boost-portal/'
+      preLoaderRoute: typeof BoostPortalIndexRouteImport
+      parentRoute: typeof BoostPortalRoute
+    }
+    '/boost-portal/cadastro': {
+      id: '/boost-portal/cadastro'
+      path: '/cadastro'
+      fullPath: '/boost-portal/cadastro'
+      preLoaderRoute: typeof BoostPortalCadastroRouteImport
+      parentRoute: typeof BoostPortalRoute
+    }
+    '/boost-portal/entrar': {
+      id: '/boost-portal/entrar'
+      path: '/entrar'
+      fullPath: '/boost-portal/entrar'
+      preLoaderRoute: typeof BoostPortalEntrarRouteImport
+      parentRoute: typeof BoostPortalRoute
+    }
+    '/boost-portal/painel': {
+      id: '/boost-portal/painel'
+      path: '/painel'
+      fullPath: '/boost-portal/painel'
+      preLoaderRoute: typeof BoostPortalPainelRouteImport
+      parentRoute: typeof BoostPortalRoute
+    }
     '/boost/': {
       id: '/boost/'
       path: '/'
@@ -1005,13 +1084,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceDiscountsRouteImport
       parentRoute: typeof FinanceRoute
     }
-    '/finance/manage': {
-      id: '/finance/manage'
-      path: '/manage'
-      fullPath: '/finance/manage'
-      preLoaderRoute: typeof FinanceManageRouteImport
-      parentRoute: typeof FinanceRoute
-    }
     '/finance/nfe': {
       id: '/finance/nfe'
       path: '/nfe'
@@ -1038,13 +1110,6 @@ declare module '@tanstack/react-router' {
       path: '/services'
       fullPath: '/finance/services'
       preLoaderRoute: typeof FinanceServicesRouteImport
-      parentRoute: typeof FinanceRoute
-    }
-    '/finance/settings': {
-      id: '/finance/settings'
-      path: '/settings'
-      fullPath: '/finance/settings'
-      preLoaderRoute: typeof FinanceSettingsRouteImport
       parentRoute: typeof FinanceRoute
     }
     '/finance/tuitions': {
@@ -1159,13 +1224,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentCalendarRouteImport
       parentRoute: typeof StudentRoute
     }
-    '/student/courses': {
-      id: '/student/courses'
-      path: '/courses'
-      fullPath: '/student/courses'
-      preLoaderRoute: typeof StudentCoursesRouteImport
-      parentRoute: typeof StudentRoute
-    }
     '/student/disciplines': {
       id: '/student/disciplines'
       path: '/disciplines'
@@ -1215,25 +1273,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentProfileRouteImport
       parentRoute: typeof StudentRoute
     }
-    '/student/reservations': {
-      id: '/student/reservations'
-      path: '/reservations'
-      fullPath: '/student/reservations'
-      preLoaderRoute: typeof StudentReservationsRouteImport
-      parentRoute: typeof StudentRoute
+    '/boost-portal/cursos/$slug': {
+      id: '/boost-portal/cursos/$slug'
+      path: '/cursos/$slug'
+      fullPath: '/boost-portal/cursos/$slug'
+      preLoaderRoute: typeof BoostPortalCursosSlugRouteImport
+      parentRoute: typeof BoostPortalRoute
     }
-    '/student/tickets': {
-      id: '/student/tickets'
-      path: '/tickets'
-      fullPath: '/student/tickets'
-      preLoaderRoute: typeof StudentTicketsRouteImport
-      parentRoute: typeof StudentRoute
+    '/boost-portal/painel/$matriculaId': {
+      id: '/boost-portal/painel/$matriculaId'
+      path: '/$matriculaId'
+      fullPath: '/boost-portal/painel/$matriculaId'
+      preLoaderRoute: typeof BoostPortalPainelMatriculaIdRouteImport
+      parentRoute: typeof BoostPortalPainelRoute
     }
-    '/boost/courses/$id': {
-      id: '/boost/courses/$id'
-      path: '/courses/$id'
-      fullPath: '/boost/courses/$id'
-      preLoaderRoute: typeof BoostCoursesIdRouteImport
+    '/boost/manage/$id': {
+      id: '/boost/manage/$id'
+      path: '/manage/$id'
+      fullPath: '/boost/manage/$id'
+      preLoaderRoute: typeof BoostManageIdRouteImport
       parentRoute: typeof BoostRoute
     }
     '/desk/categories/': {
@@ -1313,15 +1371,46 @@ const AssetsRouteWithChildren =
 
 interface BoostRouteChildren {
   BoostIndexRoute: typeof BoostIndexRoute
-  BoostCoursesIdRoute: typeof BoostCoursesIdRoute
+  BoostManageIdRoute: typeof BoostManageIdRoute
 }
 
 const BoostRouteChildren: BoostRouteChildren = {
   BoostIndexRoute: BoostIndexRoute,
-  BoostCoursesIdRoute: BoostCoursesIdRoute,
+  BoostManageIdRoute: BoostManageIdRoute,
 }
 
 const BoostRouteWithChildren = BoostRoute._addFileChildren(BoostRouteChildren)
+
+interface BoostPortalPainelRouteChildren {
+  BoostPortalPainelMatriculaIdRoute: typeof BoostPortalPainelMatriculaIdRoute
+}
+
+const BoostPortalPainelRouteChildren: BoostPortalPainelRouteChildren = {
+  BoostPortalPainelMatriculaIdRoute: BoostPortalPainelMatriculaIdRoute,
+}
+
+const BoostPortalPainelRouteWithChildren =
+  BoostPortalPainelRoute._addFileChildren(BoostPortalPainelRouteChildren)
+
+interface BoostPortalRouteChildren {
+  BoostPortalCadastroRoute: typeof BoostPortalCadastroRoute
+  BoostPortalEntrarRoute: typeof BoostPortalEntrarRoute
+  BoostPortalPainelRoute: typeof BoostPortalPainelRouteWithChildren
+  BoostPortalIndexRoute: typeof BoostPortalIndexRoute
+  BoostPortalCursosSlugRoute: typeof BoostPortalCursosSlugRoute
+}
+
+const BoostPortalRouteChildren: BoostPortalRouteChildren = {
+  BoostPortalCadastroRoute: BoostPortalCadastroRoute,
+  BoostPortalEntrarRoute: BoostPortalEntrarRoute,
+  BoostPortalPainelRoute: BoostPortalPainelRouteWithChildren,
+  BoostPortalIndexRoute: BoostPortalIndexRoute,
+  BoostPortalCursosSlugRoute: BoostPortalCursosSlugRoute,
+}
+
+const BoostPortalRouteWithChildren = BoostPortalRoute._addFileChildren(
+  BoostPortalRouteChildren,
+)
 
 interface DeskCategoriesRouteChildren {
   DeskCategoriesIdRoute: typeof DeskCategoriesIdRoute
@@ -1369,12 +1458,10 @@ interface FinanceRouteChildren {
   FinanceBoletosRoute: typeof FinanceBoletosRoute
   FinanceChargesRoute: typeof FinanceChargesRoute
   FinanceDiscountsRoute: typeof FinanceDiscountsRoute
-  FinanceManageRoute: typeof FinanceManageRoute
   FinanceNfeRoute: typeof FinanceNfeRoute
   FinanceProductsRoute: typeof FinanceProductsRoute
   FinanceReportsRoute: typeof FinanceReportsRoute
   FinanceServicesRoute: typeof FinanceServicesRoute
-  FinanceSettingsRoute: typeof FinanceSettingsRoute
   FinanceTuitionsRoute: typeof FinanceTuitionsRoute
   FinanceIndexRoute: typeof FinanceIndexRoute
 }
@@ -1383,12 +1470,10 @@ const FinanceRouteChildren: FinanceRouteChildren = {
   FinanceBoletosRoute: FinanceBoletosRoute,
   FinanceChargesRoute: FinanceChargesRoute,
   FinanceDiscountsRoute: FinanceDiscountsRoute,
-  FinanceManageRoute: FinanceManageRoute,
   FinanceNfeRoute: FinanceNfeRoute,
   FinanceProductsRoute: FinanceProductsRoute,
   FinanceReportsRoute: FinanceReportsRoute,
   FinanceServicesRoute: FinanceServicesRoute,
-  FinanceSettingsRoute: FinanceSettingsRoute,
   FinanceTuitionsRoute: FinanceTuitionsRoute,
   FinanceIndexRoute: FinanceIndexRoute,
 }
@@ -1452,7 +1537,6 @@ interface StudentRouteChildren {
   StudentActivitiesRoute: typeof StudentActivitiesRoute
   StudentAttendanceRoute: typeof StudentAttendanceRoute
   StudentCalendarRoute: typeof StudentCalendarRoute
-  StudentCoursesRoute: typeof StudentCoursesRoute
   StudentDisciplinesRoute: typeof StudentDisciplinesRoute
   StudentDocumentsRoute: typeof StudentDocumentsRoute
   StudentFinanceRoute: typeof StudentFinanceRoute
@@ -1460,8 +1544,6 @@ interface StudentRouteChildren {
   StudentHistoryRoute: typeof StudentHistoryRoute
   StudentNotificationsRoute: typeof StudentNotificationsRoute
   StudentProfileRoute: typeof StudentProfileRoute
-  StudentReservationsRoute: typeof StudentReservationsRoute
-  StudentTicketsRoute: typeof StudentTicketsRoute
   StudentIndexRoute: typeof StudentIndexRoute
 }
 
@@ -1469,7 +1551,6 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentActivitiesRoute: StudentActivitiesRoute,
   StudentAttendanceRoute: StudentAttendanceRoute,
   StudentCalendarRoute: StudentCalendarRoute,
-  StudentCoursesRoute: StudentCoursesRoute,
   StudentDisciplinesRoute: StudentDisciplinesRoute,
   StudentDocumentsRoute: StudentDocumentsRoute,
   StudentFinanceRoute: StudentFinanceRoute,
@@ -1477,8 +1558,6 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentHistoryRoute: StudentHistoryRoute,
   StudentNotificationsRoute: StudentNotificationsRoute,
   StudentProfileRoute: StudentProfileRoute,
-  StudentReservationsRoute: StudentReservationsRoute,
-  StudentTicketsRoute: StudentTicketsRoute,
   StudentIndexRoute: StudentIndexRoute,
 }
 
@@ -1490,11 +1569,13 @@ const rootRouteChildren: RootRouteChildren = {
   AcademyRoute: AcademyRouteWithChildren,
   AssetsRoute: AssetsRouteWithChildren,
   BoostRoute: BoostRouteWithChildren,
+  BoostPortalRoute: BoostPortalRouteWithChildren,
   DeskRoute: DeskRouteWithChildren,
   FinanceRoute: FinanceRouteWithChildren,
   HubRoute: HubRouteWithChildren,
   LearnRoute: LearnRouteWithChildren,
   LoginRoute: LoginRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   RoomsRoute: RoomsRouteWithChildren,
   SettingsRoute: SettingsRoute,
   StudentRoute: StudentRouteWithChildren,

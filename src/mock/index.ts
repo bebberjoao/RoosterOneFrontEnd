@@ -86,12 +86,6 @@ export const MOCK_ENDPOINT_MAP = {
   deskCategories: "/chamados-categorias",
   deskSectors: "/chamados-setores",
   deskAgents: "/chamados-atendentes",
-  // Finance
-  products: "/produtos",
-  services: "/servicos",
-  charges: "/cobrancas",
-  tuitions: "/mensalidades",
-  payments: "/pagamentos",
   // Boost
   boostCourses: "/boost-cursos",
   certificates: "/certificados",

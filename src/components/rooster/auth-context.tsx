@@ -2,7 +2,12 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { ApiError, ApiUnavailableError, request } from "@/services/hub/client";
 import { session, type SessionUser } from "@/services/hub/session";
 
-type LoginResponse = { usuario: SessionUser; accessToken: string };
+type LoginResponse = {
+  usuario: SessionUser;
+  accessToken: string;
+  /** Permissões efetivas do usuário no momento do login — mesmo formato de `Permissao.nome`/`permissionKey()`. */
+  acesso: { permissoes: Array<{ nome: string }> } | null;
+};
 
 type AuthCtx = {
   authed: boolean;
@@ -11,6 +16,10 @@ type AuthCtx = {
   /** Autentica contra POST /auth/login. Lança ApiError (credenciais) ou ApiUnavailableError (sem servidor). */
   login: (email: string, senha: string) => Promise<void>;
   logout: () => void;
+  /** POST /auth/esqueci-senha — sempre resolve (a API não informa se o e-mail existe). */
+  requestPasswordReset: (email: string) => Promise<void>;
+  /** POST /auth/redefinir-senha — lança ApiError se o token for inválido/expirado. */
+  resetPassword: (token: string, novaSenha: string) => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx>({
@@ -19,6 +28,8 @@ const Ctx = createContext<AuthCtx>({
   usuario: null,
   login: async () => {},
   logout: () => {},
+  requestPasswordReset: async () => {},
+  resetPassword: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -37,12 +48,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, senha: string) => {
     const res = await request<LoginResponse>("/auth/login", { method: "POST", body: { email, senha } });
-    session.set(res.accessToken, res.usuario);
+    const permissoes = (res.acesso?.permissoes ?? []).map((p) => p.nome);
+    session.set(res.accessToken, res.usuario, permissoes);
   };
   const logout = () => session.clear();
 
+  const requestPasswordReset = async (email: string) => {
+    await request("/auth/esqueci-senha", { method: "POST", body: { email } });
+  };
+  const resetPassword = async (token: string, novaSenha: string) => {
+    await request("/auth/redefinir-senha", { method: "POST", body: { token, novaSenha } });
+  };
+
   return (
-    <Ctx.Provider value={{ authed: usuario !== null, ready, usuario, login, logout }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ authed: usuario !== null, ready, usuario, login, logout, requestPasswordReset, resetPassword }}>
+      {children}
+    </Ctx.Provider>
   );
 }
 

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarCheck2, CalendarClock, CheckCircle2, CircleX, Clock3, MessageCircle, Plus } from "lucide-react";
 import { Btn, CrudHeader, CrudToolbar, DataTable, StatCard, TONE, type Column } from "@/components/shared";
-import { useRole, ROLE_META } from "@/components/rooster/role-context";
+import { session } from "@/services/hub/session";
 import { StatusBadge } from "@/components/rooster/rooms/badges";
 import { STATUS_LABEL, formatDate } from "@/components/rooster/rooms/labels";
 import { roomService } from "@/services/mock-api";
@@ -16,20 +16,21 @@ export const Route = createFileRoute("/rooms/reservations/")({
 
 function MyReservations() {
   const navigate = useNavigate();
-  const { role } = useRole();
-  const person = ROLE_META[role].person;
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"all" | Reservation["status"]>("all");
 
   useEffect(() => {
+    const myId = session.usuario?.id;
     Promise.all([roomService.getReservations(), roomService.getAll()]).then(([all, loadedRooms]) => {
-      const mine = all.filter((r) => r.responsible === person.name);
-      setReservations(mine.length ? mine : all.slice(0, 8).map((r) => ({ ...r, responsible: person.name })));
+      // Filtra pelo id real do usuário logado (responsibleId, vindo do backend) — nunca por nome
+      // de exibição. Sem fallback: se não há nenhuma reserva do usuário, a lista fica vazia (não
+      // mostra reservas de outra pessoa como se fossem suas).
+      setReservations(all.filter((r) => r.responsibleId === myId));
       setRooms(loadedRooms);
     });
-  }, [person.name]);
+  }, []);
 
   const rows = useMemo(() => reservations.filter((r) => {
     const room = rooms.find((item) => item.id === r.roomId);

@@ -93,6 +93,8 @@ export type Reservation = {
   id: string;
   code: string;
   spaceId: string;
+  /** Id real do usuário dono da reserva (JWT no backend) — use para checar "é minha reserva?", nunca `responsible` (nome exibido, não confiável para identidade). */
+  responsibleId?: string;
   responsible: string;
   sector: string;
   event: string;

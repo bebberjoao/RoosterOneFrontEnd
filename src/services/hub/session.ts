@@ -4,11 +4,14 @@
 // de quem está logado é sempre o backend (o token expira em 8h).
 const TOKEN_KEY = "rooster.session.token";
 const USER_KEY = "rooster.session.usuario";
+const PERMISSOES_KEY = "rooster.session.permissoes";
 
 export type SessionUser = { id: string; nome: string; email: string };
 
 let token: string | null = null;
 let usuario: SessionUser | null = null;
+/** Chaves `modulo.tela.acao` (mesmo formato de `Permissao.nome`/`permissionKey()`) efetivamente concedidas ao usuário logado — vêm de `acesso.permissoes` na resposta de `POST /auth/login`, nunca recalculadas no cliente. */
+let permissoes: string[] = [];
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -19,11 +22,14 @@ function readLocalStorage() {
   try {
     const storedToken = localStorage.getItem(TOKEN_KEY);
     const storedUser = localStorage.getItem(USER_KEY);
+    const storedPermissoes = localStorage.getItem(PERMISSOES_KEY);
     token = storedToken;
     usuario = storedUser ? (JSON.parse(storedUser) as SessionUser) : null;
+    permissoes = storedPermissoes ? (JSON.parse(storedPermissoes) as string[]) : [];
   } catch {
     token = null;
     usuario = null;
+    permissoes = [];
   }
 }
 
@@ -34,17 +40,23 @@ export const session = {
   get usuario() {
     return usuario;
   },
+  /** Chaves de permissão real do usuário logado (vazio se ainda não restaurado/logado). */
+  get permissoes() {
+    return permissoes;
+  },
   /** Lê o storage local — chamado uma vez, no boot do app. */
   restore() {
     readLocalStorage();
     notify();
   },
-  set(nextToken: string, nextUsuario: SessionUser) {
+  set(nextToken: string, nextUsuario: SessionUser, nextPermissoes: string[] = []) {
     token = nextToken;
     usuario = nextUsuario;
+    permissoes = nextPermissoes;
     try {
       localStorage.setItem(TOKEN_KEY, nextToken);
       localStorage.setItem(USER_KEY, JSON.stringify(nextUsuario));
+      localStorage.setItem(PERMISSOES_KEY, JSON.stringify(nextPermissoes));
     } catch {
       // Storage indisponível (ex.: modo privado) — sessão fica só em memória.
     }
@@ -53,9 +65,11 @@ export const session = {
   clear() {
     token = null;
     usuario = null;
+    permissoes = [];
     try {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
+      localStorage.removeItem(PERMISSOES_KEY);
     } catch {
       // ignore
     }

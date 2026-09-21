@@ -107,7 +107,7 @@ function reservaToFront(b: ReservaBack): Reservation {
   const historicoEvents = (b.historico ?? []).map(historicoToEvent).filter((e): e is ReservationEvent => e !== null);
   const ultimoStatus = [...(b.historico ?? [])].reverse().find((h) => h.campo === 'status');
   return {
-    id: b.id, code: b.codigo, spaceId: b.ambienteId, roomId: b.ambienteId, responsible: b.responsavel,
+    id: b.id, code: b.codigo, spaceId: b.ambienteId, roomId: b.ambienteId, responsibleId: b.responsavelId ?? undefined, responsible: b.responsavel,
     sector: b.setor ?? "", event: b.evento, purpose: b.finalidade ?? "", date: b.data, start: b.horarioInicio,
     end: b.horarioFim, participants: b.participantes, status: b.status as ReservationStatus,
     recurrence: b.recorrencia as Reservation["recurrence"], notes: b.observacoes ?? undefined,
@@ -175,6 +175,22 @@ export const roomService = {
       observacoes: dto.notes,
     } as Partial<ReservaBack>);
     return reservaToFront(created);
+  },
+  /** Gera uma série de reservas recorrentes (uma linha por ocorrência, ligadas por serieId). */
+  async createReservationSeries(
+    dto: Omit<Reservation, "id"> & { recurrence: "diaria" | "semanal" | "mensal" },
+    repetirAte: string,
+  ): Promise<{ serieId: string; reservas: Reservation[] }> {
+    const res = await request<{ serieId: string; reservas: ReservaBack[] }>("/reservas/serie", {
+      method: "POST",
+      body: {
+        codigo: dto.code, ambienteId: dto.roomId ?? dto.spaceId, responsavelId: session.usuario?.id, responsavel: dto.responsible,
+        setor: dto.sector, evento: dto.event, finalidade: dto.purpose, data: dto.date, horarioInicio: dto.start,
+        horarioFim: dto.end, participantes: dto.participants, status: dto.status, recorrencia: dto.recurrence,
+        observacoes: dto.notes, repetirAte,
+      },
+    });
+    return { serieId: res.serieId, reservas: res.reservas.map(reservaToFront) };
   },
   async updateReservation(id: string, dto: Partial<Reservation>): Promise<Reservation | undefined> {
     const patch: Partial<ReservaBack> = {};

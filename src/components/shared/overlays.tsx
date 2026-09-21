@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useId, useRef } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Btn } from "./primitives";
@@ -11,6 +11,41 @@ function useEscape(open: boolean, onClose: () => void) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+}
+
+const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+/** Foca o overlay ao abrir, prende o Tab dentro dele, e devolve o foco a quem tinha antes ao fechar. */
+function useFocusTrap(open: boolean, containerRef: React.RefObject<HTMLElement | null>) {
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const container = containerRef.current;
+    const firstFocusable = container?.querySelector<HTMLElement>(FOCUSABLE);
+    (firstFocusable ?? container)?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !container) return;
+      const focusables = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.offsetParent !== null);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused.current?.focus?.();
+    };
+  }, [open, containerRef]);
 }
 
 /** Centered modal used for create/edit forms. */
@@ -32,17 +67,29 @@ export function Modal({
   size?: "sm" | "md" | "lg";
 }) {
   useEscape(open, onClose);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(open, containerRef);
+  const titleId = useId();
+  const descId = useId();
   if (!open) return null;
   const width = size === "sm" ? "max-w-md" : size === "lg" ? "max-w-3xl" : "max-w-xl";
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-background/70 p-4 backdrop-blur-sm sm:p-8">
-      <div className={cn("relative w-full rounded-2xl border bg-card shadow-xl", width)}>
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descId : undefined}
+        tabIndex={-1}
+        className={cn("relative w-full rounded-2xl border bg-card shadow-xl outline-none", width)}
+      >
         <header className="flex items-start justify-between gap-4 border-b px-5 py-4">
           <div>
-            <h2 className="text-sm font-semibold">{title}</h2>
-            {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
+            <h2 id={titleId} className="text-sm font-semibold">{title}</h2>
+            {description ? <p id={descId} className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
           </div>
-          <button type="button" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent">
+          <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-md p-1 text-muted-foreground hover:bg-accent">
             <X className="h-4 w-4" />
           </button>
         </header>
@@ -72,20 +119,28 @@ export function Drawer({
   width?: number;
 }) {
   useEscape(open, onClose);
+  const containerRef = useRef<HTMLElement>(null);
+  useFocusTrap(open, containerRef);
+  const titleId = useId();
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-background/60 backdrop-blur-sm">
       <button type="button" aria-label="Fechar" className="flex-1 cursor-default" onClick={onClose} />
       <aside
-        className="flex h-full w-full flex-col border-l bg-card shadow-2xl"
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="flex h-full w-full flex-col border-l bg-card shadow-2xl outline-none"
         style={{ maxWidth: width }}
       >
         <header className="flex items-start justify-between gap-4 border-b px-5 py-4">
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold">{title}</h2>
+            <h2 id={titleId} className="truncate text-sm font-semibold">{title}</h2>
             {subtitle ? <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div> : null}
           </div>
-          <button type="button" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent">
+          <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-md p-1 text-muted-foreground hover:bg-accent">
             <X className="h-4 w-4" />
           </button>
         </header>

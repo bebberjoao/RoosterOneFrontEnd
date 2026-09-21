@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   CrudHeader,
   SectionCard, EmptyState, Btn, Modal, ConfirmDialog,
-  Field, TextInput, TextArea, SelectInput,
+  Field, TextInput, TextArea, SelectInput, LoadingCards,
 } from "@/components/shared";
 import { roomService } from "@/services/mock-api";
 import type { Room } from "@/mock/database/rooms";
@@ -64,14 +65,21 @@ function StructurePage() {
 
   async function handleDelete() {
     if (!confirmDelete) return;
-    if (confirmDelete.kind === "campus") { await roomService.removeCampus(confirmDelete.id); setCampusId(null); setBlockId(null); setRoomId(null); }
-    if (confirmDelete.kind === "block") { await roomService.removeBlock(confirmDelete.id); setBlockId(null); setRoomId(null); }
-    if (confirmDelete.kind === "room") { await roomService.remove(confirmDelete.id); setRoomId(null); }
-    setConfirmDelete(null);
-    reload();
+    try {
+      if (confirmDelete.kind === "campus") { await roomService.removeCampus(confirmDelete.id); setCampusId(null); setBlockId(null); setRoomId(null); }
+      if (confirmDelete.kind === "block") { await roomService.removeBlock(confirmDelete.id); setBlockId(null); setRoomId(null); }
+      if (confirmDelete.kind === "room") { await roomService.remove(confirmDelete.id); setRoomId(null); }
+      setConfirmDelete(null);
+      reload();
+      const label = confirmDelete.kind === "campus" ? "Campus excluído com sucesso" : confirmDelete.kind === "block" ? "Bloco excluído com sucesso" : "Ambiente excluído com sucesso";
+      toast.success(label);
+    } catch (err) {
+      setConfirmDelete(null);
+      toast.error(err instanceof Error ? err.message : "Falha ao excluir item");
+    }
   }
 
-  if (loading) return <p className="text-sm text-muted-foreground">Carregando estrutura...</p>;
+  if (loading) return <LoadingCards />;
 
   return (
     <>
@@ -409,10 +417,15 @@ function CampusModal({
 
   async function save() {
     if (!form.name || !form.code) return;
-    if (editing) await roomService.updateCampus(editing.id, form);
-    else await roomService.createCampus(form as Omit<Campus, "id">);
-    onSaved();
-    onClose();
+    try {
+      if (editing) await roomService.updateCampus(editing.id, form);
+      else await roomService.createCampus(form as Omit<Campus, "id">);
+      onSaved();
+      onClose();
+      toast.success(editing ? "Campus atualizado com sucesso" : "Campus criado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao salvar campus");
+    }
   }
 
   return (
@@ -455,10 +468,15 @@ function BlockModal({
 
   async function save() {
     if (!form.name || !form.code || !form.campusId) return;
-    if (editing) await roomService.updateBlock(editing.id, form);
-    else await roomService.createBlock(form as Omit<Block, "id">);
-    onSaved();
-    onClose();
+    try {
+      if (editing) await roomService.updateBlock(editing.id, form);
+      else await roomService.createBlock(form as Omit<Block, "id">);
+      onSaved();
+      onClose();
+      toast.success(editing ? "Bloco atualizado com sucesso" : "Bloco criado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao salvar bloco");
+    }
   }
 
   return (
@@ -521,10 +539,15 @@ function RoomModal({
 
   async function save() {
     if (!form.name || !form.code || !form.campusId || !form.blockId) return;
-    if (editing) await roomService.update(editing.id, form);
-    else await roomService.create(form as Omit<Room, "id">);
-    onSaved();
-    onClose();
+    try {
+      if (editing) await roomService.update(editing.id, form);
+      else await roomService.create(form as Omit<Room, "id">);
+      onSaved();
+      onClose();
+      toast.success(editing ? "Ambiente atualizado com sucesso" : "Ambiente criado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao salvar ambiente");
+    }
   }
 
   return (

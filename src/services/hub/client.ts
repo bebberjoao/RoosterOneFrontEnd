@@ -37,27 +37,18 @@ async function parse(res: Response) {
   }
 }
 
-export async function request<T>(
-  path: string,
-  init?: { method?: string; body?: unknown; signal?: AbortSignal },
-): Promise<T> {
-  const headers: Record<string, string> = {};
-  if (init?.body) headers["Content-Type"] = "application/json";
+async function send(path: string, init: { method?: string; headers?: Record<string, string>; body?: BodyInit; signal?: AbortSignal }): Promise<Response> {
+  const headers: Record<string, string> = { ...init.headers };
   if (session.token) headers["Authorization"] = `Bearer ${session.token}`;
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
-      method: init?.method ?? "GET",
-      headers,
-      body: init?.body ? JSON.stringify(init.body) : undefined,
-      signal: init?.signal,
-    });
+    res = await fetch(`${API_URL}${path}`, { method: init.method ?? "GET", headers, body: init.body, signal: init.signal });
   } catch (err) {
     throw new ApiUnavailableError(err);
   }
-  const data = await parse(res);
   if (!res.ok) {
+    const data = await parse(res.clone());
     const message =
       (data && typeof data === "object" && "message" in data
         ? Array.isArray((data as { message: unknown }).message)
@@ -69,5 +60,30 @@ export async function request<T>(
     if (res.status === 401 && session.token) session.clear();
     throw new ApiError(res.status, message);
   }
-  return data as T;
+  return res;
+}
+
+export async function request<T>(
+  path: string,
+  init?: { method?: string; body?: unknown; signal?: AbortSignal },
+): Promise<T> {
+  const res = await send(path, {
+    method: init?.method,
+    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
+    body: init?.body ? JSON.stringify(init.body) : undefined,
+    signal: init?.signal,
+  });
+  return (await parse(res)) as T;
+}
+
+/** Envia um arquivo (multipart/form-data) — sem Content-Type manual, o browser define o boundary. */
+export async function uploadFile<T>(path: string, formData: FormData): Promise<T> {
+  const res = await send(path, { method: "POST", body: formData });
+  return (await parse(res)) as T;
+}
+
+/** Baixa um recurso protegido por JWT como Blob (não dá pra usar um <a href> puro — não carrega o Authorization). */
+export async function requestBlob(path: string): Promise<Blob> {
+  const res = await send(path, {});
+  return res.blob();
 }

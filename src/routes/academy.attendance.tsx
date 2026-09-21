@@ -1,17 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/rooster/page-header";
 import {
-  KLASSES,
-  STUDENTS,
-  klassById,
-  disciplineById,
-  teacherById,
-  studentAttendance,
-  today,
-  formatDate,
-} from "@/components/rooster/academy/mock-data";
-import type { AttendanceMark, Klass } from "@/components/rooster/academy/mock-data";
+  academyService, toneFor,
+  type SchoolClass,
+  type Enrollment,
+  type AttendanceRecord,
+  type AttendanceStatus,
+} from "@/services/mock-api/academy.service";
+import { ApiError } from "@/services/hub/client";
+import { useCan } from "@/components/rooster/hub/permission-context";
 import {
   CheckCircle2,
   XCircle,
@@ -25,6 +24,8 @@ import {
   Plus,
   Eye,
   History,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/academy/attendance")({
@@ -41,64 +42,93 @@ export const Route = createFileRoute("/academy/attendance")({
   component: Attendance,
 });
 
-const MARK_META: Record<AttendanceMark, { label: string; tone: string; short: string }> = {
-  P: { label: "Presente", tone: "oklch(0.62 0.18 155)", short: "P" },
-  F: { label: "Falta", tone: "oklch(0.65 0.18 25)", short: "F" },
-  A: { label: "Atraso", tone: "oklch(0.72 0.14 90)", short: "A" },
-  J: { label: "Justificada", tone: "oklch(0.55 0.19 265)", short: "J" },
+const STATUS_META: Record<AttendanceStatus, { label: string; tone: string; short: string }> = {
+  presente: { label: "Presente", tone: "oklch(0.62 0.18 155)", short: "P" },
+  falta: { label: "Falta", tone: "oklch(0.65 0.18 25)", short: "F" },
+  atraso: { label: "Atraso", tone: "oklch(0.72 0.14 90)", short: "A" },
+  justificado: { label: "Justificada", tone: "oklch(0.55 0.19 265)", short: "J" },
 };
+const STATUS_LIST: AttendanceStatus[] = ["presente", "falta", "atraso", "justificado"];
 
-// Registro em memória: chave `${klassId}|${date}` -> marcações por aluno.
-const attendanceStore = new Map<string, Record<string, AttendanceMark>>();
+const todayIso = () => new Date().toISOString().slice(0, 10);
+const formatDate = (iso: string) =>
+  new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 
-const shiftDate = (n: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-const rnd = (seed: number) => {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-};
-
-// Semeia chamadas anteriores (determinísticas) para que o histórico apareça na primeira visita.
-function seedHistory() {
-  if (attendanceStore.size > 0) return;
-  const offsets = [-2, -4, -7, -9, -11];
-  KLASSES.forEach((k, ki) => {
-    offsets.forEach((off, di) => {
-      const date = shiftDate(off);
-      const marks: Record<string, AttendanceMark> = {};
-      k.studentIds.forEach((sid, si) => {
-        const r = rnd((ki + 1) * 1000 + (di + 1) * 100 + (si + 1) * 7);
-        marks[sid] = r < 0.72 ? "P" : r < 0.85 ? "F" : r < 0.94 ? "A" : "J";
-      });
-      attendanceStore.set(`${k.id}|${date}`, marks);
-    });
-  });
+function errMsg(err: unknown, forbidden = "Você não tem permissão para acessar a frequência desta turma.") {
+  if (err instanceof ApiError) return err.status === 403 ? forbidden : err.message;
+  return err instanceof Error ? err.message : "Ocorreu um erro inesperado.";
 }
-seedHistory();
 
-function summarize(marks: Record<string, AttendanceMark>) {
-  const counts: Record<AttendanceMark, number> = { P: 0, F: 0, A: 0, J: 0 };
-  Object.values(marks).forEach((m) => (counts[m] += 1));
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const pct = total === 0 ? 0 : Math.round(((counts.P + counts.A + counts.J) / total) * 100);
+type HistoryEntry = {
+  date: string;
+  counts: Record<AttendanceStatus, number>;
+  total: number;
+  pct: number;
+};
+
+function summarize(records: AttendanceRecord[]): { counts: Record<AttendanceStatus, number>; total: number; pct: number } {
+  const counts: Record<AttendanceStatus, number> = { presente: 0, falta: 0, atraso: 0, justificado: 0 };
+  records.forEach((r) => { counts[r.status] += 1; });
+  const total = records.length;
+  const pct = total === 0 ? 0 : Math.round(((counts.presente + counts.atraso + counts.justificado) / total) * 100);
   return { counts, total, pct };
 }
 
-function klassHistory(klassId: string) {
-  return [...attendanceStore.entries()]
-    .filter(([key]) => key.startsWith(`${klassId}|`))
-    .map(([key, marks]) => ({ date: key.split("|")[1], marks, ...summarize(marks) }))
+function groupHistory(records: AttendanceRecord[]): HistoryEntry[] {
+  const byDate = new Map<string, AttendanceRecord[]>();
+  records.forEach((r) => {
+    const arr = byDate.get(r.date) ?? [];
+    arr.push(r);
+    byDate.set(r.date, arr);
+  });
+  return [...byDate.entries()]
+    .map(([date, recs]) => ({ date, ...summarize(recs) }))
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 function Attendance() {
-  const [openKlassId, setOpenKlassId] = useState<string | null>(null);
+  // Decisão SEMPRE pela permissão real (nunca a Visão de demonstração): quem não tem
+  // `academy.manage.acessar` de verdade toma 403 do backend se `minhas:true` não for enviado.
+  const podeGestao = useCan("/academy/manage", "acessar");
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [summaries, setSummaries] = useState<Record<string, { calls: number; avgPct: number }>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [openClassId, setOpenClassId] = useState<string | null>(null);
 
-  if (openKlassId) {
-    return <KlassAttendance klassId={openKlassId} onBack={() => setOpenKlassId(null)} />;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    // Professor só vê as próprias turmas (`minhas: true`); coordenação/admin podem
+    // registrar chamada em qualquer turma (bypass de dono no backend), então buscam todas.
+    academyService
+      .getClasses(podeGestao ? undefined : { minhas: true })
+      .then(async (myClasses) => {
+        if (cancelled) return;
+        setClasses(myClasses);
+        const entries = await Promise.all(
+          myClasses.map(async (k) => {
+            try {
+              const records = await academyService.getFrequencia(k.id);
+              const history = groupHistory(records);
+              const avgPct = history.length ? Math.round(history.reduce((s, h) => s + h.pct, 0) / history.length) : 0;
+              return [k.id, { calls: history.length, avgPct }] as const;
+            } catch {
+              return [k.id, { calls: 0, avgPct: 0 }] as const;
+            }
+          }),
+        );
+        if (!cancelled) setSummaries(Object.fromEntries(entries));
+      })
+      .catch((err) => !cancelled && setError(errMsg(err, "Você não tem permissão para acessar a frequência.")))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [podeGestao]);
+
+  if (openClassId) {
+    const k = classes.find((c) => c.id === openClassId);
+    if (k) return <KlassAttendance klass={k} onBack={() => setOpenClassId(null)} />;
   }
 
   return (
@@ -109,62 +139,86 @@ function Attendance() {
         description="Acesse uma turma para consultar as chamadas anteriores e lançar a frequência dos alunos matriculados."
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {KLASSES.map((k) => {
-          const d = disciplineById(k.disciplineId);
-          const t = teacherById(k.teacherId);
-          const avg = Math.round(
-            k.studentIds.reduce((s, id) => s + studentAttendance(id, k.id), 0) / Math.max(k.studentIds.length, 1),
-          );
-          const calls = klassHistory(k.id).length;
-          return (
-            <button
-              key={k.id}
-              onClick={() => setOpenKlassId(k.id)}
-              className="group rounded-2xl border bg-card p-4 text-left transition-colors hover:bg-accent/40"
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className="flex h-9 w-9 items-center justify-center rounded-lg"
-                  style={{ background: `color-mix(in oklab, ${d?.accent} 14%, transparent)`, color: d?.accent }}
-                >
-                  <GraduationCap className="h-4 w-4" />
+      {loading && (
+        <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Carregando suas turmas…
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {classes.map((k) => {
+            const accent = toneFor(k.disciplineId);
+            const summary = summaries[k.id] ?? { calls: 0, avgPct: 0 };
+            return (
+              <button
+                key={k.id}
+                onClick={() => setOpenClassId(k.id)}
+                className="group rounded-2xl border bg-card p-4 text-left transition-colors hover:bg-accent/40"
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex h-9 w-9 items-center justify-center rounded-lg"
+                    style={{ background: `color-mix(in oklab, ${accent} 14%, transparent)`, color: accent }}
+                  >
+                    <GraduationCap className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{k.disciplineName ?? "—"}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{k.disciplineCode} · Turma {k.code}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{d?.name}</p>
-                  <p className="truncate text-[11px] text-muted-foreground">{d?.code} · Turma {k.code}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {k.enrolledCount} alunos</span>
+                  <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {k.shift}</span>
                 </div>
-              </div>
-              <p className="mt-2 truncate text-[11px] text-muted-foreground">
-                {t?.title} {t?.name}
-              </p>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {k.studentIds.length} alunos</span>
-                <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {k.shift}</span>
-              </div>
-              <p className="mt-2 text-[11px] text-muted-foreground">{k.schedule}</p>
-              <div className="mt-3 flex items-center justify-between text-xs">
-                <span>
-                  Frequência média: <span className="font-semibold text-foreground">{avg}%</span>
-                </span>
-                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <History className="h-3.5 w-3.5" /> {calls} chamada{calls === 1 ? "" : "s"}
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+                <p className="mt-2 text-[11px] text-muted-foreground">{k.schedule || "Horário a definir"}</p>
+                <div className="mt-3 flex items-center justify-between text-xs">
+                  <span>
+                    Frequência média: <span className="font-semibold text-foreground">{summary.avgPct}%</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <History className="h-3.5 w-3.5" /> {summary.calls} chamada{summary.calls === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+          {classes.length === 0 && (
+            <p className="col-span-full py-10 text-center text-sm text-muted-foreground">
+              {podeGestao ? "Nenhuma turma cadastrada no momento." : "Você não leciona nenhuma turma no momento."}
+            </p>
+          )}
+        </div>
+      )}
     </>
   );
 }
 
-function KlassAttendance({ klassId, onBack }: { klassId: string; onBack: () => void }) {
-  const k = klassById(klassId)!;
-  const d = disciplineById(k.disciplineId);
-  const t = teacherById(k.teacherId);
+function KlassAttendance({ klass: k, onBack }: { klass: SchoolClass; onBack: () => void }) {
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [rollCallDate, setRollCallDate] = useState<string | null>(null);
-  const [, bump] = useState(0); // força re-render ao voltar da chamada (store em memória)
+  const [refresh, setRefresh] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    academyService
+      .getFrequencia(k.id)
+      .then((records) => !cancelled && setHistory(groupHistory(records)))
+      .catch((err) => !cancelled && setError(errMsg(err)))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [k.id, refresh]);
 
   if (rollCallDate) {
     return (
@@ -173,16 +227,13 @@ function KlassAttendance({ klassId, onBack }: { klassId: string; onBack: () => v
         date={rollCallDate}
         onBack={() => {
           setRollCallDate(null);
-          bump((n) => n + 1);
+          setRefresh((n) => n + 1);
         }}
       />
     );
   }
 
-  const history = klassHistory(klassId);
-  const avgPct = history.length
-    ? Math.round(history.reduce((s, h) => s + h.pct, 0) / history.length)
-    : 0;
+  const avgPct = history.length ? Math.round(history.reduce((s, h) => s + h.pct, 0) / history.length) : 0;
 
   return (
     <>
@@ -191,12 +242,12 @@ function KlassAttendance({ klassId, onBack }: { klassId: string; onBack: () => v
       </button>
 
       <PageHeader
-        eyebrow={`Rooster Academy · ${d?.code} · Turma ${k.code}`}
-        title={d?.name ?? "Chamada"}
-        description={`${t?.title} ${t?.name} · ${k.shift} · ${k.schedule} · ${k.studentIds.length} alunos matriculados`}
+        eyebrow={`Rooster Academy · ${k.disciplineCode ?? ""} · Turma ${k.code}`}
+        title={k.disciplineName ?? "Chamada"}
+        description={`${k.shift} · ${k.schedule || "Horário a definir"} · ${k.enrolledCount} alunos matriculados`}
         actions={
           <button
-            onClick={() => setRollCallDate(today)}
+            onClick={() => setRollCallDate(todayIso())}
             className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90"
           >
             <Plus className="h-4 w-4" /> Nova chamada
@@ -204,121 +255,166 @@ function KlassAttendance({ klassId, onBack }: { klassId: string; onBack: () => v
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "color-mix(in oklab, oklch(0.55 0.19 265) 14%, transparent)", color: "oklch(0.55 0.19 265)" }}>
-              <History className="h-4 w-4" />
-            </div>
-            <div className="text-xs text-muted-foreground">Chamadas realizadas</div>
-          </div>
-          <div className="mt-2 text-2xl font-semibold">{history.length}</div>
+      {error && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
         </div>
-        <div className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "color-mix(in oklab, oklch(0.62 0.18 155) 14%, transparent)", color: "oklch(0.62 0.18 155)" }}>
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-            <div className="text-xs text-muted-foreground">Presença média</div>
-          </div>
-          <div className="mt-2 text-2xl font-semibold">{avgPct}%</div>
-        </div>
-        <div className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "color-mix(in oklab, oklch(0.68 0.14 195) 14%, transparent)", color: "oklch(0.68 0.14 195)" }}>
-              <Users className="h-4 w-4" />
-            </div>
-            <div className="text-xs text-muted-foreground">Alunos matriculados</div>
-          </div>
-          <div className="mt-2 text-2xl font-semibold">{k.studentIds.length}</div>
-        </div>
-      </div>
+      )}
 
-      <div className="overflow-hidden rounded-2xl border bg-card">
-        <div className="hidden grid-cols-[150px_repeat(4,minmax(0,1fr))_110px_90px] items-center border-b bg-muted/30 px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground md:grid">
-          <span>Data</span>
-          <span className="text-center">Presentes</span>
-          <span className="text-center">Faltas</span>
-          <span className="text-center">Atrasos</span>
-          <span className="text-center">Justificadas</span>
-          <span className="text-center">Presença</span>
-          <span className="text-right">Ação</span>
+      {loading ? (
+        <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Carregando histórico…
         </div>
-        {history.map((h) => (
-          <div
-            key={h.date}
-            className="grid grid-cols-2 items-center gap-2 border-b px-4 py-3 last:border-0 md:grid-cols-[150px_repeat(4,minmax(0,1fr))_110px_90px]"
-          >
-            <div>
-              <p className="text-sm font-medium">{formatDate(h.date)}</p>
-              <p className="text-[11px] text-muted-foreground md:hidden">
-                P {h.counts.P} · F {h.counts.F} · A {h.counts.A} · J {h.counts.J}
-              </p>
-            </div>
-            <span className="hidden text-center text-sm md:block" style={{ color: MARK_META.P.tone }}>{h.counts.P}</span>
-            <span className="hidden text-center text-sm md:block" style={{ color: MARK_META.F.tone }}>{h.counts.F}</span>
-            <span className="hidden text-center text-sm md:block" style={{ color: MARK_META.A.tone }}>{h.counts.A}</span>
-            <span className="hidden text-center text-sm md:block" style={{ color: MARK_META.J.tone }}>{h.counts.J}</span>
-            <div className="flex items-center justify-start gap-2 md:justify-center">
-              <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full" style={{ width: `${h.pct}%`, background: MARK_META.P.tone }} />
+      ) : (
+        <>
+          <div className="mb-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border bg-card p-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "color-mix(in oklab, oklch(0.55 0.19 265) 14%, transparent)", color: "oklch(0.55 0.19 265)" }}>
+                  <History className="h-4 w-4" />
+                </div>
+                <div className="text-xs text-muted-foreground">Chamadas realizadas</div>
               </div>
-              <span className="text-xs font-medium">{h.pct}%</span>
+              <div className="mt-2 text-2xl font-semibold">{history.length}</div>
             </div>
-            <div className="text-right">
-              <button
-                onClick={() => setRollCallDate(h.date)}
-                className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium hover:bg-accent"
-              >
-                <Eye className="h-3.5 w-3.5" /> Abrir
-              </button>
+            <div className="rounded-2xl border bg-card p-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "color-mix(in oklab, oklch(0.62 0.18 155) 14%, transparent)", color: "oklch(0.62 0.18 155)" }}>
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <div className="text-xs text-muted-foreground">Presença média</div>
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{avgPct}%</div>
+            </div>
+            <div className="rounded-2xl border bg-card p-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "color-mix(in oklab, oklch(0.68 0.14 195) 14%, transparent)", color: "oklch(0.68 0.14 195)" }}>
+                  <Users className="h-4 w-4" />
+                </div>
+                <div className="text-xs text-muted-foreground">Alunos matriculados</div>
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{k.enrolledCount}</div>
             </div>
           </div>
-        ))}
-        {history.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-            Nenhuma chamada registrada para esta turma. Clique em "Nova chamada" para começar.
-          </p>
-        )}
-      </div>
+
+          <div className="overflow-hidden rounded-2xl border bg-card">
+            <div className="hidden grid-cols-[150px_repeat(4,minmax(0,1fr))_110px_90px] items-center border-b bg-muted/30 px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground md:grid">
+              <span>Data</span>
+              <span className="text-center">Presentes</span>
+              <span className="text-center">Faltas</span>
+              <span className="text-center">Atrasos</span>
+              <span className="text-center">Justificadas</span>
+              <span className="text-center">Presença</span>
+              <span className="text-right">Ação</span>
+            </div>
+            {history.map((h) => (
+              <div
+                key={h.date}
+                className="grid grid-cols-2 items-center gap-2 border-b px-4 py-3 last:border-0 md:grid-cols-[150px_repeat(4,minmax(0,1fr))_110px_90px]"
+              >
+                <div>
+                  <p className="text-sm font-medium">{formatDate(h.date)}</p>
+                  <p className="text-[11px] text-muted-foreground md:hidden">
+                    P {h.counts.presente} · F {h.counts.falta} · A {h.counts.atraso} · J {h.counts.justificado}
+                  </p>
+                </div>
+                <span className="hidden text-center text-sm md:block" style={{ color: STATUS_META.presente.tone }}>{h.counts.presente}</span>
+                <span className="hidden text-center text-sm md:block" style={{ color: STATUS_META.falta.tone }}>{h.counts.falta}</span>
+                <span className="hidden text-center text-sm md:block" style={{ color: STATUS_META.atraso.tone }}>{h.counts.atraso}</span>
+                <span className="hidden text-center text-sm md:block" style={{ color: STATUS_META.justificado.tone }}>{h.counts.justificado}</span>
+                <div className="flex items-center justify-start gap-2 md:justify-center">
+                  <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full" style={{ width: `${h.pct}%`, background: STATUS_META.presente.tone }} />
+                  </div>
+                  <span className="text-xs font-medium">{h.pct}%</span>
+                </div>
+                <div className="text-right">
+                  <button
+                    onClick={() => setRollCallDate(h.date)}
+                    className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium hover:bg-accent"
+                  >
+                    <Eye className="h-3.5 w-3.5" /> Abrir
+                  </button>
+                </div>
+              </div>
+            ))}
+            {history.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                Nenhuma chamada registrada para esta turma. Clique em "Nova chamada" para começar.
+              </p>
+            )}
+          </div>
+        </>
+      )}
     </>
   );
 }
 
-function RollCall({ klass, date: initialDate, onBack }: { klass: Klass; date: string; onBack: () => void }) {
-  const k = klass;
-  const d = disciplineById(k.disciplineId);
-  const t = teacherById(k.teacherId);
+function RollCall({ klass: k, date: initialDate, onBack }: { klass: SchoolClass; date: string; onBack: () => void }) {
   const [date, setDate] = useState(initialDate);
-  const [marks, setMarks] = useState<Record<string, AttendanceMark>>(
-    () => attendanceStore.get(`${k.id}|${initialDate}`) ?? {},
-  );
-  const [saved, setSaved] = useState(() => attendanceStore.has(`${k.id}|${initialDate}`));
+  const [roster, setRoster] = useState<Enrollment[]>([]);
+  const [marks, setMarks] = useState<Record<string, AttendanceStatus>>({});
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const roster = useMemo(() => k.studentIds.map((id) => STUDENTS.find((s) => s.id === id)!).filter(Boolean), [k]);
+  useEffect(() => {
+    let cancelled = false;
+    academyService.getEnrollmentsByClass(k.id).then((rows) => !cancelled && setRoster(rows)).catch(() => {});
+    return () => { cancelled = true; };
+  }, [k.id]);
 
-  const changeDate = (value: string) => {
-    setDate(value);
-    setMarks(attendanceStore.get(`${k.id}|${value}`) ?? {});
-    setSaved(attendanceStore.has(`${k.id}|${value}`));
-  };
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    academyService
+      .getFrequencia(k.id, date)
+      .then((records) => {
+        if (cancelled) return;
+        const byStudent: Record<string, AttendanceStatus> = {};
+        records.forEach((r) => { byStudent[r.studentId] = r.status; });
+        setMarks(byStudent);
+        setSaved(records.length > 0);
+      })
+      .catch((err) => !cancelled && setError(errMsg(err)))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [k.id, date]);
 
-  const setAll = (m: AttendanceMark) => {
-    const n: Record<string, AttendanceMark> = {};
-    roster.forEach((s) => (n[s.id] = m));
+  const setAll = (m: AttendanceStatus) => {
+    const n: Record<string, AttendanceStatus> = {};
+    roster.forEach((e) => { n[e.studentId] = m; });
     setMarks(n);
     setSaved(false);
   };
 
-  const save = () => {
-    const full: Record<string, AttendanceMark> = {};
-    roster.forEach((s) => (full[s.id] = marks[s.id] ?? "P"));
-    attendanceStore.set(`${k.id}|${date}`, full);
-    setSaved(true);
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const registros = roster.map((e) => ({ alunoId: e.studentId, presenca: marks[e.studentId] ?? "presente" as AttendanceStatus }));
+      await academyService.registrarFrequencia(k.id, date, registros);
+      setSaved(true);
+      toast.success("Chamada registrada com sucesso");
+    } catch (err) {
+      const message = errMsg(err, "Você não tem permissão para registrar a frequência desta turma.");
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const counts = roster.reduce((a, s) => { const m = marks[s.id] ?? "P"; a[m] = (a[m] ?? 0) + 1; return a; }, {} as Record<AttendanceMark, number>);
-  const presentPct = Math.round(((counts.P ?? 0) + (counts.A ?? 0) + (counts.J ?? 0)) / roster.length * 100);
+  const counts = roster.reduce((a, e) => {
+    const m = marks[e.studentId] ?? "presente";
+    a[m] = (a[m] ?? 0) + 1;
+    return a;
+  }, {} as Record<AttendanceStatus, number>);
+  const presentPct = roster.length
+    ? Math.round(((counts.presente ?? 0) + (counts.atraso ?? 0) + (counts.justificado ?? 0)) / roster.length * 100)
+    : 0;
 
   return (
     <>
@@ -327,27 +423,37 @@ function RollCall({ klass, date: initialDate, onBack }: { klass: Klass; date: st
       </button>
 
       <PageHeader
-        eyebrow={`Rooster Academy · ${d?.code} · Turma ${k.code}`}
-        title={d?.name ?? "Chamada"}
-        description={`${t?.title} ${t?.name} · ${k.shift} · ${k.schedule} · ${roster.length} alunos matriculados`}
+        eyebrow={`Rooster Academy · ${k.disciplineCode ?? ""} · Turma ${k.code}`}
+        title={k.disciplineName ?? "Chamada"}
+        description={`${k.shift} · ${k.schedule || "Horário a definir"} · ${roster.length} alunos matriculados`}
         actions={
-          <button onClick={save} className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90">
-            <Save className="h-4 w-4" /> Salvar chamada
+          <button
+            onClick={save}
+            disabled={saving || loading}
+            className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90 disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar chamada
           </button>
         }
       />
 
+      {error && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
+        </div>
+      )}
+
       <div className="mb-4 grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[180px_1fr]">
         <div>
           <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Data da aula</label>
-          <input type="date" value={date} onChange={(e) => changeDate(e.target.value)} className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm" />
+          <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setSaved(false); }} className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Marcar todos</label>
           <div className="mt-1 flex flex-wrap gap-1.5">
-            {(Object.keys(MARK_META) as AttendanceMark[]).map((m) => (
-              <button key={m} onClick={() => setAll(m)} className="rounded-md border px-2 py-1 text-xs hover:bg-accent" style={{ color: MARK_META[m].tone, borderColor: `color-mix(in oklab, ${MARK_META[m].tone} 40%, transparent)` }}>
-                Todos: {MARK_META[m].label}
+            {STATUS_LIST.map((m) => (
+              <button key={m} onClick={() => setAll(m)} className="rounded-md border px-2 py-1 text-xs hover:bg-accent" style={{ color: STATUS_META[m].tone, borderColor: `color-mix(in oklab, ${STATUS_META[m].tone} 40%, transparent)` }}>
+                Todos: {STATUS_META[m].label}
               </button>
             ))}
           </div>
@@ -355,44 +461,54 @@ function RollCall({ klass, date: initialDate, onBack }: { klass: Klass; date: st
       </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
-        <Card icon={CheckCircle2} tone="oklch(0.62 0.18 155)" label="Presentes" value={counts.P ?? 0} />
-        <Card icon={XCircle} tone="oklch(0.65 0.18 25)" label="Faltas" value={counts.F ?? 0} />
-        <Card icon={Clock3} tone="oklch(0.72 0.14 90)" label="Atrasos" value={counts.A ?? 0} />
-        <Card icon={FileText} tone="oklch(0.55 0.19 265)" label="Justificadas" value={counts.J ?? 0} />
+        <Card icon={CheckCircle2} tone="oklch(0.62 0.18 155)" label="Presentes" value={counts.presente ?? 0} />
+        <Card icon={XCircle} tone="oklch(0.65 0.18 25)" label="Faltas" value={counts.falta ?? 0} />
+        <Card icon={Clock3} tone="oklch(0.72 0.14 90)" label="Atrasos" value={counts.atraso ?? 0} />
+        <Card icon={FileText} tone="oklch(0.55 0.19 265)" label="Justificadas" value={counts.justificado ?? 0} />
       </div>
       <div className="mb-4 text-[11px] text-muted-foreground">
-        Presença efetiva: <span className="font-semibold text-foreground">{isFinite(presentPct) ? presentPct : 0}%</span> · aula de {formatDate(date)}
+        Presença efetiva: <span className="font-semibold text-foreground">{presentPct}%</span> · aula de {formatDate(date)}
         {saved && <span className="ml-2 font-medium" style={{ color: "oklch(0.62 0.18 155)" }}>Chamada salva</span>}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border bg-card">
-        <div className="grid grid-cols-[minmax(0,1fr)_140px_minmax(0,1.6fr)] items-center border-b bg-muted/30 px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          <span>Aluno</span><span>RA</span><span className="text-right">Registro</span>
+      {loading ? (
+        <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Carregando turma…
         </div>
-        {roster.map((s) => {
-          const m = marks[s.id] ?? "P";
-          return (
-            <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_140px_minmax(0,1.6fr)] items-center border-b px-4 py-2.5 last:border-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-[11px] font-medium">{s.initials}</div>
-                <div className="truncate text-sm">{s.name}</div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border bg-card">
+          <div className="grid grid-cols-[minmax(0,1fr)_140px_minmax(0,1.6fr)] items-center border-b bg-muted/30 px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span>Aluno</span><span>RA</span><span className="text-right">Registro</span>
+          </div>
+          {roster.map((e) => {
+            const s = e.student;
+            const m = marks[e.studentId] ?? "presente";
+            return (
+              <div key={e.id} className="grid grid-cols-[minmax(0,1fr)_140px_minmax(0,1.6fr)] items-center border-b px-4 py-2.5 last:border-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-[11px] font-medium">{s?.initials ?? "—"}</div>
+                  <div className="truncate text-sm">{s?.name ?? e.studentId}</div>
+                </div>
+                <div className="text-xs text-muted-foreground">{s?.ra ?? "—"}</div>
+                <div className="flex flex-wrap items-center justify-end gap-1">
+                  {STATUS_LIST.map((opt) => {
+                    const active = m === opt;
+                    const meta = STATUS_META[opt];
+                    return (
+                      <button key={opt} onClick={() => { setMarks((s2) => ({ ...s2, [e.studentId]: opt })); setSaved(false); }} className="rounded-md px-2 py-1 text-[11px] font-medium transition-all" style={active ? { background: meta.tone, color: "white" } : { color: meta.tone, background: `color-mix(in oklab, ${meta.tone} 12%, transparent)` }}>
+                        {meta.short} · {meta.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="text-xs text-muted-foreground">{s.ra}</div>
-              <div className="flex flex-wrap items-center justify-end gap-1">
-                {(Object.keys(MARK_META) as AttendanceMark[]).map((opt) => {
-                  const active = m === opt;
-                  const meta = MARK_META[opt];
-                  return (
-                    <button key={opt} onClick={() => { setMarks((s2) => ({ ...s2, [s.id]: opt })); setSaved(false); }} className="rounded-md px-2 py-1 text-[11px] font-medium transition-all" style={active ? { background: meta.tone, color: "white" } : { color: meta.tone, background: `color-mix(in oklab, ${meta.tone} 12%, transparent)` }}>
-                      {meta.short} · {meta.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+          {roster.length === 0 && (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">Nenhum aluno matriculado nesta turma.</p>
+          )}
+        </div>
+      )}
     </>
   );
 }

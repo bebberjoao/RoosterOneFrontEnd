@@ -1,102 +1,119 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { AlertTriangle, Download, Users, Wallet } from "lucide-react";
+import { financeService, type ReceitaMensal, type FluxoCaixaMes, type Inadimplencia } from "@/services/mock-api/finance.service";
+import { Btn, StatCard, SectionCard, TONE } from "@/components/shared";
+import { brl, downloadBlob } from "@/components/rooster/finance/format";
 import { PageHeader } from "@/components/rooster/page-header";
-import { REVENUE_BY_MONTH, DEFAULT_RATE, CASHFLOW, brl, TUITIONS, sum } from "@/components/rooster/finance/mock-data";
-import { FileDown, FileSpreadsheet, Filter } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, AreaChart, Area } from "recharts";
 
 export const Route = createFileRoute("/finance/reports")({ component: Reports });
 
+const MES_LABEL: Record<string, string> = { jan: "Jan", fev: "Fev", mar: "Mar", abr: "Abr", mai: "Mai", jun: "Jun", jul: "Jul", ago: "Ago", set: "Set", out: "Out", nov: "Nov", dez: "Dez" };
+
 function Reports() {
-  const previsto = sum(TUITIONS.map((t) => t.value - t.discount));
-  const recebido = sum(TUITIONS.filter((t) => t.status === "pago").map((t) => t.paid));
+  const [receita, setReceita] = useState<ReceitaMensal[]>([]);
+  const [fluxo, setFluxo] = useState<FluxoCaixaMes[]>([]);
+  const [inadimplencia, setInadimplencia] = useState<Inadimplencia | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      financeService.relatorios.receitaMensal(),
+      financeService.relatorios.fluxoCaixa(),
+      financeService.relatorios.inadimplencia(),
+    ]).then(([r, f, i]) => {
+      setReceita(r);
+      setFluxo(f);
+      setInadimplencia(i);
+    }).catch((err) => setError(err instanceof Error ? err.message : "Falha ao carregar relatórios"));
+  }, []);
+
+  const previsto = receita.reduce((s, m) => s + m.previsto, 0);
+  const recebido = receita.reduce((s, m) => s + m.recebido, 0);
   const pendente = previsto - recebido;
+
+  async function doExportar() {
+    try {
+      const blob = await financeService.relatorios.exportarCsv();
+      downloadBlob(blob, "relatorio-financeiro.csv");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao exportar relatório");
+    }
+  }
+
+  const receitaChart = receita.map((m) => ({ ...m, mesLabel: MES_LABEL[m.mes] ?? m.mes }));
+  const fluxoChart = fluxo.map((m) => ({ ...m, mesLabel: MES_LABEL[m.mes] ?? m.mes }));
 
   return (
     <>
       <PageHeader
         eyebrow="Rooster Finance"
         title="Relatórios"
-        description="Analytics financeiro com exportação PDF/Excel e filtros por curso, turma, período, aluno, serviço ou produto."
-        actions={
-          <div className="flex gap-2">
-            <button className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"><FileDown className="h-4 w-4" /> PDF</button>
-            <button className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"><FileSpreadsheet className="h-4 w-4" /> Excel</button>
-          </div>
-        }
+        description="Analytics financeiro do ano corrente — receita mensal, fluxo de caixa e inadimplência, com exportação em CSV."
+        actions={<Btn onClick={doExportar}><Download className="h-4 w-4" /> Exportar CSV</Btn>}
       />
 
-      <div className="mb-4 flex flex-wrap gap-2 rounded-xl border bg-card p-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Filter className="h-4 w-4" /> Filtros:</div>
-        {["Curso", "Turma", "Período", "Situação", "Aluno", "Serviço", "Produto"].map((f) => (
-          <button key={f} className="rounded-lg border bg-background px-3 py-1.5 text-xs hover:bg-muted">{f}</button>
-        ))}
-      </div>
+      {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border bg-card p-4 shadow-sm">
-          <div className="text-xs text-muted-foreground">Receita prevista</div>
-          <div className="mt-2 text-xl font-semibold">{brl(previsto)}</div>
-        </div>
-        <div className="rounded-2xl border bg-card p-4 shadow-sm">
-          <div className="text-xs text-muted-foreground">Recebido</div>
-          <div className="mt-2 text-xl font-semibold" style={{ color: "oklch(0.62 0.18 155)" }}>{brl(recebido)}</div>
-        </div>
-        <div className="rounded-2xl border bg-card p-4 shadow-sm">
-          <div className="text-xs text-muted-foreground">A receber</div>
-          <div className="mt-2 text-xl font-semibold" style={{ color: "oklch(0.6 0.22 25)" }}>{brl(pendente)}</div>
-        </div>
+        <StatCard label="Receita prevista (ano)" value={brl(previsto)} icon={Wallet} tone={TONE.info} />
+        <StatCard label="Recebido" value={brl(recebido)} icon={Wallet} tone={TONE.ok} />
+        <StatCard label="A receber" value={brl(pendente)} icon={AlertTriangle} tone={TONE.danger} />
       </div>
 
+      {inadimplencia && (
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <StatCard label="Taxa de inadimplência" value={`${inadimplencia.taxaInadimplencia}%`} icon={AlertTriangle} tone={TONE.danger} />
+          <StatCard label="Valor vencido" value={brl(inadimplencia.valorVencido)} icon={Wallet} tone={TONE.warn} />
+          <StatCard label="Alunos inadimplentes" value={String(inadimplencia.alunosInadimplentes)} icon={Users} tone={TONE.warn} />
+        </div>
+      )}
+
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border bg-card p-5 shadow-sm">
-          <h3 className="text-sm font-semibold">Receita mensal</h3>
-          <p className="text-xs text-muted-foreground">Previsto vs recebido</p>
+        <SectionCard title="Receita mensal" description="Previsto vs recebido — ano corrente" className="shadow-sm">
           <div className="h-64">
             <ResponsiveContainer>
-              <AreaChart data={REVENUE_BY_MONTH}>
+              <AreaChart data={receitaChart}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.01 260)" />
-                <XAxis dataKey="m" fontSize={11} />
+                <XAxis dataKey="mesLabel" fontSize={11} />
                 <YAxis fontSize={11} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(v: number) => brl(v)} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                <Area type="monotone" dataKey="prev" name="Previsto" stroke="oklch(0.6 0.18 260)" fill="oklch(0.6 0.18 260)" fillOpacity={0.15} strokeWidth={2} />
-                <Area type="monotone" dataKey="rec" name="Recebido" stroke="oklch(0.62 0.18 155)" fill="oklch(0.62 0.18 155)" fillOpacity={0.2} strokeWidth={2} />
+                <Area type="monotone" dataKey="previsto" name="Previsto" stroke="oklch(0.6 0.18 260)" fill="oklch(0.6 0.18 260)" fillOpacity={0.15} strokeWidth={2} />
+                <Area type="monotone" dataKey="recebido" name="Recebido" stroke="oklch(0.62 0.18 155)" fill="oklch(0.62 0.18 155)" fillOpacity={0.2} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </SectionCard>
 
-        <div className="rounded-2xl border bg-card p-5 shadow-sm">
-          <h3 className="text-sm font-semibold">Inadimplência</h3>
-          <p className="text-xs text-muted-foreground">Evolução mensal</p>
+        <SectionCard title="Pendente por mês" description="Previsto menos recebido" className="shadow-sm">
           <div className="h-64">
             <ResponsiveContainer>
-              <LineChart data={DEFAULT_RATE}>
+              <LineChart data={fluxoChart}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.01 260)" />
-                <XAxis dataKey="m" fontSize={11} />
-                <YAxis fontSize={11} tickFormatter={(v) => `${v}%`} />
-                <Tooltip formatter={(v: number) => `${v}%`} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                <Line type="monotone" dataKey="v" stroke="oklch(0.6 0.22 25)" strokeWidth={2.5} dot={{ r: 3 }} />
+                <XAxis dataKey="mesLabel" fontSize={11} />
+                <YAxis fontSize={11} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => brl(v)} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                <Line type="monotone" dataKey="pendente" stroke="oklch(0.6 0.22 25)" strokeWidth={2.5} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </SectionCard>
 
-        <div className="rounded-2xl border bg-card p-5 shadow-sm lg:col-span-2">
-          <h3 className="text-sm font-semibold">Fluxo de caixa</h3>
-          <p className="text-xs text-muted-foreground">Entradas e saídas do mês</p>
+        <SectionCard title="Fluxo de caixa" description="Entradas e pendências por mês" className="shadow-sm lg:col-span-2">
           <div className="h-64">
             <ResponsiveContainer>
-              <BarChart data={CASHFLOW}>
+              <BarChart data={fluxoChart}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.01 260)" />
-                <XAxis dataKey="d" fontSize={11} />
+                <XAxis dataKey="mesLabel" fontSize={11} />
                 <YAxis fontSize={11} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(v: number) => brl(v)} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="entrada" name="Entradas" fill="oklch(0.62 0.18 155)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="saida" name="Saídas" fill="oklch(0.6 0.22 25)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="entradas" name="Entradas" fill="oklch(0.62 0.18 155)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="pendente" name="Pendente" fill="oklch(0.6 0.22 25)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </SectionCard>
       </div>
     </>
   );

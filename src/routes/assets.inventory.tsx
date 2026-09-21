@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   CrudHeader, DataTable, type Column,
   Drawer, ConfirmDialog, TabBar, Btn, Select, EmptyState, Field, TextArea, SelectInput,
@@ -123,7 +124,7 @@ function InventoryPage() {
   const { role } = useRole();
   const {
     assets, categories, categoryName, categoryTone,
-    createAsset, updateAsset, deleteAsset, movementsOf, registerMovement,
+    createAsset, updateAsset, deleteAsset, movementsOf, registerMovement, returnLoan,
     createCategory, updateCategory, deleteCategory,
   } = useAssets();
   const { sectors, users, usersOfSector } = useHubDirectory();
@@ -150,6 +151,7 @@ function InventoryPage() {
   const [mType, setMType] = useState<MovementType>("sala");
   const [mTo, setMTo] = useState(LOCATIONS[0]);
   const [mNotes, setMNotes] = useState("");
+  const [mDueDate, setMDueDate] = useState("");
 
   const canCreate = assetsCan(role, "create");
   const canEdit = assetsCan(role, "edit");
@@ -223,9 +225,14 @@ function InventoryPage() {
   const saveCategory = async () => {
     const name = catForm.name.trim();
     if (!name) return;
-    if (catModal.editingId) await updateCategory(catModal.editingId, { name, description: catForm.description, tone: catForm.tone });
-    else await createCategory({ name, description: catForm.description, tone: catForm.tone });
-    setCatModal({ open: false });
+    try {
+      if (catModal.editingId) await updateCategory(catModal.editingId, { name, description: catForm.description, tone: catForm.tone });
+      else await createCategory({ name, description: catForm.description, tone: catForm.tone });
+      setCatModal({ open: false });
+      toast.success(catModal.editingId ? "Categoria atualizada com sucesso" : "Categoria criada com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao salvar categoria");
+    }
   };
 
   return (
@@ -316,13 +323,25 @@ function InventoryPage() {
         onClose={() => setFormOpen(false)}
         asset={editing}
         defaults={!editing && category ? { categoryId: category.id } : undefined}
-        onSubmit={(draft) => (editing ? updateAsset(editing.id, draft) : createAsset(draft))}
+        onSubmit={(draft) => {
+          const isEdit = !!editing;
+          (isEdit ? updateAsset(editing!.id, draft) : createAsset(draft))
+            .then(() => toast.success(isEdit ? "Item atualizado com sucesso" : "Item criado com sucesso"))
+            .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao salvar item"));
+        }}
       />
 
       <ConfirmDialog
         open={!!toDelete}
         onClose={() => setToDelete(null)}
-        onConfirm={() => { if (toDelete) { deleteAsset(toDelete.id); setSelected(null); } }}
+        onConfirm={() => {
+          if (toDelete) {
+            deleteAsset(toDelete.id)
+              .then(() => toast.success("Item excluído com sucesso"))
+              .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao excluir item"));
+            setSelected(null);
+          }
+        }}
         title="Excluir item"
         description={`O patrimônio "${toDelete?.name}" será removido permanentemente do inventário.`}
       />
@@ -330,7 +349,14 @@ function InventoryPage() {
       <ConfirmDialog
         open={!!catToDelete}
         onClose={() => setCatToDelete(null)}
-        onConfirm={() => { if (catToDelete) { deleteCategory(catToDelete); setCategoryId(null); } }}
+        onConfirm={() => {
+          if (catToDelete) {
+            deleteCategory(catToDelete)
+              .then(() => toast.success("Categoria excluída com sucesso"))
+              .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao excluir categoria"));
+            setCategoryId(null);
+          }
+        }}
         title="Excluir categoria"
         description="A categoria será removida permanentemente."
       />
@@ -407,14 +433,22 @@ function InventoryPage() {
                   <Field label="Setor (cadastrados no Rooster Hub)">
                     <SelectInput
                       value={asset.sector ?? ""}
-                      onChange={(e) => updateAsset(asset.id, { sector: e.target.value })}
+                      onChange={(e) =>
+                        updateAsset(asset.id, { sector: e.target.value })
+                          .then(() => toast.success("Setor vinculado com sucesso"))
+                          .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao vincular setor"))
+                      }
                       options={[{ value: "", label: "Sem setor vinculado" }, ...sectors.map((s) => ({ value: s.name, label: s.name }))]}
                     />
                   </Field>
                   <Field label="Usuário responsável" hint="Usuários do setor selecionado aparecem primeiro.">
                     <SelectInput
                       value={asset.owner ?? ""}
-                      onChange={(e) => updateAsset(asset.id, { owner: e.target.value })}
+                      onChange={(e) =>
+                        updateAsset(asset.id, { owner: e.target.value })
+                          .then(() => toast.success("Responsável vinculado com sucesso"))
+                          .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao vincular responsável"))
+                      }
                       options={[{ value: "", label: "Não atribuído" }, ...usersOfSector(asset.sector).map((u) => ({ value: u.name, label: `${u.name} · ${u.email}` }))]}
                     />
                   </Field>
@@ -435,10 +469,32 @@ function InventoryPage() {
                   <Field label={mType === "setor" ? "Novo setor *" : mType === "emprestimo" ? "Emprestado para *" : "Destino *"}>
                     <SelectInput value={mTo} onChange={(e) => setMTo(e.target.value)} options={targetOptions(mType, sectors, users).map((o) => ({ value: o, label: o }))} />
                   </Field>
+                  {mType === "emprestimo" && (
+                    <Field label="Prazo de devolução" hint="Aparece em Empréstimos atrasados se não for devolvido até essa data.">
+                      <input
+                        type="date"
+                        value={mDueDate}
+                        onChange={(e) => setMDueDate(e.target.value)}
+                        className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                      />
+                    </Field>
+                  )}
                   <Field label="Observações">
                     <TextArea rows={3} value={mNotes} onChange={(e) => setMNotes(e.target.value)} placeholder="Detalhes da movimentação..." />
                   </Field>
-                  <Btn variant="solid" onClick={async () => { await registerMovement({ assetId: asset.id, type: mType, to: mTo, notes: mNotes, user: me }); setMNotes(""); }}>
+                  <Btn
+                    variant="solid"
+                    onClick={async () => {
+                      try {
+                        await registerMovement({ assetId: asset.id, type: mType, to: mTo, notes: mNotes, user: me, dueDate: mType === "emprestimo" ? mDueDate || undefined : undefined });
+                        setMNotes("");
+                        setMDueDate("");
+                        toast.success("Movimentação registrada com sucesso");
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : "Falha ao registrar movimentação");
+                      }
+                    }}
+                  >
                     Registrar movimentação
                   </Btn>
                 </div>
@@ -451,17 +507,38 @@ function InventoryPage() {
               <EmptyState icon={Boxes} title="Sem movimentações registradas" />
             ) : (
               <ol className="relative space-y-4 border-l pl-5">
-                {history.map((m) => (
-                  <li key={m.id} className="relative">
-                    <span className="absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-background" style={{ background: "var(--foreground)" }} />
-                    <div className="flex flex-wrap items-center gap-2">
-                      <MovementBadge type={m.type} />
-                      <span className="text-xs text-muted-foreground">{fmtDateTime(m.date)} · {m.user}</span>
-                    </div>
-                    <p className="mt-1 text-sm">{m.from ? `${m.from} → ` : ""}{m.to}</p>
-                    {m.notes ? <p className="text-xs text-muted-foreground">{m.notes}</p> : null}
-                  </li>
-                ))}
+                {history.map((m) => {
+                  const overdue = m.type === "emprestimo" && !m.returnedAt && m.dueDate && m.dueDate < new Date().toISOString().slice(0, 10);
+                  return (
+                    <li key={m.id} className="relative">
+                      <span className="absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-background" style={{ background: overdue ? "oklch(0.6 0.2 25)" : "var(--foreground)" }} />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <MovementBadge type={m.type} />
+                        <span className="text-xs text-muted-foreground">{fmtDateTime(m.date)} · {m.user}</span>
+                      </div>
+                      <p className="mt-1 text-sm">{m.from ? `${m.from} → ` : ""}{m.to}</p>
+                      {m.notes ? <p className="text-xs text-muted-foreground">{m.notes}</p> : null}
+                      {m.type === "emprestimo" && m.dueDate && (
+                        <p className={`mt-1 text-xs ${overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                          {m.returnedAt ? "Devolvido" : overdue ? "Prazo vencido em" : "Devolver até"} {fmtDate(m.dueDate)}
+                        </p>
+                      )}
+                      {m.type === "emprestimo" && !m.returnedAt && canMove && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            returnLoan(m.id, me)
+                              .then(() => toast.success("Devolução registrada com sucesso"))
+                              .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao registrar devolução"))
+                          }
+                          className="mt-1.5 rounded-md border px-2 py-1 text-xs font-medium hover:bg-accent"
+                        >
+                          Marcar como devolvido
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ol>
             )
           ) : null}

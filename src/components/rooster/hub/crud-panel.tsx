@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { Loader2, Pencil, Plus, RefreshCw, Trash2, WifiOff } from "lucide-react";
 import { CrudToolbar } from "@/components/shared/crud-page";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -153,9 +154,12 @@ export function HubCrud<T extends { id: string }>({
       if (isCreate) await create(dto);
       else if (editing) await update(editing.id, dto);
       closeForm();
+      toast.success(isCreate ? `${entityLabel} criado com sucesso` : `${entityLabel} atualizado com sucesso`);
     } catch (e) {
-      setErrors({ __form: e instanceof Error ? e.message : "Falha ao salvar" });
+      const message = e instanceof Error ? e.message : "Falha ao salvar";
+      setErrors({ __form: message });
       setSaving(false);
+      toast.error(message);
     }
   }
 
@@ -300,7 +304,10 @@ export function HubCrud<T extends { id: string }>({
         open={toRemove !== null}
         onClose={() => setToRemove(null)}
         onConfirm={() => {
-          if (toRemove) void remove(toRemove.id);
+          if (!toRemove) return;
+          remove(toRemove.id)
+            .then(() => toast.success(`${entityLabel} excluído com sucesso`))
+            .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Falha ao excluir"));
         }}
         description={`O registro será removido definitivamente (DELETE ${service.path}/:id).`}
       />

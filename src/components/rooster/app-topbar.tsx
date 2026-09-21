@@ -8,6 +8,7 @@ import { RoleSwitcher } from "./role-switcher";
 import { useRole, ROLE_META } from "./role-context";
 import { useTheme } from "./theme-context";
 import { useAuth } from "./auth-context";
+import { useGlobalSearch } from "./global-command-palette";
 
 function useBreadcrumb() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -26,6 +27,7 @@ export function AppTopbar() {
   const { role } = useRole();
   const { theme, toggle } = useTheme();
   const { logout } = useAuth();
+  const { setOpen: setSearchOpen } = useGlobalSearch();
   const person = ROLE_META[role].person;
 
   const handleLogout = () => {
@@ -49,6 +51,7 @@ export function AppTopbar() {
       <div className="ml-auto flex items-center gap-2">
         <button
           type="button"
+          onClick={() => setSearchOpen(true)}
           className="group hidden h-9 w-72 items-center gap-2 rounded-lg border bg-card px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:border-foreground/20 hover:text-foreground md:flex"
         >
           <Search className="h-4 w-4" />

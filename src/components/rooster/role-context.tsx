@@ -65,7 +65,11 @@ export function learnCan(role: Role, perm: LearnPerm): boolean {
   const M: Record<Role, LearnPerm[]> = {
     admin: ["createActivity", "gradeActivity", "manageQuestions", "manageClasses", "viewAllGrades", "viewReports", "submitActivity"],
     professor: ["createActivity", "gradeActivity", "manageQuestions", "manageClasses", "viewAllGrades", "viewReports"],
-    coordenador: ["viewAllGrades", "viewReports", "manageClasses"],
+    // Coordenação tem acesso amplo ao Learn no backend (`academyCoordenadorKeys` em
+    // prisma/seed-dev.ts inclui `learn.classes.gerenciar-turmas`/`criar-atividade`/`corrigir`) —
+    // precisa das mesmas permissões de gestão do professor, senão a tela de atividades
+    // barra a coordenação mesmo o backend autorizando.
+    coordenador: ["createActivity", "gradeActivity", "manageQuestions", "manageClasses", "viewAllGrades", "viewReports"],
     aluno: ["submitActivity"],
     financeiro: [],
     tecnico: [],

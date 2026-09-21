@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, CalendarRange, CheckCircle2, Pencil, Trash2 } from "lucide-react";
-import { academyService } from "@/services/mock-api";
-import type { CalendarEvent } from "@/mock/database/calendarEvents";
-import type { Term, Discipline } from "@/mock/database/disciplines";
-import type { SchoolClass } from "@/mock/database/classes";
+import { academyService, type CalendarEvent, type Term, type SchoolClass } from "@/services/mock-api/academy.service";
 import { EVENT_TONE, EVENT_LABEL } from "@/components/rooster/academy/mock-data";
 import {
   TabBar, Btn, Drawer, Modal, ConfirmDialog, Field, TextInput, SelectInput, SectionCard,
@@ -31,7 +29,6 @@ export function CalendarTab() {
   const [section, setSection] = useState("calendario");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [terms, setTerms] = useState<Term[]>([]);
-  const [disciplines, setDisciplines] = useState<Discipline[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [cursor, setCursor] = useState(() => new Date());
   const [refresh, setRefresh] = useState(0);
@@ -48,7 +45,6 @@ export function CalendarTab() {
   useEffect(() => {
     academyService.getCalendarEvents().then(setEvents);
     academyService.getTerms().then(setTerms);
-    academyService.getAll().then(setDisciplines);
     academyService.getClasses().then(setClasses);
   }, [refresh]);
 
@@ -60,27 +56,51 @@ export function CalendarTab() {
   }
 
   async function saveEvent() {
-    await academyService.createCalendarEvent({ ...draftEvent, end: draftEvent.end || undefined, time: draftEvent.time || undefined });
-    setModalEvent(false);
-    setDraftEvent(EMPTY_EVENT);
-    setRefresh((r) => r + 1);
+    try {
+      await academyService.createCalendarEvent({ ...draftEvent, end: draftEvent.end || undefined, time: draftEvent.time || undefined });
+      setModalEvent(false);
+      setDraftEvent(EMPTY_EVENT);
+      setRefresh((r) => r + 1);
+      toast.success("Evento criado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao criar evento");
+    }
   }
 
   function openNewTerm() { setDraftTerm(EMPTY_TERM); setModalTerm(true); }
-  async function saveNewTerm() { await academyService.createTerm(draftTerm); setModalTerm(false); setRefresh((r) => r + 1); }
+  async function saveNewTerm() {
+    try {
+      await academyService.createTerm(draftTerm);
+      setModalTerm(false);
+      setRefresh((r) => r + 1);
+      toast.success("Período letivo criado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao criar período letivo");
+    }
+  }
   function startEditTerm(t: Term) { setDraftTerm({ name: t.name, startDate: t.startDate, endDate: t.endDate, active: t.active }); setEditingTerm(true); }
   async function saveEditTerm() {
     if (!selectedTerm) return;
-    const updated = await academyService.updateTerm(selectedTerm.id, draftTerm);
-    if (updated) setSelectedTerm(updated);
-    setEditingTerm(false);
-    setRefresh((r) => r + 1);
+    try {
+      const updated = await academyService.updateTerm(selectedTerm.id, draftTerm);
+      if (updated) setSelectedTerm(updated);
+      setEditingTerm(false);
+      setRefresh((r) => r + 1);
+      toast.success("Período letivo atualizado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao salvar período letivo");
+    }
   }
   async function doDeleteTerm() {
     if (!selectedTerm) return;
-    await academyService.removeTerm(selectedTerm.id);
-    setSelectedTerm(null);
-    setRefresh((r) => r + 1);
+    try {
+      await academyService.removeTerm(selectedTerm.id);
+      setSelectedTerm(null);
+      setRefresh((r) => r + 1);
+      toast.success("Período letivo excluído com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao excluir período letivo");
+    }
   }
 
   const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
@@ -171,8 +191,9 @@ export function CalendarTab() {
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {terms.map((t) => {
-              const disc = disciplines.filter((d) => d.termId === t.id).length;
-              const klasses = classes.filter((k) => k.termId === t.id).length;
+              const termClasses = classes.filter((k) => k.termId === t.id);
+              const disc = new Set(termClasses.map((k) => k.disciplineId)).size;
+              const klasses = termClasses.length;
               return (
                 <button key={t.id} onClick={() => { setSelectedTerm(t); setEditingTerm(false); }} className={`rounded-2xl border bg-card p-5 text-left shadow-sm hover:bg-accent/30 ${t.active ? "border-foreground/30" : ""}`}>
                   <div className="flex items-start justify-between">

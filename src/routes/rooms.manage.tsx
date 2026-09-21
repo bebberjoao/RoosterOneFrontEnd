@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { CalendarCheck2, CalendarClock, CheckCircle2, CircleX, Clock3, MessageCircle, Reply, XCircle } from "lucide-react";
 import { Btn, CrudHeader, CrudToolbar, DataTable, Field, Modal, StatCard, TextArea, TONE, type Column } from "@/components/shared";
 import { useRole, ROLE_META } from "@/components/rooster/role-context";
@@ -41,15 +42,25 @@ function ManageReservations() {
 
   async function confirmDialog() {
     if (!dialog || !text.trim()) return;
-    if (dialog.kind === "reply") await roomService.addReservationMessage(dialog.item.id, { body: text.trim() });
-    else await roomService.changeReservationStatus(dialog.item.id, "cancelada", person.name, text.trim());
-    setDialog(null); setText("");
-    await reload();
+    try {
+      if (dialog.kind === "reply") await roomService.addReservationMessage(dialog.item.id, { body: text.trim() });
+      else await roomService.changeReservationStatus(dialog.item.id, "cancelada", person.name, text.trim());
+      setDialog(null); setText("");
+      await reload();
+      toast.success(dialog.kind === "reply" ? "Resposta enviada com sucesso" : "Reserva cancelada com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao processar a solicitação");
+    }
   }
 
   async function approve(item: Reservation) {
-    await roomService.changeReservationStatus(item.id, "confirmada", person.name);
-    await reload();
+    try {
+      await roomService.changeReservationStatus(item.id, "confirmada", person.name);
+      await reload();
+      toast.success("Reserva aprovada com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao aprovar reserva");
+    }
   }
 
   const columns: Column<Reservation>[] = [

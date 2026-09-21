@@ -85,19 +85,18 @@ const SCREENS: Record<string, ScreenDef[]> = {
     screen("/student/attendance", "Frequência", []),
     screen("/student/history", "Histórico", [a("baixar", "Baixar histórico")]),
     screen("/student/calendar", "Calendário", []),
-    screen("/student/courses", "Cursos", [a("inscrever", "Inscrever-se")]),
     screen("/student/finance", "Financeiro", [a("baixar-boleto", "Baixar boleto")]),
-    screen("/student/reservations", "Reservas", [a("solicitar", "Solicitar reserva")]),
-    screen("/student/tickets", "Chamados", [a("abrir", "Abrir chamado")]),
     screen("/student/documents", "Documentos", [a("enviar", "Enviar documento"), a("baixar", "Baixar documento")]),
     screen("/student/notifications", "Notificações", [a("marcar-lida", "Marcar como lida")]),
   ],
   academy: [
     screen("/academy", "Dashboard", []),
     screen("/academy/manage", "Gestão acadêmica", [
+      a("gerenciar-cursos", "Gerenciar cursos"),
       a("gerenciar-disciplinas", "Gerenciar disciplinas"),
       a("gerenciar-turmas", "Gerenciar turmas"),
       a("gerenciar-professores", "Gerenciar professores"),
+      a("gerenciar-alunos", "Gerenciar alunos"),
       a("gerenciar-calendario", "Gerenciar calendário"),
       a("matricular", "Matricular aluno"),
     ]),
@@ -168,13 +167,12 @@ const SCREENS: Record<string, ScreenDef[]> = {
     ]),
   ],
   boost: [
-    screen("/boost", "Cursos", [
-      a("criar", "Novo curso"),
-      a("editar", "Editar curso"),
-      a("duplicar", "Duplicar curso"),
-      a("arquivar", "Arquivar curso"),
-      a("excluir", "Excluir curso"),
-      a("certificado", "Emitir certificado"),
+    screen("/boost", "Meus cursos", []),
+    screen("/boost/manage", "Gestão do curso", [
+      a("gerenciar-cursos", "Gerenciar cursos"),
+      a("gerenciar-conteudo", "Gerenciar conteúdo"),
+      a("ver-progresso", "Ver progresso dos alunos"),
+      a("mensagem", "Enviar mensagem"),
     ]),
   ],
 };
@@ -188,9 +186,19 @@ export const PERMISSION_MODULES: ModuleDef[] = MODULES.map((m: ModuleItem) => ({
   screens: SCREENS[m.id] ?? [],
 })).filter((m) => m.screens.length > 0);
 
-/** Chave canônica de uma permissão: `modulo.tela.acao`. */
+/**
+ * Chave canônica de uma permissão: `modulo.tela.acao` — precisa bater exatamente
+ * com `Permissao.nome` gravado pelo backend (`prisma/seed-dev.ts`), já que é
+ * assim que `usePermissions()`/`useCanAccess()` decidem o que aparece no menu
+ * e o que a tela libera pro usuário REALMENTE logado (não é só um rótulo
+ * decorativo da tela "Acessos e permissões" — ver `hub/permission-context.tsx`).
+ * A convenção do backend é sempre o ÚLTIMO segmento da rota da tela (ex.:
+ * `/academy/manage` -> `manage`), ou `dashboard` quando a tela É a raiz do
+ * módulo (ex.: `/academy` -> `dashboard`) — nunca a rota inteira concatenada.
+ */
 export function permissionKey(moduleId: string, screenId: string, actionId: string): string {
-  const screenSlug = screenId.replace(/^\//, "").replace(/\//g, "-");
+  const segments = screenId.replace(/^\//, "").split("/").filter(Boolean);
+  const screenSlug = segments.length <= 1 ? "dashboard" : segments[segments.length - 1];
   return `${moduleId}.${screenSlug}.${actionId}`;
 }
 

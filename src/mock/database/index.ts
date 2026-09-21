@@ -22,10 +22,6 @@ export * from "./assets";
 export * from "./assetMovements";
 export * from "./tickets";
 export * from "./deskCategories";
-export * from "./products";
-export * from "./services";
-export * from "./charges";
-export * from "./payments";
 export * from "./boostCourses";
 export * from "./certificates";
 export * from "./notifications";
@@ -53,10 +49,6 @@ import { assets } from "./assets";
 import { assetMovements } from "./assetMovements";
 import { tickets, ticketCategories } from "./tickets";
 import { deskCategories, deskSectors, deskAgents } from "./deskCategories";
-import { products } from "./products";
-import { services } from "./services";
-import { charges, tuitions } from "./charges";
-import { payments } from "./payments";
 import { boostCourses } from "./boostCourses";
 import { certificates } from "./certificates";
 import { notifications } from "./notifications";
@@ -92,11 +84,6 @@ export const db = {
   deskCategories,
   deskSectors,
   deskAgents,
-  products,
-  services,
-  charges,
-  tuitions,
-  payments,
   boostCourses,
   certificates,
   notifications,

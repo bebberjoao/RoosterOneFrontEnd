@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Breadcrumbs, CrudHeader, Btn, Modal, ConfirmDialog, Field, TextInput, EmptyState,
 } from "@/components/shared";
@@ -98,8 +99,10 @@ function SubcategoriesPage() {
         defaultSla={cat.slaHours}
         onClose={() => { setOpen(false); setEditing(null); }}
         onSave={(data) => {
-          if (editing) categoriesApi.updateSub(cat.id, editing.id, data);
-          else categoriesApi.addSub(cat.id, data);
+          const op = editing ? categoriesApi.updateSub(cat.id, editing.id, data) : categoriesApi.addSub(cat.id, data);
+          op
+            .then(() => toast.success(editing ? "Subcategoria atualizada com sucesso" : "Subcategoria criada com sucesso"))
+            .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao salvar subcategoria"));
           setOpen(false);
           setEditing(null);
         }}
@@ -109,7 +112,14 @@ function SubcategoriesPage() {
         title="Excluir subcategoria"
         description={`Remover "${toDelete?.name}"?`}
         onClose={() => setToDelete(null)}
-        onConfirm={() => { if (toDelete) categoriesApi.removeSub(cat.id, toDelete.id); setToDelete(null); }}
+        onConfirm={() => {
+          if (toDelete) {
+            categoriesApi.removeSub(cat.id, toDelete.id)
+              .then(() => toast.success("Subcategoria excluída com sucesso"))
+              .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao excluir subcategoria"));
+          }
+          setToDelete(null);
+        }}
       />
     </>
   );

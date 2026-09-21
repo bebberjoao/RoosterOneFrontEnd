@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Breadcrumbs, CrudHeader, CrudToolbar, Btn, Select, Drawer, EmptyState } from "@/components/shared";
 import { useDeskCategories, categoriesApi, AGENT_DIRECTORY, AGENT_ROLES, SECTORS } from "@/components/rooster/desk/categories-store";
 import { AgentAvatar } from "@/components/rooster/desk/assignee-picker";
@@ -158,11 +159,15 @@ function TeamPage() {
                     </p>
                     <Btn
                       onClick={() =>
-                        c.subcategories.forEach((s) =>
-                          categoriesApi.updateSub(c.id, s.id, {
-                            assignees: all ? s.assignees.filter((x) => x !== agent) : Array.from(new Set([...s.assignees, agent])),
-                          }),
+                        Promise.all(
+                          c.subcategories.map((s) =>
+                            categoriesApi.updateSub(c.id, s.id, {
+                              assignees: all ? s.assignees.filter((x) => x !== agent) : Array.from(new Set([...s.assignees, agent])),
+                            }),
+                          ),
                         )
+                          .then(() => toast.success(all ? "Permissões removidas com sucesso" : "Permissões atribuídas com sucesso"))
+                          .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao atualizar permissões"))
                       }
                     >
                       {all ? "Remover todas" : "Marcar todas"}
@@ -182,6 +187,8 @@ function TeamPage() {
                               categoriesApi.updateSub(c.id, s.id, {
                                 assignees: on ? s.assignees.filter((x) => x !== agent) : [...s.assignees, agent],
                               })
+                                .then(() => toast.success(on ? "Permissão removida com sucesso" : "Permissão atribuída com sucesso"))
+                                .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao atualizar permissão"))
                             }
                             className={
                               "flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left text-sm transition " +

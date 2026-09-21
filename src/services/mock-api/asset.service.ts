@@ -8,6 +8,7 @@ import type { AssetMovement, MovementType } from "@/mock/database/assetMovements
 import type { AssetCategory } from "@/mock/database/assetCategories";
 import type { AssetSector } from "@/mock/database/assetSectors";
 import { mapResource } from "@/services/hub/mapped-resource";
+import { request } from "@/services/hub/client";
 import { applyFilters, type Filters } from "./utils";
 
 type PatrimonioBack = {
@@ -34,11 +35,8 @@ type PatrimonioBack = {
   criadoEm: string;
 };
 
-const assetService_ = mapResource<Asset, PatrimonioBack>(
-  "/patrimonio",
-  "asset",
-  [],
-  (b) => ({
+function patrimonioToFront(b: PatrimonioBack): Asset {
+  return {
     id: b.id,
     name: b.nome,
     tag: b.tag,
@@ -59,7 +57,14 @@ const assetService_ = mapResource<Asset, PatrimonioBack>(
     photo: b.foto ?? undefined,
     maintenanceTicketId: b.chamadoManutencaoId ?? undefined,
     createdAt: b.criadoEm,
-  }),
+  };
+}
+
+const assetService_ = mapResource<Asset, PatrimonioBack>(
+  "/patrimonio",
+  "asset",
+  [],
+  patrimonioToFront,
   (f) => ({
     ...(f.name !== undefined && { nome: f.name }),
     ...(f.tag !== undefined && { tag: f.tag }),
@@ -104,20 +109,33 @@ const sectorService = mapResource<AssetSector, SetorBack>(
   }),
 );
 
-type MovimentoBack = { id: string; patrimonioId: string; tipo: string; origem?: string | null; destino?: string | null; usuario: string; observacoes?: string | null; criadoEm: string };
+type MovimentoBack = {
+  id: string; patrimonioId: string; tipo: string; origem?: string | null; destino?: string | null;
+  usuario: string; observacoes?: string | null; criadoEm: string;
+  dataDevolucaoPrevista?: string | null; devolvidoEm?: string | null;
+};
+function movimentoToFront(b: MovimentoBack): AssetMovement {
+  return {
+    id: b.id, assetId: b.patrimonioId, type: b.tipo as MovementType, from: b.origem ?? undefined,
+    to: b.destino ?? undefined, user: b.usuario, date: b.criadoEm, notes: b.observacoes ?? undefined,
+    dueDate: b.dataDevolucaoPrevista ?? undefined, returnedAt: b.devolvidoEm ?? undefined,
+  };
+}
+const movementToBack = (f: Partial<AssetMovement>): Partial<MovimentoBack> => ({
+  ...(f.assetId !== undefined && { patrimonioId: f.assetId }),
+  ...(f.type !== undefined && { tipo: f.type }),
+  ...(f.from !== undefined && { origem: f.from }),
+  ...(f.to !== undefined && { destino: f.to }),
+  ...(f.user !== undefined && { usuario: f.user }),
+  ...(f.notes !== undefined && { observacoes: f.notes }),
+  ...(f.dueDate !== undefined && { dataDevolucaoPrevista: f.dueDate }),
+});
 const movementService = mapResource<AssetMovement, MovimentoBack>(
   "/patrimonio-movimentacoes",
   "mov",
   [],
-  (b) => ({ id: b.id, assetId: b.patrimonioId, type: b.tipo as MovementType, from: b.origem ?? undefined, to: b.destino ?? undefined, user: b.usuario, date: b.criadoEm, notes: b.observacoes ?? undefined }),
-  (f) => ({
-    ...(f.assetId !== undefined && { patrimonioId: f.assetId }),
-    ...(f.type !== undefined && { tipo: f.type }),
-    ...(f.from !== undefined && { origem: f.from }),
-    ...(f.to !== undefined && { destino: f.to }),
-    ...(f.user !== undefined && { usuario: f.user }),
-    ...(f.notes !== undefined && { observacoes: f.notes }),
-  }),
+  movimentoToFront,
+  movementToBack,
 );
 
 export const assetService = {
@@ -173,7 +191,25 @@ export const assetService = {
   async getMovements(filters?: Filters<AssetMovement>) {
     return applyFilters(await movementService.list(), filters);
   },
+  /**
+   * `POST /patrimonio-movimentacoes` é transacional e devolve
+   * `{ movimentacao, patrimonio }` (não uma linha "achatada" como o resto do
+   * CRUD) — por isso não passa pelo `movementService.create()` genérico, que
+   * espera receber de volta exatamente o formato que manda.
+   */
   async registerMovement(dto: Omit<AssetMovement, "id">): Promise<AssetMovement> {
-    return movementService.create(dto as Partial<AssetMovement>);
+    const res = await request<{ movimentacao: MovimentoBack }>("/patrimonio-movimentacoes", {
+      method: "POST",
+      body: movementToBack(dto),
+    });
+    return movimentoToFront(res.movimentacao);
+  },
+  async getOverdueLoans(): Promise<AssetMovement[]> {
+    const rows = await request<MovimentoBack[]>("/patrimonio-emprestimos-atrasados");
+    return rows.map(movimentoToFront);
+  },
+  async returnLoan(movementId: string, user: string): Promise<Asset> {
+    const patrimonio = await request<PatrimonioBack>(`/patrimonio-movimentacoes/${movementId}/devolver`, { method: "PATCH", body: { usuario: user } });
+    return patrimonioToFront(patrimonio);
   },
 };

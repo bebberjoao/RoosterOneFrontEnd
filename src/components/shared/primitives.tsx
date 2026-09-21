@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PopoverSelect } from "./dropdown";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function Chip({ tone, children }: { tone: string; children: ReactNode }) {
   return (
@@ -285,6 +286,28 @@ export function Pagination({
         <button onClick={() => onPage(Math.max(1, page - 1))} disabled={page === 1} className="rounded-md border px-2.5 py-1 disabled:opacity-40 hover:bg-accent">Anterior</button>
         <button onClick={() => onPage(Math.min(pages, page + 1))} disabled={page === pages} className="rounded-md border px-2.5 py-1 disabled:opacity-40 hover:bg-accent">Próxima</button>
       </div>
+    </div>
+  );
+}
+
+/** Skeleton genérico pra substituir texto solto "Carregando…" — algumas linhas de card, não um spinner. */
+export function LoadingBlock({ lines = 3, className }: { lines?: number; className?: string }) {
+  return (
+    <div className={cn("space-y-3", className)}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton key={i} className="h-16 rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
+/** Mesma ideia, em grade de cards — pra telas com layout em cards em vez de lista. */
+export function LoadingCards({ count = 4, className }: { count?: number; className?: string }) {
+  return (
+    <div className={cn("grid gap-3 sm:grid-cols-2 xl:grid-cols-4", className)}>
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} className="h-24 rounded-2xl" />
+      ))}
     </div>
   );
 }

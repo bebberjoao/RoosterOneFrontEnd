@@ -1,38 +1,61 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/rooster/page-header";
-import { SectionCard, StatusChip, Table, Select, FilterInput, StatCard, ProgressBar, TONE, Chip } from "@/components/rooster/student/ui";
-import { HISTORY, CR, totalHoursDone, CURRICULUM_HOURS } from "@/components/rooster/student/mock-data";
-import { Search, Download, GraduationCap, Award, Clock, TrendingUp } from "lucide-react";
+import { SectionCard, StatusChip, Table, Select, FilterInput, StatCard, TONE, Chip, EmptyState } from "@/components/rooster/student/ui";
+import { LoadingCards } from "@/components/shared";
+import { studentService, computeCR, totalHoursDone, type HistoryRow } from "@/services/mock-api/student.service";
+import { Search, GraduationCap, Award, Clock, UserX } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 export const Route = createFileRoute("/student/history")({ component: StudentHistory });
 
 function StudentHistory() {
+  const [history, setHistory] = useState<HistoryRow[] | null>(null);
+  const [noLink, setNoLink] = useState(false);
   const [q, setQ] = useState("");
   const [term, setTerm] = useState("todos");
   const [sit, setSit] = useState("todas");
 
-  const terms = Array.from(new Set(HISTORY.map((h) => h.term)));
+  useEffect(() => {
+    studentService.getMyHistory().then(setHistory).catch(() => setNoLink(true));
+  }, []);
 
-  const rows = useMemo(() => {
-    const n = q.trim().toLowerCase();
-    return HISTORY.filter((h) =>
-      (!n || `${h.name} ${h.code}`.toLowerCase().includes(n)) &&
-      (term === "todos" || h.term === term) &&
-      (sit === "todas" || h.situation === sit),
+  if (noLink) {
+    return (
+      <>
+        <PageHeader eyebrow="Rooster Student · integrado ao Rooster Academy" title="Histórico acadêmico" description="Disciplinas cursadas e coeficiente de rendimento." />
+        <EmptyState icon={UserX} title="Sem vínculo de aluno" description="O usuário autenticado não possui um registro de aluno associado." />
+      </>
     );
-  }, [q, term, sit]);
+  }
+
+  if (history === null) {
+    return (
+      <>
+        <PageHeader eyebrow="Rooster Student · integrado ao Rooster Academy" title="Histórico acadêmico" description="Disciplinas cursadas e coeficiente de rendimento." />
+        <LoadingCards />
+      </>
+    );
+  }
+
+  const terms = Array.from(new Set(history.map((h) => h.term)));
+
+  const rows = history.filter((h) =>
+    (!q.trim() || `${h.name} ${h.code}`.toLowerCase().includes(q.trim().toLowerCase())) &&
+    (term === "todos" || h.term === term) &&
+    (sit === "todas" || h.situation === sit),
+  );
 
   const perTerm = terms.map((t) => {
-    const items = HISTORY.filter((h) => h.term === t && h.grade !== null);
+    const items = history.filter((h) => h.term === t && h.grade !== null);
     const w = items.reduce((s, h) => s + h.workload, 0);
-    return { term: t, media: Number((items.reduce((s, h) => s + (h.grade as number) * h.workload, 0) / (w || 1)).toFixed(2)) };
+    return { term: t, media: w ? Number((items.reduce((s, h) => s + (h.grade as number) * h.workload, 0) / w).toFixed(2)) : 0 };
   });
 
-  const approved = HISTORY.filter((h) => h.situation === "aprovado").length;
-  const failed = HISTORY.filter((h) => h.situation.startsWith("reprovado")).length;
-  const progress = (totalHoursDone / CURRICULUM_HOURS) * 100;
+  const approved = history.filter((h) => h.situation === "aprovado").length;
+  const failed = history.filter((h) => h.situation.startsWith("reprovado")).length;
+  const cr = computeCR(history);
+  const hours = totalHoursDone(history);
 
   return (
     <>
@@ -40,23 +63,20 @@ function StudentHistory() {
         eyebrow="Rooster Student · integrado ao Rooster Academy"
         title="Histórico acadêmico"
         description="Disciplinas cursadas, notas finais, carga horária, situação e coeficiente de rendimento."
-        actions={<button className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-accent"><Download className="h-4 w-4" /> Baixar histórico</button>}
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Coeficiente de rendimento" value={CR.toFixed(2)} hint="ponderado por carga horária" icon={TrendingUp} tone={TONE.ok} />
+        <StatCard label="Coeficiente de rendimento" value={cr !== null ? cr.toFixed(2) : "—"} hint="ponderado por carga horária" icon={GraduationCap} tone={TONE.ok} />
         <StatCard label="Disciplinas aprovadas" value={approved.toString()} hint={`${failed} reprovação(ões)`} icon={Award} tone={TONE.info} />
-        <StatCard label="Horas integralizadas" value={`${totalHoursDone}h`} hint={`de ${CURRICULUM_HOURS}h da matriz`} icon={Clock} tone={TONE.cyan} />
-        <StatCard label="Conclusão do curso" value={`${progress.toFixed(0)}%`} hint="progresso curricular" icon={GraduationCap} tone={TONE.purple} />
+        <StatCard label="Horas integralizadas" value={`${hours}h`} hint="carga horária das disciplinas aprovadas" icon={Clock} tone={TONE.cyan} />
+        <StatCard label="Cursando" value={history.filter((h) => h.situation === "cursando").length.toString()} hint="disciplinas no período atual" icon={GraduationCap} tone={TONE.purple} />
       </div>
 
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
-        <SectionCard title="Progresso curricular" className="lg:col-span-1">
-          <p className="text-xs text-muted-foreground">{totalHoursDone}h concluídas de {CURRICULUM_HOURS}h</p>
-          <ProgressBar className="mt-2 h-2.5" value={progress} tone={TONE.purple} />
-          <ul className="mt-4 space-y-2 text-xs">
+        <SectionCard title="Resumo" className="lg:col-span-1">
+          <ul className="space-y-2 text-xs">
             <li className="flex justify-between"><span className="text-muted-foreground">Aprovadas</span><Chip tone={TONE.ok}>{approved}</Chip></li>
-            <li className="flex justify-between"><span className="text-muted-foreground">Cursando</span><Chip tone={TONE.info}>{HISTORY.filter((h) => h.situation === "cursando").length}</Chip></li>
+            <li className="flex justify-between"><span className="text-muted-foreground">Cursando</span><Chip tone={TONE.info}>{history.filter((h) => h.situation === "cursando").length}</Chip></li>
             <li className="flex justify-between"><span className="text-muted-foreground">Reprovadas</span><Chip tone={TONE.danger}>{failed}</Chip></li>
           </ul>
         </SectionCard>
@@ -85,6 +105,7 @@ function StudentHistory() {
           { value: "cursando", label: "Cursando" },
           { value: "reprovado", label: "Reprovado" },
           { value: "reprovado-falta", label: "Reprovado por falta" },
+          { value: "trancado", label: "Trancado" },
         ]} />
       </div>
 

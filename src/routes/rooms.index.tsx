@@ -1,17 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CrudHeader, StatCard, SectionCard, EmptyState, TONE } from "@/components/shared";
+import { CrudHeader, StatCard, SectionCard, EmptyState, TONE, LoadingCards } from "@/components/shared";
 import { roomService } from "@/services/mock-api";
 import type { Room } from "@/mock/database/rooms";
 import type { Reservation } from "@/mock/database/reservations";
 import type { Campus } from "@/mock/database/campuses";
 import type { Block } from "@/mock/database/blocks";
 import { StatusBadge, SpaceStatusBadge } from "@/components/rooster/rooms/badges";
-import { SPACE_TYPE_TONE, formatDate, isoOf } from "@/components/rooster/rooms/labels";
+import { SPACE_TYPE_TONE, formatDate, isoOf, roomSlots } from "@/components/rooster/rooms/labels";
 import {
   DoorOpen, CalendarDays, CalendarRange, CheckCircle2, Activity,
-  Clock3, XCircle, ArrowUpRight, AlertTriangle, Inbox,
+  Clock3, XCircle, ArrowUpRight, AlertTriangle, Inbox, PieChart,
 } from "lucide-react";
+
+const WEEKDAY_CODES = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
 
 export const Route = createFileRoute("/rooms/")({
   component: RoomsDashboard,
@@ -40,7 +42,7 @@ function RoomsDashboard() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Carregando painel...</p>;
+    return <LoadingCards />;
   }
 
   const roomById = (id: string) => rooms.find((r) => r.id === id);
@@ -59,10 +61,18 @@ function RoomsDashboard() {
   const pending = reservations.filter((r) => r.status === "analise").length;
   const canceled = reservations.filter((r) => r.status === "cancelada").length;
 
+  // Taxa de ocupação de hoje: reservas do dia / total de períodos reserváveis
+  // nos ambientes que funcionam hoje (mesmos períodos usados na tela de reserva).
+  const todayCode = WEEKDAY_CODES[new Date().getDay()];
+  const roomsOpenToday = rooms.filter((r) => r.weekdays.includes(todayCode));
+  const totalSlotsToday = roomsOpenToday.reduce((s, r) => s + roomSlots(r).length, 0);
+  const occupancyRate = totalSlotsToday > 0 ? Math.round((todayRes.length / totalSlotsToday) * 100) : 0;
+
   const STATS = [
     { label: "Total de ambientes", value: rooms.length.toString(), hint: `${campuses.length} campus · ${blocks.length} blocos`, icon: DoorOpen, tone: TONE.info },
     { label: "Reservas do dia", value: todayRes.length.toString(), hint: "atualizadas em tempo real", icon: CalendarDays, tone: TONE.info },
     { label: "Reservas na semana", value: weekRes.length.toString(), hint: "próximos 7 dias", icon: CalendarRange, tone: TONE.ok },
+    { label: "Taxa de ocupação hoje", value: `${occupancyRate}%`, hint: `${todayRes.length}/${totalSlotsToday} períodos`, icon: PieChart, tone: TONE.purple },
     { label: "Disponíveis", value: available.toString(), hint: "prontos para uso", icon: CheckCircle2, tone: TONE.cyan },
     { label: "Em uso agora", value: inUse.toString(), hint: "ocupação ativa", icon: Activity, tone: TONE.orange },
     { label: "Aguardando aprovação", value: pending.toString(), hint: "requer ação", icon: Clock3, tone: TONE.warn },
@@ -92,7 +102,7 @@ function RoomsDashboard() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
         {STATS.map((s) => (
           <StatCard key={s.label} label={s.label} value={s.value} hint={s.hint} icon={s.icon} tone={s.tone} />
         ))}

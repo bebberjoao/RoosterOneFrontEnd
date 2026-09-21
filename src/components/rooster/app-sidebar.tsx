@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { HOME_ITEM, MODULES, ADMIN_ITEMS, modulesForRole, type ModuleItem, type SubItem } from "./module-config";
 import { useRole, ROLE_META } from "./role-context";
+import { useAuth } from "./auth-context";
 import { usePermissions } from "./hub/permission-context";
 import { ACCESS_ACTION, findScreenByRoute, permissionKey } from "./hub/permission-catalog";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,11 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { role } = useRole();
   const person = ROLE_META[role].person;
+  const { usuario } = useAuth();
+  const displayName = usuario?.nome ?? person.name;
+  const displayInitials = usuario
+    ? usuario.nome.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase()
+    : person.initials;
   const [query, setQuery] = useState("");
 
   const { granted, hasCustom } = usePermissions();
@@ -196,10 +202,10 @@ export function AppSidebar() {
             className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium text-white"
             style={{ background: `linear-gradient(135deg, ${ROLE_META[role].tone}, oklch(0.7 0.16 195))` }}
           >
-            {person.initials}
+            {displayInitials}
           </div>
           <div className="flex flex-1 flex-col group-data-[collapsible=icon]:hidden">
-            <span className="truncate text-xs font-medium text-sidebar-foreground">{person.name}</span>
+            <span className="truncate text-xs font-medium text-sidebar-foreground">{displayName}</span>
             <span className="truncate text-[11px] text-muted-foreground">{person.caption}</span>
           </div>
         </div>

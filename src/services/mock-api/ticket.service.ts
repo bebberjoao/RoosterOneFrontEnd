@@ -8,9 +8,18 @@
 // (embutido em GET /chamados/:id), gravado pelo backend a cada troca real de
 // status/prioridade/categoria/técnico.
 import type { Ticket, TicketCategory, TicketStatus, TicketPriority, TicketEvent } from "@/mock/database/tickets";
-import { request } from "@/services/hub/client";
+import { request, requestBlob, uploadFile } from "@/services/hub/client";
 import { session } from "@/services/hub/session";
 import { applyFilters, type Filters } from "./utils";
+
+export type TicketAttachment = {
+  id: string;
+  nomeArquivo: string | null;
+  tipo: string | null;
+  tamanho: number | null;
+  criadoEm: string;
+  usuario?: { id: string; nome: string } | null;
+};
 
 const STATUS_TO_SLUG: Record<string, TicketStatus> = {
   "Aberto": "aberto", "Em atendimento": "atendimento", "Pendente": "pendente",
@@ -38,7 +47,7 @@ type BackTicket = {
   categoriaId?: string | null; categoria?: BackCategoria | null;
   subcategoriaId?: string | null; subcategoria?: BackSubcategoria | null;
   prioridade?: BackPrioridade | null; status?: BackStatus | null;
-  criadoEm?: string | null; atualizadoEm?: string | null;
+  criadoEm?: string | null; atualizadoEm?: string | null; encerradoEm?: string | null;
   tags?: string[]; favorito?: boolean;
   historico?: BackHistorico[];
 };
@@ -86,6 +95,7 @@ function toFrontTicket(b: BackTicket): Ticket {
     slaDeadline: deadline,
     openedAt: criadoEm,
     updatedAt: b.atualizadoEm ?? criadoEm,
+    closedAt: b.encerradoEm ?? undefined,
     description: b.descricao,
     tags: b.tags ?? [],
     favorite: b.favorito ?? false,
@@ -207,5 +217,26 @@ export const ticketService = {
   },
   async assignTicket(ticketId: string, tecnicoId: string) {
     return request(`/chamados/${ticketId}/atribuir`, { method: "PATCH", body: { tecnicoId } });
+  },
+
+  async getAttachments(ticketId: string): Promise<TicketAttachment[]> {
+    return request<TicketAttachment[]>(`/chamados/${ticketId}/anexos`);
+  },
+  async uploadAttachment(ticketId: string, file: File): Promise<TicketAttachment> {
+    const formData = new FormData();
+    formData.append("arquivo", file);
+    return uploadFile<TicketAttachment>(`/chamados/${ticketId}/anexos`, formData);
+  },
+  /** Baixa o anexo como Blob (autenticado) e dispara o download no navegador. */
+  async downloadAttachment(ticketId: string, anexo: TicketAttachment) {
+    const blob = await requestBlob(`/chamados/${ticketId}/anexos/${anexo.id}/arquivo`);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = anexo.nomeArquivo ?? "anexo";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   },
 };

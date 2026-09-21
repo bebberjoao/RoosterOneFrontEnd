@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   Breadcrumbs, CrudHeader, CrudToolbar, Btn, Select, Modal, ConfirmDialog,
   Field, TextInput, SelectInput, EmptyState,
@@ -118,7 +119,14 @@ function CategoriesPage() {
         title="Excluir categoria"
         description={`Remover "${toDelete?.name}" e suas subcategorias?`}
         onClose={() => setToDelete(null)}
-        onConfirm={() => { if (toDelete) categoriesApi.remove(toDelete.id); setToDelete(null); }}
+        onConfirm={() => {
+          if (toDelete) {
+            categoriesApi.remove(toDelete.id)
+              .then(() => toast.success("Categoria excluída com sucesso"))
+              .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao excluir categoria"));
+          }
+          setToDelete(null);
+        }}
       />
     </>
   );
@@ -132,6 +140,7 @@ function CategoryModal({ open, cat, onClose }: { open: boolean; cat: DeskCategor
 
   function submit() {
     if (!name.trim()) return;
+    const isEdit = !!cat;
     categoriesApi.upsert({
       id: cat?.id ?? `cat-${Date.now()}`,
       name: name.trim(),
@@ -139,7 +148,9 @@ function CategoryModal({ open, cat, onClose }: { open: boolean; cat: DeskCategor
       owner: owner.trim() || "—",
       slaHours: Number(sla) || 8,
       subcategories: cat?.subcategories ?? [],
-    });
+    })
+      .then(() => toast.success(isEdit ? "Categoria atualizada com sucesso" : "Categoria criada com sucesso"))
+      .catch((err) => toast.error(err instanceof Error ? err.message : "Falha ao salvar categoria"));
     onClose();
   }
 

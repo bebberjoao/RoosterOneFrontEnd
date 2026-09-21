@@ -1,25 +1,55 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/rooster/page-header";
-import { SectionCard, ProgressBar, Chip, TONE, Table, StatCard } from "@/components/rooster/student/ui";
-import { DISCIPLINES, MIN_ATTENDANCE, ATTENDANCE_TREND, overallAttendance, shiftDate, formatDate } from "@/components/rooster/student/mock-data";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
-import { UserCheck, AlertTriangle, CalendarX, Percent } from "lucide-react";
+import { SectionCard, ProgressBar, Chip, TONE, Table, StatCard, EmptyState } from "@/components/rooster/student/ui";
+import { LoadingCards } from "@/components/shared";
+import { studentService, MIN_ATTENDANCE, overallAttendance, type StudentDiscipline, type StudentAttendanceRecord } from "@/services/mock-api/student.service";
+import { UserCheck, AlertTriangle, CalendarX, Percent, UserX } from "lucide-react";
 
 export const Route = createFileRoute("/student/attendance")({ component: StudentAttendance });
 
-const RECENT_ABSENCES = [
-  { id: "ab1", disciplineId: "d5", date: shiftDate(-4), justified: false },
-  { id: "ab2", disciplineId: "d3", date: shiftDate(-7), justified: false },
-  { id: "ab3", disciplineId: "d2", date: shiftDate(-11), justified: true },
-  { id: "ab4", disciplineId: "d5", date: shiftDate(-14), justified: false },
-  { id: "ab5", disciplineId: "d3", date: shiftDate(-18), justified: true },
-  { id: "ab6", disciplineId: "d1", date: shiftDate(-25), justified: false },
-];
+function formatDate(iso: string) {
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
+const STATUS_LABEL: Record<StudentAttendanceRecord["status"], string> = {
+  presente: "Presente", falta: "Falta", atraso: "Atraso", justificado: "Justificada",
+};
 
 function StudentAttendance() {
-  const totalAbsences = DISCIPLINES.reduce((s, d) => s + d.absences, 0);
-  const below = DISCIPLINES.filter((d) => d.attendance < MIN_ATTENDANCE);
-  const risk = DISCIPLINES.filter((d) => d.attendance >= MIN_ATTENDANCE && d.attendance < 80);
+  const [disciplines, setDisciplines] = useState<StudentDiscipline[] | null>(null);
+  const [records, setRecords] = useState<StudentAttendanceRecord[]>([]);
+  const [noLink, setNoLink] = useState(false);
+
+  useEffect(() => {
+    studentService.getMyEnrollments().then(setDisciplines).catch(() => setNoLink(true));
+    studentService.getMyAttendance().then(setRecords).catch(() => {});
+  }, []);
+
+  if (noLink) {
+    return (
+      <>
+        <PageHeader eyebrow="Rooster Student · integrado ao Rooster Academy" title="Frequência" description="Presenças e faltas por disciplina." />
+        <EmptyState icon={UserX} title="Sem vínculo de aluno" description="O usuário autenticado não possui um registro de aluno associado." />
+      </>
+    );
+  }
+
+  if (disciplines === null) {
+    return (
+      <>
+        <PageHeader eyebrow="Rooster Student · integrado ao Rooster Academy" title="Frequência" description="Presenças e faltas por disciplina." />
+        <LoadingCards />
+      </>
+    );
+  }
+
+  const totalAbsences = disciplines.reduce((s, d) => s + d.absences, 0);
+  const below = disciplines.filter((d) => d.attendance < MIN_ATTENDANCE);
+  const risk = disciplines.filter((d) => d.attendance >= MIN_ATTENDANCE && d.attendance < 80);
+  const avgAttendance = overallAttendance(disciplines);
+  const recent = [...records].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
 
   return (
     <>
@@ -30,10 +60,10 @@ function StudentAttendance() {
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Frequência média" value={`${overallAttendance.toFixed(0)}%`} hint="todas as disciplinas" icon={Percent} tone={overallAttendance < 80 ? TONE.warn : TONE.ok} />
+        <StatCard label="Frequência média" value={`${avgAttendance.toFixed(0)}%`} hint="todas as disciplinas" icon={Percent} tone={avgAttendance < 80 ? TONE.warn : TONE.ok} />
         <StatCard label="Faltas no semestre" value={totalAbsences.toString()} hint="registros lançados" icon={CalendarX} tone={TONE.info} />
         <StatCard label="Abaixo do mínimo" value={below.length.toString()} hint={`${MIN_ATTENDANCE}% exigidos`} icon={AlertTriangle} tone={below.length ? TONE.danger : TONE.muted} />
-        <StatCard label="Em zona de atenção" value={risk.length.toString()} hint="entre 75% e 80%" icon={UserCheck} tone={TONE.warn} />
+        <StatCard label="Em zona de atenção" value={risk.length.toString()} hint="entre o mínimo e 80%" icon={UserCheck} tone={TONE.warn} />
       </div>
 
       {below.length > 0 && (
@@ -41,7 +71,7 @@ function StudentAttendance() {
           <p className="flex items-center gap-2 text-sm font-medium"><AlertTriangle className="h-4 w-4" style={{ color: TONE.danger }} /> Risco de reprovação por falta</p>
           <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
             {below.map((d) => (
-              <li key={d.id}>{d.name} — {d.attendance}% de presença ({d.absences} faltas em {d.classesGiven} aulas). Máximo permitido: {Math.floor(d.classesGiven * 0.25)} faltas.</li>
+              <li key={d.id}>{d.name} — {d.attendance}% de presença ({d.absences} faltas em {d.classesGiven} aulas registradas).</li>
             ))}
           </ul>
         </div>
@@ -49,65 +79,47 @@ function StudentAttendance() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard title="Frequência por disciplina" className="lg:col-span-2">
-          <Table head={["Disciplina", "Aulas", "Faltas", "Limite", "Frequência", "Situação"]}>
-            {DISCIPLINES.map((d) => {
-              const limit = Math.floor(d.classesGiven * 0.25);
-              return (
-                <tr key={d.id} className="hover:bg-muted/30">
-                  <td className="px-3 py-2.5">
-                    <p className="font-medium">{d.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{d.code} · {d.teacher}</p>
-                  </td>
-                  <td className="px-3 py-2.5 text-muted-foreground">{d.classesGiven}</td>
-                  <td className="px-3 py-2.5">{d.absences}</td>
-                  <td className="px-3 py-2.5 text-muted-foreground">{limit}</td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-24"><ProgressBar value={d.attendance} tone={d.attendance < MIN_ATTENDANCE ? TONE.danger : d.attendance < 80 ? TONE.warn : TONE.ok} /></div>
-                      <span className="text-xs">{d.attendance}%</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <Chip tone={d.attendance < MIN_ATTENDANCE ? TONE.danger : d.attendance < 80 ? TONE.warn : TONE.ok}>
-                      {d.attendance < MIN_ATTENDANCE ? "Abaixo do mínimo" : d.attendance < 80 ? "Atenção" : "Regular"}
-                    </Chip>
-                  </td>
-                </tr>
-              );
-            })}
+          <Table head={["Disciplina", "Aulas", "Faltas", "Frequência", "Situação"]}>
+            {disciplines.map((d) => (
+              <tr key={d.id} className="hover:bg-muted/30">
+                <td className="px-3 py-2.5">
+                  <p className="font-medium">{d.name}</p>
+                  <p className="text-[11px] text-muted-foreground">{d.code} · {d.teacher}</p>
+                </td>
+                <td className="px-3 py-2.5 text-muted-foreground">{d.classesGiven}</td>
+                <td className="px-3 py-2.5">{d.absences}</td>
+                <td className="px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-24"><ProgressBar value={d.attendance} tone={d.attendance < MIN_ATTENDANCE ? TONE.danger : d.attendance < 80 ? TONE.warn : TONE.ok} /></div>
+                    <span className="text-xs">{d.attendance}%</span>
+                  </div>
+                </td>
+                <td className="px-3 py-2.5">
+                  <Chip tone={d.attendance < MIN_ATTENDANCE ? TONE.danger : d.attendance < 80 ? TONE.warn : TONE.ok}>
+                    {d.attendance < MIN_ATTENDANCE ? "Abaixo do mínimo" : d.attendance < 80 ? "Atenção" : "Regular"}
+                  </Chip>
+                </td>
+              </tr>
+            ))}
           </Table>
         </SectionCard>
 
-        <SectionCard title="Faltas recentes" description="Últimos registros de ausência">
-          <ul className="space-y-2">
-            {RECENT_ABSENCES.map((a) => {
-              const d = DISCIPLINES.find((x) => x.id === a.disciplineId);
-              return (
-                <li key={a.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/40 p-3">
+        <SectionCard title="Registros recentes" description="Últimos lançamentos de frequência">
+          {recent.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum registro de frequência lançado ainda.</p>
+          ) : (
+            <ul className="space-y-2">
+              {recent.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/40 p-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm">{d?.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{formatDate(a.date)}</p>
+                    <p className="truncate text-sm">{r.className}</p>
+                    <p className="text-[11px] text-muted-foreground">{formatDate(r.date)}</p>
                   </div>
-                  <Chip tone={a.justified ? TONE.cyan : TONE.danger}>{a.justified ? "Justificada" : "Falta"}</Chip>
+                  <Chip tone={r.status === "presente" ? TONE.ok : r.status === "justificado" ? TONE.cyan : r.status === "atraso" ? TONE.warn : TONE.danger}>{STATUS_LABEL[r.status]}</Chip>
                 </li>
-              );
-            })}
-          </ul>
-        </SectionCard>
-
-        <SectionCard title="Evolução da frequência" className="lg:col-span-3">
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={ATTENDANCE_TREND}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} stroke="var(--muted-foreground)" />
-                <YAxis domain={[50, 100]} tickLine={false} axisLine={false} fontSize={11} stroke="var(--muted-foreground)" />
-                <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }} />
-                <ReferenceLine y={MIN_ATTENDANCE} stroke="oklch(0.65 0.18 25)" strokeDasharray="4 4" label={{ value: `mínimo ${MIN_ATTENDANCE}%`, fontSize: 10, fill: "var(--muted-foreground)" }} />
-                <Line type="monotone" dataKey="freq" name="Frequência" stroke="oklch(0.68 0.14 195)" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+              ))}
+            </ul>
+          )}
         </SectionCard>
       </div>
     </>

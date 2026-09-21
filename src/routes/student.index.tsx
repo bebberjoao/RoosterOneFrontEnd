@@ -1,35 +1,73 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/rooster/page-header";
-import { StatCard, SectionCard, ProgressBar, StatusChip, Avatar, TONE, Chip } from "@/components/rooster/student/ui";
+import { StatCard, SectionCard, ProgressBar, Avatar, TONE, Chip, EmptyState } from "@/components/rooster/student/ui";
+import { LoadingCards } from "@/components/shared";
+import { NOTICES, NOTIFICATIONS } from "@/components/rooster/student/mock-data";
+import { studentService, overallAverage, overallAttendance, MIN_ATTENDANCE, type StudentDiscipline, type ClassGrades } from "@/services/mock-api/student.service";
+import { learnService, formatDate, TYPE_LABEL, type Activity } from "@/services/mock-api/learn.service";
+import { academyService, type CalendarEvent } from "@/services/mock-api/academy.service";
+import { financeService, type Cobranca } from "@/services/mock-api/finance.service";
+import { CobrancaStatusBadge } from "@/components/rooster/finance/badges";
+import { brl, valorDevido } from "@/components/rooster/finance/format";
 import {
-  DISCIPLINES, ACTIVITIES, CHARGES, BOOST_COURSES, NOTICES, NOTIFICATIONS, ASSESSMENTS,
-  PERFORMANCE_TREND, EVENTS, today, formatDate, overallAverage, overallAttendance, money,
-  disciplineById, MIN_ATTENDANCE, CR,
-} from "@/components/rooster/student/mock-data";
-import {
-  BookOpen, ClipboardList, UserCheck, Wallet, GraduationCap, CalendarDays, Bell, ArrowUpRight, AlertTriangle, Star,
+  BookOpen, ClipboardList, UserCheck, Wallet, CalendarDays, Bell, ArrowUpRight, AlertTriangle, Star, UserX,
 } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Line, LineChart } from "recharts";
 
 export const Route = createFileRoute("/student/")({ component: StudentDashboard });
 
+const today = new Date().toISOString().slice(0, 10);
+
 function StudentDashboard() {
-  const pending = ACTIVITIES.filter((a) => a.status === "pendente" || a.status === "em-andamento" || a.status === "atrasada");
-  const upcoming = [...pending].sort((a, b) => a.due.localeCompare(b.due)).slice(0, 5);
-  const open = CHARGES.filter((c) => c.status === "aberto" || c.status === "vencido");
-  const openTotal = open.reduce((s, c) => s + c.amount, 0);
-  const inProgress = BOOST_COURSES.filter((c) => c.status === "andamento");
-  const recentGrades = ASSESSMENTS.filter((a) => a.value !== null).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  const risky = DISCIPLINES.filter((d) => d.attendance < MIN_ATTENDANCE + 5);
-  const nextEvents = [...EVENTS].filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+  const [disciplines, setDisciplines] = useState<StudentDiscipline[] | null>(null);
+  const [grades, setGrades] = useState<ClassGrades[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
+  const [noLink, setNoLink] = useState(false);
+
+  useEffect(() => {
+    studentService.getMyEnrollments().then(setDisciplines).catch(() => setNoLink(true));
+    studentService.getMyGrades().then(setGrades).catch(() => {});
+    learnService.getMyActivities().then(setActivities).catch(() => {});
+    academyService.getCalendarEvents().then(setEvents).catch(() => {});
+    financeService.me.getCobrancas().then(setCobrancas).catch(() => {});
+  }, []);
+
+  if (noLink) {
+    return (
+      <>
+        <PageHeader eyebrow="Rooster Student" title="Portal do aluno" description="Acompanhe suas disciplinas, entregas, notas e frequência." />
+        <EmptyState icon={UserX} title="Sem vínculo de aluno" description="O usuário autenticado não possui um registro de aluno associado no Rooster Academy." />
+      </>
+    );
+  }
+
+  if (disciplines === null) {
+    return (
+      <>
+        <PageHeader eyebrow="Rooster Student" title="Portal do aluno" description="Acompanhe suas disciplinas, entregas, notas e frequência." />
+        <LoadingCards />
+      </>
+    );
+  }
+
+  const upcoming = [...activities].filter((a) => a.dueAt).sort((a, b) => (a.dueAt as string).localeCompare(b.dueAt as string)).slice(0, 5);
+  const open = cobrancas.filter((c) => c.status === "aberto" || c.status === "vencido");
+  const openTotal = open.reduce((s, c) => s + valorDevido(c), 0);
+  const recentGrades = grades.flatMap((g) => g.items.filter((i) => i.value !== null).map((i) => ({ ...i, classId: g.classId }))).slice(0, 5);
+  const risky = disciplines.filter((d) => d.attendance < MIN_ATTENDANCE + 5);
+  const nextEvents = [...events].filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
   const unread = NOTIFICATIONS.filter((n) => !n.read).length;
+  const avg = overallAverage(disciplines);
+  const attendance = overallAttendance(disciplines);
 
   return (
     <>
       <PageHeader
         eyebrow="Rooster Student"
-        title="Olá, Ana 👋"
-        description="Acompanhe suas disciplinas, entregas, notas, frequência e pendências do semestre 2026.1."
+        title="Olá 👋"
+        description="Acompanhe suas disciplinas, entregas, notas, frequência e pendências do semestre."
         actions={
           <Link to="/student/notifications" className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-accent">
             <Bell className="h-4 w-4" /> {unread} novas
@@ -38,10 +76,10 @@ function StudentDashboard() {
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Disciplinas" value={DISCIPLINES.length.toString()} hint="matriculadas em 2026.1" icon={BookOpen} tone={TONE.info} />
-        <StatCard label="Média geral" value={overallAverage.toFixed(1)} hint={`CR acumulado ${CR.toFixed(2)}`} icon={Star} tone={TONE.ok} />
-        <StatCard label="Frequência média" value={`${overallAttendance.toFixed(0)}%`} hint={`mínimo exigido ${MIN_ATTENDANCE}%`} icon={UserCheck} tone={overallAttendance < 80 ? TONE.warn : TONE.cyan} />
-        <StatCard label="Financeiro em aberto" value={money(openTotal)} hint={`${open.length} cobrança(s)`} icon={Wallet} tone={open.some((c) => c.status === "vencido") ? TONE.danger : TONE.purple} />
+        <StatCard label="Disciplinas" value={disciplines.length.toString()} hint="matriculadas neste período" icon={BookOpen} tone={TONE.info} />
+        <StatCard label="Média geral" value={avg !== null ? avg.toFixed(1) : "—"} hint="médias das turmas com nota lançada" icon={Star} tone={TONE.ok} />
+        <StatCard label="Frequência média" value={`${attendance.toFixed(0)}%`} hint={`mínimo exigido ${MIN_ATTENDANCE}%`} icon={UserCheck} tone={attendance < 80 ? TONE.warn : TONE.cyan} />
+        <StatCard label="Financeiro em aberto" value={brl(openTotal)} hint={`${open.length} cobrança(s)`} icon={Wallet} tone={open.some((c) => c.status === "vencido") ? TONE.danger : TONE.purple} />
       </div>
 
       {risky.length > 0 && (
@@ -64,21 +102,21 @@ function StudentDashboard() {
           className="lg:col-span-2"
           action={<Link to="/student/activities" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">Ver todas <ArrowUpRight className="h-3.5 w-3.5" /></Link>}
         >
-          <ul className="space-y-2">
-            {upcoming.map((a) => {
-              const d = disciplineById(a.disciplineId);
-              return (
+          {upcoming.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma atividade publicada no momento.</p>
+          ) : (
+            <ul className="space-y-2">
+              {upcoming.map((a) => (
                 <li key={a.id} className="flex items-center gap-3 rounded-xl border bg-background/40 p-3">
-                  <span className="h-8 w-1 rounded-full" style={{ background: d?.accent }} />
+                  <span className="h-8 w-1 rounded-full" style={{ background: TONE.info }} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{a.title}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">{d?.name} · {a.teacher} · entrega {formatDate(a.due)}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{a.disciplineName ?? a.className} · {TYPE_LABEL[a.type]} · entrega {formatDate(a.dueAt)}</p>
                   </div>
-                  <StatusChip status={a.status} />
                 </li>
-              );
-            })}
-          </ul>
+              ))}
+            </ul>
+          )}
         </SectionCard>
 
         <SectionCard title="Avisos importantes" description="Comunicados institucionais">
@@ -95,79 +133,47 @@ function StudentDashboard() {
           </ul>
         </SectionCard>
 
-        <SectionCard title="Evolução do desempenho" description="Sua média x média da turma" className="lg:col-span-2">
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={PERFORMANCE_TREND}>
-                <defs>
-                  <linearGradient id="stG" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.55 0.19 265)" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="oklch(0.55 0.19 265)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} stroke="var(--muted-foreground)" />
-                <YAxis domain={[0, 10]} tickLine={false} axisLine={false} fontSize={11} stroke="var(--muted-foreground)" />
-                <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }} />
-                <Area type="monotone" dataKey="media" name="Minha média" stroke="oklch(0.55 0.19 265)" fill="url(#stG)" strokeWidth={2} />
-                <Line type="monotone" dataKey="turma" name="Turma" stroke="oklch(0.65 0.05 260)" strokeDasharray="4 4" strokeWidth={2} dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </SectionCard>
-
         <SectionCard title="Notas recentes" action={<Link to="/student/grades" className="text-xs text-muted-foreground hover:text-foreground">Boletim</Link>}>
-          <ul className="space-y-2">
-            {recentGrades.map((g) => {
-              const d = disciplineById(g.disciplineId);
-              const val = g.value as number;
-              return (
-                <li key={g.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/40 p-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm">{g.name}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">{d?.code} · {formatDate(g.date)}</p>
-                  </div>
-                  <Chip tone={val >= 7 ? TONE.ok : val >= 5 ? TONE.warn : TONE.danger}>{val.toFixed(1)}</Chip>
-                </li>
-              );
-            })}
-          </ul>
+          {recentGrades.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma nota lançada ainda.</p>
+          ) : (
+            <ul className="space-y-2">
+              {recentGrades.map((g) => {
+                const val = g.value as number;
+                return (
+                  <li key={g.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/40 p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm">{g.name}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">{g.origin === "learn" ? "Rooster Learn" : "Manual"}</p>
+                    </div>
+                    <Chip tone={val >= 7 ? TONE.ok : val >= 5 ? TONE.warn : TONE.danger}>{val.toFixed(1)}</Chip>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </SectionCard>
 
         <SectionCard title="Minhas disciplinas" className="lg:col-span-2" action={<Link to="/student/disciplines" className="text-xs text-muted-foreground hover:text-foreground">Ver todas</Link>}>
           <div className="grid gap-3 sm:grid-cols-2">
-            {DISCIPLINES.slice(0, 4).map((d) => (
+            {disciplines.slice(0, 4).map((d) => (
               <div key={d.id} className="rounded-xl border bg-background/40 p-3">
                 <div className="flex items-center gap-2">
                   <Avatar initials={d.teacherInitials} tone={d.accent} size={30} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{d.name}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">{d.teacher} · {d.schedule}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{d.teacher} · {d.schedule || "horário a definir"}</p>
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
                   <span>Média {d.average?.toFixed(1) ?? "—"}</span>
                   <span>Freq. {d.attendance}%</span>
                 </div>
-                <ProgressBar className="mt-1.5" value={d.progress} tone={d.accent} />
+                <ProgressBar className="mt-1.5" value={d.attendance} tone={d.accent} />
               </div>
             ))}
+            {disciplines.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma disciplina matriculada.</p>}
           </div>
-        </SectionCard>
-
-        <SectionCard title="Cursos em andamento" description="Rooster Boost" action={<Link to="/student/courses" className="text-xs text-muted-foreground hover:text-foreground">Ver cursos</Link>}>
-          <ul className="space-y-3">
-            {inProgress.map((c) => (
-              <li key={c.id} className="rounded-xl border bg-background/40 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-medium">{c.title}</p>
-                  <span className="text-[11px] text-muted-foreground">{c.progress}%</span>
-                </div>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">{c.instructor} · {c.hours}h</p>
-                <ProgressBar className="mt-2" value={c.progress} tone={c.tone} />
-              </li>
-            ))}
-          </ul>
         </SectionCard>
 
         <SectionCard title="Próximos eventos" description="Calendário acadêmico" className="lg:col-span-2" action={<Link to="/student/calendar" className="text-xs text-muted-foreground hover:text-foreground">Abrir calendário</Link>}>
@@ -177,34 +183,34 @@ function StudentDashboard() {
                 <CalendarDays className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <div className="min-w-0">
                   <p className="truncate text-sm">{e.title}</p>
-                  <p className="text-[11px] text-muted-foreground">{formatDate(e.date)} {e.time ? `· ${e.time}` : ""}</p>
+                  <p className="text-[11px] text-muted-foreground">{e.date.split("-").reverse().join("/")} {e.time ? `· ${e.time}` : ""}</p>
                 </div>
               </li>
             ))}
+            {nextEvents.length === 0 && <li className="text-sm text-muted-foreground">Nenhum evento futuro cadastrado.</li>}
           </ul>
         </SectionCard>
 
         <SectionCard title="Situação financeira" description="Rooster Finance" action={<Link to="/student/finance" className="text-xs text-muted-foreground hover:text-foreground">Ver</Link>}>
           <ul className="space-y-2">
-            {CHARGES.slice(0, 4).map((c) => (
+            {cobrancas.slice(0, 4).map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/40 p-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm">{c.description}</p>
-                  <p className="text-[11px] text-muted-foreground">Venc. {formatDate(c.due)} · {money(c.amount)}</p>
+                  <p className="truncate text-sm">{c.descricao}</p>
+                  <p className="text-[11px] text-muted-foreground">Venc. {c.vencimento.slice(0, 10).split("-").reverse().join("/")} · {brl(valorDevido(c))}</p>
                 </div>
-                <StatusChip status={c.status} />
+                <CobrancaStatusBadge status={c.status} />
               </li>
             ))}
+            {cobrancas.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma cobrança registrada.</p>}
           </ul>
         </SectionCard>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {[
           { to: "/student/activities", label: "Entregar atividade", icon: ClipboardList },
           { to: "/student/finance", label: "Baixar boleto", icon: Wallet },
-          { to: "/student/reservations", label: "Reservar espaço", icon: CalendarDays },
-          { to: "/student/tickets", label: "Abrir chamado", icon: GraduationCap },
         ].map((s) => (
           <Link key={s.to} to={s.to} className="flex items-center gap-3 rounded-2xl border bg-card p-4 transition-colors hover:bg-accent">
             <s.icon className="h-4 w-4 text-muted-foreground" />

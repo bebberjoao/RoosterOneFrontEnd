@@ -5,6 +5,7 @@ import { TabBar } from "@/components/shared";
 import { DisciplinesTab } from "@/components/rooster/academy/manage/disciplines-tab";
 import { ClassesTab } from "@/components/rooster/academy/manage/classes-tab";
 import { TeachersTab } from "@/components/rooster/academy/manage/teachers-tab";
+import { StudentsTab } from "@/components/rooster/academy/manage/students-tab";
 import { CalendarTab } from "@/components/rooster/academy/manage/calendar-tab";
 
 export const Route = createFileRoute("/academy/manage")({
@@ -21,6 +22,7 @@ const TABS = [
   { value: "disciplinas", label: "Disciplinas" },
   { value: "turmas", label: "Turmas" },
   { value: "professores", label: "Professores" },
+  { value: "alunos", label: "Alunos" },
   { value: "calendario", label: "Calendário" },
 ];
 
@@ -33,6 +35,7 @@ function AcademyManage() {
       {tab === "disciplinas" && <DisciplinesTab />}
       {tab === "turmas" && <ClassesTab />}
       {tab === "professores" && <TeachersTab />}
+      {tab === "alunos" && <StudentsTab />}
       {tab === "calendario" && <CalendarTab />}
     </>
   );

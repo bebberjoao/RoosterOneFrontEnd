@@ -1,41 +1,52 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/rooster/page-header";
 import { SectionCard, Chip, TONE } from "@/components/rooster/student/ui";
-import { EVENTS, ACTIVITIES, RESERVATIONS, CHARGES, DISCIPLINES, disciplineById, formatDate, today } from "@/components/rooster/student/mock-data";
+import { today } from "@/components/rooster/student/mock-data";
+import { studentService, type StudentDiscipline } from "@/services/mock-api/student.service";
+import { learnService, type Activity } from "@/services/mock-api/learn.service";
+import { academyService, type CalendarEvent } from "@/services/mock-api/academy.service";
+import { financeService, type Cobranca } from "@/services/mock-api/finance.service";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 
 export const Route = createFileRoute("/student/calendar")({ component: StudentCalendar });
 
-type Item = { id: string; title: string; date: string; time?: string; source: "academico" | "atividade" | "reserva" | "financeiro" | "aula"; tone: string };
+type Item = { id: string; title: string; date: string; time?: string; source: "academico" | "atividade" | "financeiro" | "aula"; tone: string };
 
 function pad(n: number) { return n.toString().padStart(2, "0"); }
 function iso(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
-
-const SOURCE_LABEL: Record<Item["source"], string> = {
-  academico: "Acadêmico",
-  atividade: "Entregas",
-  reserva: "Reservas",
-  financeiro: "Financeiro",
-  aula: "Aulas",
-};
-
-function buildItems(): Item[] {
-  const items: Item[] = [
-    ...EVENTS.map((e) => ({ id: `e-${e.id}`, title: e.title, date: e.date, time: e.time, source: "academico" as const, tone: TONE.info })),
-    ...ACTIVITIES.map((a) => ({ id: `a-${a.id}`, title: `Entrega: ${a.title}`, date: a.due, source: "atividade" as const, tone: TONE.purple })),
-    ...RESERVATIONS.filter((r) => r.status !== "cancelada").map((r) => ({ id: `r-${r.id}`, title: `${r.space} — ${r.purpose}`, date: r.date, time: r.time, source: "reserva" as const, tone: TONE.cyan })),
-    ...CHARGES.filter((c) => c.status !== "pago").map((c) => ({ id: `c-${c.id}`, title: `Vencimento: ${c.description}`, date: c.due, source: "financeiro" as const, tone: TONE.ok })),
-  ];
-  return items;
+function formatDate(dateIso: string) {
+  const d = new Date(`${dateIso}T00:00:00`);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
 }
 
+const SOURCE_LABEL: Record<Item["source"], string> = {
+  academico: "Acadêmico", atividade: "Entregas", financeiro: "Financeiro", aula: "Aulas",
+};
+
 function StudentCalendar() {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [disciplines, setDisciplines] = useState<StudentDiscipline[]>([]);
+  const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
   const [cursor, setCursor] = useState(() => new Date());
   const [view, setView] = useState<"month" | "agenda">("month");
-  const [sources, setSources] = useState<Item["source"][]>(["academico", "atividade", "reserva", "financeiro"]);
+  const [sources, setSources] = useState<Item["source"][]>(["academico", "atividade", "financeiro"]);
 
-  const items = useMemo(() => buildItems().filter((i) => sources.includes(i.source)), [sources]);
+  useEffect(() => {
+    academyService.getCalendarEvents().then(setEvents).catch(() => {});
+    learnService.getMyActivities().then(setActivities).catch(() => {});
+    studentService.getMyEnrollments().then(setDisciplines).catch(() => {});
+    financeService.me.getCobrancas().then(setCobrancas).catch(() => {});
+  }, []);
+
+  const allItems = useMemo<Item[]>(() => [
+    ...events.map((e) => ({ id: `e-${e.id}`, title: e.title, date: e.date, time: e.time, source: "academico" as const, tone: TONE.info })),
+    ...activities.filter((a) => a.dueAt).map((a) => ({ id: `a-${a.id}`, title: `Entrega: ${a.title}`, date: a.dueAt!.slice(0, 10), source: "atividade" as const, tone: TONE.purple })),
+    ...cobrancas.filter((c) => c.status !== "pago" && c.status !== "cancelado").map((c) => ({ id: `c-${c.id}`, title: `Vencimento: ${c.descricao}`, date: c.vencimento.slice(0, 10), source: "financeiro" as const, tone: TONE.ok })),
+  ], [events, activities, cobrancas]);
+
+  const items = allItems.filter((i) => sources.includes(i.source));
   const onDay = (d: string) => items.filter((i) => i.date === d);
 
   const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
@@ -52,9 +63,9 @@ function StudentCalendar() {
   return (
     <>
       <PageHeader
-        eyebrow="Rooster Student · integrado ao Academy, Learn, Rooms e Finance"
+        eyebrow="Rooster Student · integrado ao Academy, Learn e Finance"
         title="Calendário acadêmico"
-        description="Provas, entregas, aulas, eventos institucionais, reservas e vencimentos em uma única visão."
+        description="Provas, entregas, eventos institucionais e vencimentos em uma única visão."
       />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-3">
@@ -117,6 +128,7 @@ function StudentCalendar() {
                   <Chip tone={e.tone}>{SOURCE_LABEL[e.source]}</Chip>
                 </li>
               ))}
+              {agenda.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">Nenhum compromisso futuro.</li>}
             </ul>
           )}
         </div>
@@ -133,17 +145,19 @@ function StudentCalendar() {
                   </div>
                 </li>
               ))}
+              {agenda.length === 0 && <li className="text-sm text-muted-foreground">Nada por aqui.</li>}
             </ul>
           </SectionCard>
 
-          <SectionCard title="Minha grade semanal" description="Aulas fixas do semestre">
+          <SectionCard title="Minha grade" description="Disciplinas matriculadas no semestre">
             <ul className="space-y-2">
-              {DISCIPLINES.map((d) => (
+              {disciplines.map((d) => (
                 <li key={d.id} className="rounded-xl border bg-background/40 p-2.5">
                   <p className="text-sm">{d.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{d.schedule} · {d.room}</p>
+                  <p className="text-[11px] text-muted-foreground">{d.schedule || "horário a definir"} · {d.room || "sala a definir"}</p>
                 </li>
               ))}
+              {disciplines.length === 0 && <li className="text-sm text-muted-foreground">Nenhuma disciplina matriculada.</li>}
             </ul>
           </SectionCard>
         </aside>

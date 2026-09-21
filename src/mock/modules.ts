@@ -87,9 +87,10 @@ export const MODULE_MANIFEST: ModuleManifest[] = [
     name: "Rooster Finance",
     basePath: "/finance",
     docs: "docs/modules/finance.md",
-    routes: ["finance.tsx", "finance.index.tsx", "finance.charges.tsx", "finance.tuitions.tsx", "finance.boletos.tsx", "finance.products.tsx", "finance.services.tsx", "finance.nfe.tsx", "finance.reports.tsx", "finance.discounts.tsx", "finance.manage.tsx", "finance.settings.tsx"],
+    // Já ligado ao backend real (NestJS + Prisma) — sem tabelas mockadas restantes.
+    routes: ["finance.tsx", "finance.index.tsx", "finance.charges.tsx", "finance.tuitions.tsx", "finance.boletos.tsx", "finance.products.tsx", "finance.services.tsx", "finance.nfe.tsx", "finance.reports.tsx", "finance.discounts.tsx"],
     services: ["src/services/mock-api/finance.service.ts"],
-    tables: ["products", "services", "charges", "tuitions", "payments"],
+    tables: [],
   },
   {
     id: "learn",

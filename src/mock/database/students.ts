@@ -1,7 +1,6 @@
-// Table: students — array owned here (seed source of truth), enriched with finance scholarship info.
+// Table: students — array owned here (seed source of truth).
 // src/components/rooster/academy/mock-data.ts re-exports STUDENTS from this file for compatibility.
 import type { Student as SrcStudent } from "@/components/rooster/academy/mock-data";
-import { financeStudents } from "./financeStudents";
 
 export type Student = SrcStudent & { userId: string; scholarship?: string };
 
@@ -31,12 +30,9 @@ const STUDENTS_SEED: SrcStudent[] = NAMES.map((n, i) => ({
   semester: (i % 8) + 1,
 }));
 
-const scholarshipByName = new Map(financeStudents.map((s) => [s.name, s.scholarship]));
-
 export const students: Student[] = STUDENTS_SEED.map((s) => ({
   ...s,
   userId: `user-${s.id}`,
-  scholarship: scholarshipByName.get(s.name),
 }));
 
 export const studentById = (id: string) => students.find((s) => s.id === id);

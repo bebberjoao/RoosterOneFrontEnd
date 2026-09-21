@@ -1,13 +1,22 @@
 // Autorização em tempo real do Rooster One.
-// Lê as permissões concedidas ao usuário ativo (tabela `usuarios_permissoes`
-// + `permissoes`) e responde "pode / não pode" por tela e por ação.
-// Não existe mais perfil/role como intermediário: a autorização é sempre
-// usuário -> permissão. Quando o usuário ainda não possui permissões próprias
-// cadastradas, vale a matriz padrão de demonstração dos módulos (RoleSwitcher),
-// apenas para que o ambiente de demonstração continue navegável.
+// Fonte da verdade: as permissões efetivas do usuário REALMENTE logado
+// (`session.permissoes`, capturadas de `acesso.permissoes` na resposta de
+// `POST /auth/login` — ver auth-context.tsx e services/hub/session.ts).
+// Isso nunca depende de listar todo mundo do sistema (a maioria dos usuários
+// não tem permissão pra isso) nem de casar o nome da persona de demonstração
+// (RoleSwitcher) com algum usuário real cadastrado — o usuário logado é
+// sempre exatamente quem o JWT diz que é.
+//
+// O RoleSwitcher (`role-context.tsx`) continua funcionando por cima disso:
+// `MODULES`/`modulesForRole` decide o que a "Visão" escolhida mostraria; esta
+// permissão real é uma restrição ADICIONAL (E lógico, nunca substitui) — um
+// módulo só aparece se a Visão permitir E o usuário logado tiver a permissão
+// de verdade. Para um admin real (que tem todas as permissões), isso não
+// muda nada visualmente — a Visão continua controlando 100% da prévia, como
+// sempre. Para qualquer outro usuário real, a permissão dele vira um teto:
+// nenhuma Visão consegue mostrar mais do que ele realmente pode acessar.
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -16,22 +25,20 @@ import {
 } from "react";
 import { ShieldAlert } from "lucide-react";
 import { EmptyState } from "@/components/shared/primitives";
-import { permissoesService, usuariosPermissoesService, usuariosService } from "@/services/hub";
-import type { Permissao, Usuario, UsuarioPermissao } from "@/services/hub";
-import { ROLE_META, useRole, type Role } from "../role-context";
-import { MODULES, moduleAllowed, subItemAllowed } from "../module-config";
+import { session, type SessionUser } from "@/services/hub/session";
 import { ACCESS_ACTION, findScreenByRoute, permissionKey } from "./permission-catalog";
 
 type PermissionCtx = {
-  /** Usuário do Hub correspondente à persona ativa (quando existir). */
-  usuario: Usuario | null;
-  /** Chaves `modulo.tela.acao` concedidas ao usuário ativo. */
+  /** Usuário realmente logado (JWT), ou `null` antes do login/restore. */
+  usuario: SessionUser | null;
+  /** Chaves `modulo.tela.acao` (mesmo formato de `Permissao.nome`) efetivamente concedidas a ele. */
   granted: Set<string>;
-  /** Há permissões personalizadas salvas para este usuário? */
+  /** Há uma sessão real ativa? (sempre `true` quando logado — a permissão vem sempre do backend, nunca de uma matriz de demonstração) */
   hasCustom: boolean;
   loading: boolean;
-  /** Primeira carga concluída (evita remontar as telas a cada recarga). */
+  /** Primeira sincronização com a sessão concluída (evita telas piscando "sem acesso" antes de restaurar). */
   ready: boolean;
+  /** Recarrega a partir da sessão atual — útil depois de uma ação que possa ter mudado a própria permissão (raro; o normal é um novo login). */
   reload: () => void;
 };
 
@@ -44,73 +51,35 @@ const Ctx = createContext<PermissionCtx>({
   reload: () => {},
 });
 
-/** Matriz padrão de demonstração, usada apenas quando não há permissões próprias. */
-function roleAllowsRoute(role: Role, route: string): boolean {
-  const mod = MODULES.find((m) => route === m.path || route.startsWith(`${m.path}/`));
-  if (!mod) return true;
-  if (!moduleAllowed(mod, role)) return false;
-  const child = (mod.children ?? []).find((c) => c.to === route);
-  return child ? subItemAllowed(child, role) : true;
-}
-
 export function PermissionProvider({ children }: { children: ReactNode }) {
-  const { role } = useRole();
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [usuario, setUsuario] = useState<SessionUser | null>(null);
   const [granted, setGranted] = useState<Set<string>>(new Set());
-  const [hasCustom, setHasCustom] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
-  const [tick, setTick] = useState(0);
-
-  const reload = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
-    let alive = true;
-    const personName = ROLE_META[role].person.name;
-
-    (async () => {
-      setLoading(true);
-      try {
-        const [usuarios, vinculos, permissoes] = await Promise.all([
-          usuariosService.list(),
-          usuariosPermissoesService.list(),
-          permissoesService.list(),
-        ]);
-        if (!alive) return;
-        const found = usuarios.find((u) => u.nome === personName) ?? null;
-        setUsuario(found);
-        if (!found) {
-          setGranted(new Set());
-          setHasCustom(false);
-          return;
-        }
-        const byId = new Map<string, Permissao>(permissoes.map((p) => [p.id, p]));
-        const mine = vinculos.filter((v: UsuarioPermissao) => v.usuarioId === found.id);
-        const keys = new Set(
-          mine.map((v) => byId.get(v.permissaoId)?.nome).filter((n): n is string => Boolean(n)),
-        );
-        setGranted(keys);
-        setHasCustom(mine.length > 0);
-      } catch {
-        if (!alive) return;
-        setGranted(new Set());
-        setHasCustom(false);
-      } finally {
-        if (alive) {
-          setLoading(false);
-          setReady(true);
-        }
-      }
-    })();
-
-    return () => {
-      alive = false;
+    const sync = () => {
+      setUsuario(session.usuario);
+      setGranted(new Set(session.permissoes));
+      setReady(true);
     };
-  }, [role, tick]);
+    sync();
+    const unsubscribe = session.subscribe(sync);
+    return () => { unsubscribe(); };
+  }, []);
 
-  const value = useMemo(
-    () => ({ usuario, granted, hasCustom, loading, ready, reload }),
-    [usuario, granted, hasCustom, loading, ready, reload],
+  const value = useMemo<PermissionCtx>(
+    () => ({
+      usuario,
+      granted,
+      hasCustom: usuario !== null,
+      loading: false,
+      ready,
+      reload: () => {
+        setUsuario(session.usuario);
+        setGranted(new Set(session.permissoes));
+      },
+    }),
+    [usuario, granted, ready],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -120,17 +89,16 @@ export function usePermissions() {
   return useContext(Ctx);
 }
 
-/** O usuário ativo pode entrar nesta tela/rota? */
+/** O usuário logado pode entrar nesta tela/rota? Rota sem tela conhecida no catálogo é sempre liberada (ex.: `/`, `/settings`). */
 export function useCanAccess(route: string): boolean {
   const { granted, hasCustom } = usePermissions();
-  const { role } = useRole();
-  if (!hasCustom) return roleAllowsRoute(role, route);
+  if (!hasCustom) return true; // sessão ainda não restaurada — não bloqueia, RequireAccess espera `ready`
   const match = findScreenByRoute(route);
-  if (!match) return roleAllowsRoute(role, route);
+  if (!match) return true;
   return granted.has(permissionKey(match.module.id, match.screen.id, ACCESS_ACTION.id));
 }
 
-/** O usuário ativo pode executar esta ação na tela informada? */
+/** O usuário logado pode executar esta ação na tela informada? */
 export function useCan(route: string, actionId: string): boolean {
   const { granted, hasCustom } = usePermissions();
   const canAccess = useCanAccess(route);
@@ -141,7 +109,7 @@ export function useCan(route: string, actionId: string): boolean {
   return granted.has(permissionKey(match.module.id, match.screen.id, actionId));
 }
 
-/** Bloqueia o conteúdo quando o usuário ativo não tem permissão de acesso. */
+/** Bloqueia o conteúdo quando o usuário logado não tem permissão de acesso real à rota. */
 export function RequireAccess({ route, children }: { route: string; children: ReactNode }) {
   const allowed = useCanAccess(route);
   const { ready } = usePermissions();

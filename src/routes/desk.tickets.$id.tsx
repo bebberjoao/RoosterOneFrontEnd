@@ -1,7 +1,8 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { ticketService } from "@/services/mock-api";
+import { ticketService, type TicketAttachment } from "@/services/mock-api";
 import { Breadcrumbs } from "@/components/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
@@ -27,7 +28,9 @@ import {
   RotateCcw,
   XCircle,
   Clock,
-  
+  Download,
+  Loader2,
+  FileText,
 } from "lucide-react";
 
 export const Route = createFileRoute("/desk/tickets/$id")({
@@ -55,23 +58,50 @@ function TicketDetail() {
   const [agents, setAgents] = useState<Array<{ id: string; name: string }>>([]);
   const [transferOpen, setTransferOpen] = useState(false);
   const [categories, setCategories] = useState<TicketCategory[]>([]);
+  const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
   const categoryColor = (id: string) => categories.find((c) => c.id === id)?.color ?? "oklch(0.6 0.1 260)";
 
   useEffect(() => {
     ticketService.getAgentsWithIds().then(setAgents).catch(() => setAgents([]));
     ticketService.getCategories().then(setCategories).catch(() => setCategories([]));
-  }, []);
+    ticketService.getAttachments(ticket.id).then(setAttachments).catch(() => setAttachments([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket.id]);
 
   async function reload() {
     const fresh = await ticketService.getById(ticket.id);
     if (fresh) setTicket(fresh);
+    ticketService.getAttachments(ticket.id).then(setAttachments).catch(() => setAttachments([]));
+  }
+
+  async function handleFilePicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      await ticketService.uploadAttachment(ticket.id, file);
+      await reload();
+      toast.success("Anexo enviado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar anexo");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleTransfer(tecnicoId: string) {
     setTransferOpen(false);
-    await ticketService.assignTicket(ticket.id, tecnicoId);
-    await reload();
+    try {
+      await ticketService.assignTicket(ticket.id, tecnicoId);
+      await reload();
+      toast.success("Chamado transferido com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao transferir chamado");
+    }
   }
 
   async function handleSend() {
@@ -81,14 +111,22 @@ function TicketDetail() {
       await ticketService.sendMessage(ticket.id, reply.trim(), tab === "internal");
       setReply("");
       await reload();
+      toast.success(tab === "internal" ? "Comentário interno enviado com sucesso" : "Resposta enviada com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar mensagem");
     } finally {
       setSending(false);
     }
   }
 
   async function changeStatus(status: Ticket["status"]) {
-    await ticketService.update(ticket.id, { status });
-    await reload();
+    try {
+      await ticketService.update(ticket.id, { status });
+      await reload();
+      toast.success("Status do chamado atualizado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao atualizar status do chamado");
+    }
   }
 
   return (
@@ -172,6 +210,26 @@ function TicketDetail() {
               </div>
             </SidebarCard>
           )}
+
+          {attachments.length > 0 && (
+            <SidebarCard title="Anexos">
+              <div className="space-y-2">
+                {attachments.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => ticketService.downloadAttachment(ticket.id, a)}
+                    className="flex w-full items-center gap-2 rounded-lg border border-border/60 px-2.5 py-2 text-left text-xs hover:bg-muted/40"
+                  >
+                    <FileText className="h-3.5 w-3.5 flex-none text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate font-medium">{a.nomeArquivo ?? "arquivo"}</span>
+                    <span className="flex-none text-muted-foreground">{formatBytes(a.tamanho)}</span>
+                    <Download className="h-3.5 w-3.5 flex-none text-muted-foreground" />
+                  </button>
+                ))}
+              </div>
+            </SidebarCard>
+          )}
         </aside>
 
         {/* Timeline */}
@@ -213,7 +271,17 @@ function TicketDetail() {
             />
             <div className="mt-2 flex items-center justify-between">
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" className="gap-1.5"><Paperclip className="h-4 w-4" /> Anexar</Button>
+                <input ref={fileInputRef} type="file" className="hidden" onChange={handleFilePicked} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                  {uploading ? "Enviando…" : "Anexar"}
+                </Button>
                 {tab === "internal" && (
                   <span className="ml-1 inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
                     <Lock className="h-3 w-3" /> Interno
@@ -229,6 +297,13 @@ function TicketDetail() {
       </div>
     </>
   );
+}
+
+function formatBytes(bytes: number | null): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function SidebarCard({ title, children }: { title: string; children: React.ReactNode }) {

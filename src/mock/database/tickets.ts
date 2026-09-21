@@ -35,6 +35,7 @@ type TicketSeed = {
   slaDeadline: string;
   openedAt: string;
   updatedAt: string;
+  closedAt?: string;
   description: string;
   tags: string[];
   favorite?: boolean;

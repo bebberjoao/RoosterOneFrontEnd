@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Receipt, CalendarClock, Package, Wrench,
-  FileBarChart, FileText, TicketPercent, LineChart, Settings,
+  FileBarChart, FileText, TicketPercent, LineChart,
 } from "lucide-react";
 import { useRole } from "@/components/rooster/role-context";
 import { financeCan } from "./permissions";
@@ -16,7 +16,6 @@ const ALL = [
   { to: "/finance/nfe", label: "Notas Fiscais", icon: FileText, perm: "manageNfe" as const },
   { to: "/finance/discounts", label: "Descontos e Bolsas", icon: TicketPercent, perm: "manageDiscounts" as const },
   { to: "/finance/reports", label: "Relatórios", icon: LineChart, perm: "viewReports" as const },
-  { to: "/finance/settings", label: "Configurações", icon: Settings, perm: "manageSettings" as const },
 ];
 
 export function FinanceNav() {

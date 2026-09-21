@@ -12,6 +12,10 @@ export type AssetMovement = {
   user: string;
   date: string; // ISO
   notes?: string;
+  /** Só usado quando type === "emprestimo": prazo previsto de devolução. */
+  dueDate?: string;
+  /** Preenchido quando o empréstimo é marcado como devolvido. */
+  returnedAt?: string;
 };
 
 export const MOVEMENT_META: Record<MovementType, { label: string; tone: string }> = {

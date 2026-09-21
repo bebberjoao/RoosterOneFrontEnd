@@ -8,6 +8,7 @@ type NewMovement = {
   to: string;
   notes?: string;
   user: string;
+  dueDate?: string;
 };
 
 type Ctx = {
@@ -26,6 +27,7 @@ type Ctx = {
   updateSector: (id: string, patch: Partial<AssetSector>) => Promise<void>;
   deleteSector: (id: string) => Promise<void>;
   registerMovement: (m: NewMovement) => Promise<void>;
+  returnLoan: (movementId: string, user: string) => Promise<void>;
   categoryName: (id: string) => string;
   categoryTone: (id: string) => string;
   movementsOf: (assetId: string) => AssetMovement[];
@@ -119,6 +121,7 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
         user: m.user,
         date: new Date().toISOString(),
         notes: m.notes,
+        dueDate: m.dueDate,
       });
       setMovements((prev) => [created, ...prev]);
 
@@ -139,6 +142,12 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
     [assets, updateAsset],
   );
 
+  const returnLoan = useCallback(async (movementId: string, user: string) => {
+    const updatedAsset = await assetService.returnLoan(movementId, user);
+    setAssets((prev) => prev.map((a) => (a.id === updatedAsset.id ? updatedAsset : a)));
+    setMovements((prev) => prev.map((m) => (m.id === movementId ? { ...m, returnedAt: new Date().toISOString() } : m)));
+  }, []);
+
   const value = useMemo<Ctx>(
     () => ({
       assets,
@@ -156,11 +165,12 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
       updateSector,
       deleteSector,
       registerMovement,
+      returnLoan,
       categoryName: (id) => categories.find((c) => c.id === id)?.name ?? "—",
       categoryTone: (id) => categories.find((c) => c.id === id)?.tone ?? "oklch(0.65 0.05 260)",
       movementsOf: (assetId) => movements.filter((m) => m.assetId === assetId).sort((a, b) => (a.date < b.date ? 1 : -1)),
     }),
-    [assets, categories, sectors, movements, loading, createSector, updateSector, deleteSector, createAsset, updateAsset, deleteAsset, createCategory, updateCategory, deleteCategory, registerMovement],
+    [assets, categories, sectors, movements, loading, createSector, updateSector, deleteSector, createAsset, updateAsset, deleteAsset, createCategory, updateCategory, deleteCategory, registerMovement, returnLoan],
   );
 
   return <AssetsCtx.Provider value={value}>{children}</AssetsCtx.Provider>;

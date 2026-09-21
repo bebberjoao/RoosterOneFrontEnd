@@ -12,8 +12,9 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { RoleProvider } from "@/components/rooster/role-context";
-import { ThemeProvider } from "@/components/rooster/theme-context";
+import { ThemeProvider, useTheme } from "@/components/rooster/theme-context";
 import { AuthProvider } from "@/components/rooster/auth-context";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -119,6 +120,12 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** `sonner` segue o tema custom do app (não é o next-themes que ele espera por padrão). */
+function AppToaster() {
+  const { theme } = useTheme();
+  return <Toaster theme={theme} richColors closeButton position="bottom-right" />;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -129,6 +136,7 @@ function RootComponent() {
           <RoleProvider>
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
+            <AppToaster />
           </RoleProvider>
         </AuthProvider>
       </ThemeProvider>

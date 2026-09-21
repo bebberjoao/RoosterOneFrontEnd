@@ -1,105 +1,136 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Download, FileBarChart } from "lucide-react";
+import { financeService, type Cobranca } from "@/services/mock-api/finance.service";
+import { academyService, type Student } from "@/services/mock-api/academy.service";
+import { CrudToolbar, DataTable, type Column, Select, Avatar } from "@/components/shared";
+import { brl, fmtDate, valorDevido, downloadBlob } from "@/components/rooster/finance/format";
+import { CobrancaStatusBadge } from "@/components/rooster/finance/badges";
+import { financeCan } from "@/components/rooster/finance/permissions";
+import { useRole } from "@/components/rooster/role-context";
 import { PageHeader } from "@/components/rooster/page-header";
-import { BOLETOS, studentById, brl, fmtDate } from "@/components/rooster/finance/mock-data";
-import { BoletoStatusBadge, Avatar } from "@/components/rooster/finance/badges";
-import { Search, Download, Plus, RefreshCcw } from "lucide-react";
-import { SelectInput } from "@/components/shared";
 
 export const Route = createFileRoute("/finance/boletos")({ component: Boletos });
 
 function Boletos() {
+  const { role } = useRole();
+  const canManage = financeCan(role, "manageCharges");
+  const [rows, setRows] = useState<Cobranca[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("todos");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
 
-  const rows = useMemo(() => BOLETOS.filter((b) => {
-    if (status !== "todos" && b.status !== status) return false;
+  useEffect(() => {
+    financeService.cobrancas.getAll().then(setRows).catch((err) => setError(err instanceof Error ? err.message : "Falha ao carregar cobranças"));
+    academyService.getStudents().then(setStudents).catch(() => {});
+  }, [refresh]);
+
+  const studentById = (id: string) => students.find((s) => s.id === id);
+
+  const filtered = useMemo(() => rows.filter((c) => {
+    if (status !== "todos" && c.status !== status) return false;
     if (!q) return true;
-    const s = studentById(b.studentId);
-    return s?.name.toLowerCase().includes(q.toLowerCase()) || b.code.includes(q) || b.ourNumber.toLowerCase().includes(q.toLowerCase());
-  }), [q, status]);
+    const nome = c.aluno?.usuario.nome ?? studentById(c.alunoId)?.name ?? "";
+    return nome.toLowerCase().includes(q.toLowerCase()) || (c.nossoNumero ?? "").includes(q);
+  }), [rows, q, status, students]);
+
+  async function emitir(id: string) {
+    setBusyId(id);
+    try {
+      await financeService.cobrancas.emitirBoleto(id);
+      setError(null);
+      setRefresh((r) => r + 1);
+      toast.success("Boleto emitido com sucesso");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao emitir boleto";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function baixar(c: Cobranca) {
+    setBusyId(c.id);
+    try {
+      const blob = await financeService.cobrancas.baixarBoletoPdf(c.id);
+      downloadBlob(blob, `boleto-${c.nossoNumero ?? c.id}.pdf`);
+      toast.success("Boleto baixado com sucesso");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao baixar boleto";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const columns: Column<Cobranca>[] = [
+    { key: "nossoNumero", header: "Nosso nº", cell: (c) => <span className="font-mono text-xs">{c.nossoNumero ?? "—"}</span> },
+    { key: "aluno", header: "Aluno", cell: (c) => {
+      const nome = c.aluno?.usuario.nome ?? studentById(c.alunoId)?.name ?? "—";
+      return (
+        <div className="flex items-center gap-3">
+          <Avatar initials={nome.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "—"} size={32} tone="oklch(0.6 0.18 260)" />
+          <div className="truncate text-sm font-medium">{nome}</div>
+        </div>
+      );
+    } },
+    { key: "descricao", header: "Descrição", cell: (c) => <span className="text-xs text-muted-foreground">{c.descricao}</span> },
+    { key: "emitidoEm", header: "Emissão", cell: (c) => fmtDate(c.emitidoEm) },
+    { key: "vencimento", header: "Vencimento", sortValue: (c) => c.vencimento, cell: (c) => fmtDate(c.vencimento) },
+    { key: "valor", header: "Valor", className: "text-right", sortValue: (c) => valorDevido(c), cell: (c) => <span className="font-medium">{brl(valorDevido(c))}</span> },
+    { key: "status", header: "Situação", cell: (c) => <CobrancaStatusBadge status={c.status} /> },
+    { key: "acoes", header: "", className: "text-right", cell: (c) => (
+      <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        {!c.nossoNumero && canManage && c.status !== "pago" && c.status !== "cancelado" && (
+          <button title="Emitir boleto" disabled={busyId === c.id} onClick={() => emitir(c.id)} className="rounded-md border p-1.5 hover:bg-muted disabled:opacity-50">
+            <FileBarChart className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {c.nossoNumero && (
+          <button title="Baixar PDF" disabled={busyId === c.id} onClick={() => baixar(c)} className="rounded-md border p-1.5 hover:bg-muted disabled:opacity-50">
+            <Download className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    ) },
+  ];
 
   return (
     <>
       <PageHeader
         eyebrow="Rooster Finance"
         title="Boletos"
-        description="Emissão, reemissão e controle de boletos bancários. Arquitetura pronta para integração via API."
-        actions={
-          <div className="flex gap-2">
-            <button className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"><Download className="h-4 w-4" /> Remessa</button>
-            <button className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90"><Plus className="h-4 w-4" /> Emitir boleto</button>
-          </div>
+        description="Emissão e download de boletos vinculados às cobranças — controle interno do Rooster Finance."
+      />
+
+      <CrudToolbar
+        search={q}
+        onSearch={setQ}
+        placeholder="Buscar por aluno ou nosso número…"
+        filters={
+          <Select value={status} onChange={setStatus} options={[
+            { value: "todos", label: "Todos os status" },
+            { value: "aberto", label: "Em aberto" },
+            { value: "pago", label: "Pago" },
+            { value: "vencido", label: "Vencido" },
+            { value: "negociado", label: "Negociado" },
+            { value: "cancelado", label: "Cancelado" },
+          ]} />
         }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2 rounded-xl border bg-card p-3">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por aluno, nosso número ou linha digitável…"
-            className="w-full rounded-lg border bg-background pl-9 pr-3 py-2 text-sm" />
-        </div>
-        <SelectInput value={status} onChange={(e) => setStatus(e.target.value)} options={[
-          { value: "todos", label: "Todos os status" },
-          { value: "emitido", label: "Emitido" },
-          { value: "pago", label: "Pago" },
-          { value: "vencido", label: "Vencido" },
-          { value: "processando", label: "Processando" },
-          { value: "cancelado", label: "Cancelado" },
-        ]} />
-      </div>
+      {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
 
-      <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="p-3 text-left">Nosso nº</th>
-                <th className="p-3 text-left">Aluno</th>
-                <th className="p-3 text-left">Descrição</th>
-                <th className="p-3 text-left">Emissão</th>
-                <th className="p-3 text-left">Vencimento</th>
-                <th className="p-3 text-right">Valor</th>
-                <th className="p-3 text-left">Situação</th>
-                <th className="p-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {rows.map((b) => {
-                const s = studentById(b.studentId);
-                return (
-                  <tr key={b.id} className="hover:bg-muted/30">
-                    <td className="p-3 font-mono text-xs">{b.ourNumber}</td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar initials={s?.initials ?? "—"} />
-                        <div>
-                          <div className="font-medium">{s?.name}</div>
-                          <div className="text-xs text-muted-foreground">{s?.registration}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-3 text-muted-foreground">{b.description}</td>
-                    <td className="p-3">{fmtDate(b.emittedAt)}</td>
-                    <td className="p-3">{fmtDate(b.dueDate)}</td>
-                    <td className="p-3 text-right font-medium">{brl(b.value)}</td>
-                    <td className="p-3"><BoletoStatusBadge status={b.status} /></td>
-                    <td className="p-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button title="Reemitir" className="rounded-md border p-1.5 hover:bg-muted"><RefreshCcw className="h-3.5 w-3.5" /></button>
-                        <button title="PDF" className="rounded-md border p-1.5 hover:bg-muted"><Download className="h-3.5 w-3.5" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable rows={filtered} columns={columns} emptyMessage="Nenhuma cobrança encontrada" />
 
       <div className="mt-4 rounded-xl border border-dashed bg-muted/30 p-4 text-xs text-muted-foreground">
-        <strong className="text-foreground">Integração bancária:</strong> a estrutura de emissão está preparada para conectar com APIs de bancos (Itaú, Bradesco, Sicredi, Banco do Brasil, Santander) via CNAB240 ou API PIX/Boleto.
+        <strong className="text-foreground">Controle interno:</strong> nosso número, linha digitável e código PIX são gerados internamente pelo Rooster Finance para fins de controle e comprovação — não há compensação bancária real (sem gateway/PSP).
       </div>
     </>
   );

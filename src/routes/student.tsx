@@ -1,9 +1,10 @@
 import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/rooster/app-shell";
 import { PageHeader } from "@/components/rooster/page-header";
 import { useRole } from "@/components/rooster/role-context";
 import { StudentGlobalSearch } from "@/components/rooster/student/global-search";
-import { PROFILE } from "@/components/rooster/student/mock-data";
+import { studentService, type StudentProfile } from "@/services/mock-api/student.service";
 import { Avatar } from "@/components/rooster/student/ui";
 import { Lock } from "lucide-react";
 
@@ -28,10 +29,7 @@ const TABS = [
   { to: "/student/attendance", label: "Frequência" },
   { to: "/student/history", label: "Histórico" },
   { to: "/student/calendar", label: "Calendário" },
-  { to: "/student/courses", label: "Cursos" },
   { to: "/student/finance", label: "Financeiro" },
-  { to: "/student/reservations", label: "Reservas" },
-  { to: "/student/tickets", label: "Chamados" },
   { to: "/student/documents", label: "Documentos" },
   { to: "/student/notifications", label: "Notificações" },
 ];
@@ -39,11 +37,21 @@ const TABS = [
 function StudentLayout() {
   const { role } = useRole();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [profile, setProfile] = useState<StudentProfile | null | undefined>(undefined);
 
-  if (role !== "aluno" && role !== "admin") {
+  useEffect(() => {
+    let alive = true;
+    studentService.getMe().then((p) => { if (alive) setProfile(p ?? null); }).catch(() => { if (alive) setProfile(null); });
+    return () => { alive = false; };
+  }, []);
+
+  // Coordenação também acessa o portal (module-config.ts já lista "coordenador" nos roles
+  // do módulo Student, para acompanhar/pré-visualizar o que um aluno vê) — quando o usuário
+  // logado não tem vínculo de Aluno, o estado "Sem vínculo de aluno" abaixo já cobre isso.
+  if (role !== "aluno" && role !== "admin" && role !== "coordenador") {
     return (
       <AppShell>
-        <PageHeader eyebrow="Rooster Student" title="Acesso restrito" description="O portal do aluno é exclusivo para estudantes e administradores." />
+        <PageHeader eyebrow="Rooster Student" title="Acesso restrito" description="O portal do aluno é exclusivo para estudantes, coordenação e administradores." />
         <div className="rounded-2xl border bg-card p-10 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <Lock className="h-6 w-6" />
@@ -59,15 +67,30 @@ function StudentLayout() {
   return (
     <AppShell>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card p-4">
-        <div className="flex items-center gap-3">
-          <Avatar initials={PROFILE.initials} tone={PROFILE.photoTone} size={44} />
-          <div>
-            <p className="text-sm font-semibold">{PROFILE.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {PROFILE.course} · {PROFILE.semester} · RA {PROFILE.ra}
-            </p>
+        {profile ? (
+          <div className="flex items-center gap-3">
+            <Avatar initials={profile.initials} tone={profile.photoTone} size={44} />
+            <div>
+              <p className="text-sm font-semibold">{profile.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {profile.courseName} · {profile.semester}º semestre · RA {profile.ra}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : profile === null ? (
+          <div className="flex items-center gap-3">
+            <Avatar initials="—" size={44} />
+            <div>
+              <p className="text-sm font-semibold">Sem vínculo de aluno</p>
+              <p className="text-xs text-muted-foreground">Este usuário não possui um registro de aluno vinculado.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Avatar initials="…" size={44} />
+            <p className="text-xs text-muted-foreground">Carregando perfil…</p>
+          </div>
+        )}
         <StudentGlobalSearch />
       </div>
 
