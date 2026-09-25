@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CrudHeader, SectionCard, EmptyState, Btn, Field, TextInput, TextArea, SelectInput, LoadingCards } from "@/components/shared";
 import { roomService } from "@/services/mock-api";
@@ -11,8 +11,9 @@ import { SpaceStatusBadge } from "@/components/rooster/rooms/badges";
 import {
   SPACE_TYPE_LABEL, RESOURCE_LABEL, formatDate, isoOf, hourToMinutes, findConflicts, roomSlots,
 } from "@/components/rooster/rooms/labels";
-import { useRole, ROLE_META } from "@/components/rooster/role-context";
+import { useRole } from "@/components/rooster/role-context";
 import { session } from "@/services/hub/session";
+import { useCan } from "@/components/rooster/hub/permission-context";
 import {
   ChevronLeft, ChevronRight, Search, CalendarDays, CheckCircle2, AlertTriangle, DoorOpen, Users, MessageSquare, Send,
 } from "lucide-react";
@@ -51,7 +52,19 @@ function BookRoomPage() {
   // Nome exibido na reserva é sempre o do usuário logado de verdade (session.usuario) — nunca a
   // persona de demonstração do seletor "Visão" (ROLE_META[role].person), que não corresponde a
   // quem está autenticado. O dono real da reserva (responsavelId) já vem do backend via JWT.
-  const currentPersonName = session.usuario?.nome ?? ROLE_META[role].person.name;
+  const currentPersonName = session.usuario?.nome ?? "Usuário";
+  // Permissão real (não a Visão de demonstração): quem não tem `solicitar-recorrente` só pode
+  // fazer reserva única; quem não tem `prazo-estendido` fica limitado a 15 dias de antecedência
+  // (o mesmo limite é sempre reforçado pelo backend — isto aqui é só pra não deixar preencher um
+  // formulário que o servidor vai recusar).
+  const podeRecorrente = useCan("/rooms/book", "solicitar-recorrente");
+  const podePrazoEstendido = useCan("/rooms/book", "prazo-estendido");
+  const antecedenciaMaximaDias = podePrazoEstendido ? 365 : 15;
+  const maxDateIso = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + antecedenciaMaximaDias);
+    return isoOf(d);
+  }, [antecedenciaMaximaDias]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -79,12 +92,35 @@ function BookRoomPage() {
     repeatUntil: "",
   });
 
+  // Garante que o default de sala/data (abaixo) só é aplicado uma vez, no carregamento inicial —
+  // recargas seguintes (ex.: depois de enviar uma nova solicitação) não devem "puxar o tapete"
+  // da sala/data que o usuário já está olhando na tela.
+  const appliedDefaultRef = useRef(false);
+
   function reload() {
     Promise.all([roomService.getAll(), roomService.getCampuses(), roomService.getReservations()]).then(([r, c, res]) => {
       setRooms(r);
       setCampuses(c);
       setReservations(res);
-      setRoomId((prev) => prev ?? r[0]?.id ?? null);
+      if (!appliedDefaultRef.current) {
+        appliedDefaultRef.current = true;
+        // O calendário mostra a disponibilidade de uma sala por vez. Antes, a sala padrão ao
+        // abrir a tela era sempre a primeira da lista — se a reserva do próprio usuário fosse em
+        // outra sala, ela nunca aparecia por padrão (o bug relatado: reserva aprovada some da
+        // tela). Agora prioriza a sala e a data da reserva mais recente do usuário logado, se ele
+        // tiver alguma; só cai na primeira sala da lista quando não há nenhuma reserva própria.
+        const minhaReservaMaisRecente = res
+          .filter((item) => item.responsibleId && item.responsibleId === session.usuario?.id && item.status !== "cancelada")
+          .sort((a, b) => b.date.localeCompare(a.date))[0];
+        setRoomId(minhaReservaMaisRecente?.roomId ?? r[0]?.id ?? null);
+        if (minhaReservaMaisRecente) {
+          setDate(minhaReservaMaisRecente.date);
+          // O grid do calendário é desenhado a partir de `cursor` (mês exibido) — sem isto, a
+          // data poderia ser marcada como selecionada num mês que nem está sendo exibido.
+          const [y, m, d] = minhaReservaMaisRecente.date.split("-").map(Number);
+          setCursor(new Date(y, m - 1, d));
+        }
+      }
       setLoading(false);
     });
   }
@@ -129,9 +165,11 @@ function BookRoomPage() {
   const overCapacity = !!room && form.participants > room.capacity;
   const isRecurring = form.recurrence !== "unica";
   const invalidRepeatUntil = isRecurring && (!form.repeatUntil || form.repeatUntil < date);
+  const beyondHorizon = date > maxDateIso;
+  const repeatBeyondHorizon = isRecurring && !!form.repeatUntil && form.repeatUntil > maxDateIso;
   const canSubmit =
     !!room && !!form.event.trim() && !!slotValue && !invalidTime && !overCapacity && conflicts.length === 0 &&
-    !invalidRepeatUntil && !saving;
+    !invalidRepeatUntil && !beyondHorizon && !repeatBeyondHorizon && !saving;
 
   const cells = useMemo(() => monthMatrix(cursor), [cursor]);
   const countByDay = useMemo(() => {
@@ -276,16 +314,21 @@ function BookRoomPage() {
                 const selected = iso === date;
                 const isToday = iso === isoOf(new Date());
                 const n = countByDay.get(iso) ?? 0;
+                const beyond = iso > maxDateIso;
                 return (
                   <button
                     key={iso}
                     type="button"
+                    disabled={beyond}
+                    title={beyond ? `Fora do limite de ${antecedenciaMaximaDias} dias de antecedência` : undefined}
                     onClick={() => { setDate(iso); setSent(null); }}
                     className={`flex h-16 flex-col items-start rounded-2xl border border-transparent bg-muted/30 p-2 text-left transition-colors ${
-                      selected ? "border-foreground/30 bg-accent shadow-sm" : "hover:bg-accent/60"
-                    } ${outside ? "opacity-40" : ""}`}
+                      selected
+                        ? "border-foreground bg-accent shadow-sm ring-2 ring-foreground ring-offset-1 ring-offset-background"
+                        : "hover:bg-accent/60"
+                    } ${outside ? "opacity-40" : ""} ${beyond ? "cursor-not-allowed opacity-30" : ""}`}
                   >
-                    <span className={`text-xs tabular-nums ${isToday ? "font-semibold" : ""}`}>{d.getDate()}</span>
+                    <span className={`text-xs tabular-nums ${isToday || selected ? "font-semibold" : ""}`}>{d.getDate()}</span>
                     {n > 0 && (
                       <span className="mt-auto rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                         {n} reserva{n > 1 ? "s" : ""}
@@ -351,9 +394,13 @@ function BookRoomPage() {
                 <Field label="Participantes">
                   <TextInput type="number" value={String(form.participants)} onChange={(e) => setForm({ ...form, participants: Number(e.target.value) })} />
                 </Field>
-                <Field label="Repetição">
+                <Field
+                  label="Repetição"
+                  hint={!podeRecorrente ? "Seu perfil não tem permissão para reserva recorrente — fale com a coordenação." : undefined}
+                >
                   <SelectInput
                     value={form.recurrence}
+                    disabled={!podeRecorrente}
                     onChange={(e) => setForm({ ...form, recurrence: e.target.value as typeof form.recurrence })}
                     options={[
                       { value: "unica", label: "Não repetir" },
@@ -366,9 +413,9 @@ function BookRoomPage() {
                 {isRecurring && (
                   <Field
                     label="Repetir até"
-                    hint="Cada ocorrência é verificada individualmente; se alguma colidir, nenhuma reserva da série é criada (até 26 ocorrências)."
+                    hint={`Cada ocorrência é verificada individualmente; se alguma colidir, nenhuma reserva da série é criada (até 26 ocorrências, e sempre dentro do limite de ${antecedenciaMaximaDias} dias de antecedência).`}
                   >
-                    <TextInput type="date" value={form.repeatUntil} onChange={(e) => setForm({ ...form, repeatUntil: e.target.value })} />
+                    <TextInput type="date" value={form.repeatUntil} max={maxDateIso} onChange={(e) => setForm({ ...form, repeatUntil: e.target.value })} />
                   </Field>
                 )}
                 <div className="rounded-xl border bg-background/40 p-3 text-xs text-muted-foreground sm:col-span-2">
@@ -436,7 +483,13 @@ function BookRoomPage() {
               {invalidRepeatUntil && (
                 <p className="flex items-center gap-1.5 text-xs text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> Informe até quando a repetição deve continuar.</p>
               )}
-              {conflicts.length === 0 && !invalidTime && !overCapacity && !invalidRepeatUntil && form.event.trim() && (
+              {beyondHorizon && (
+                <p className="flex items-center gap-1.5 text-xs text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> Essa data está fora do limite de {antecedenciaMaximaDias} dias de antecedência do seu perfil.</p>
+              )}
+              {repeatBeyondHorizon && (
+                <p className="flex items-center gap-1.5 text-xs text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> A repetição não pode ultrapassar o limite de {antecedenciaMaximaDias} dias de antecedência do seu perfil.</p>
+              )}
+              {conflicts.length === 0 && !invalidTime && !overCapacity && !invalidRepeatUntil && !beyondHorizon && !repeatBeyondHorizon && form.event.trim() && (
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5" /> Horário livre para este ambiente.</p>
               )}
               {submitError && (

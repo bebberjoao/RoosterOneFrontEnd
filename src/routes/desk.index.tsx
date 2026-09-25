@@ -11,6 +11,7 @@ import {
   EmptyState,
   TONE,
 } from "@/components/shared";
+import { useCan } from "@/components/rooster/hub/permission-context";
 import { formatDate, relative } from "@/components/rooster/desk/mock-data";
 import { StatusBadge, PriorityBadge, SlaBar } from "@/components/rooster/desk/badges";
 import {
@@ -38,9 +39,10 @@ function DeskDashboard() {
 
   useEffect(() => {
     ticketService.getAll().then(setTickets);
-    ticketService.getCategories().then(setCategories);
+    ticketService.getCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
 
+  const canSla = useCan("/desk/tickets", "ver-sla");
   const open = tickets.filter((t) => t.status === "aberto").length;
   const inProgress = tickets.filter((t) => t.status === "atendimento").length;
   const pending = tickets.filter((t) => t.status === "pendente").length;
@@ -56,8 +58,9 @@ function DeskDashboard() {
 
   const latest = useMemo(() => [...tickets].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6), [tickets]);
   const critical = useMemo(
-    () => tickets.filter((t) => t.priority === "critica" || t.slaPercent < 30).slice(0, 5),
-    [tickets],
+    // Sem permissão de SLA, "SLA em risco" também não pode filtrar a lista — vazaria a informação por inferência.
+    () => tickets.filter((t) => t.priority === "critica" || (canSla && t.slaPercent < 30)).slice(0, 5),
+    [tickets, canSla],
   );
 
   const byCategory = useMemo(
@@ -74,7 +77,7 @@ function DeskDashboard() {
     <>
       <CrudHeader
         title="Central de atendimento"
-        description="Visão em tempo real dos chamados e do SLA do Rooster Desk."
+        description={canSla ? "Visão em tempo real dos chamados e do SLA do Rooster Desk." : "Visão em tempo real dos chamados do Rooster Desk."}
         actions={
           <Link
             to="/desk/tickets"
@@ -86,7 +89,7 @@ function DeskDashboard() {
         }
       />
 
-      <TabBar
+      {canSla && <TabBar
         className="mb-5"
         value={tab}
         onChange={setTab}
@@ -94,16 +97,16 @@ function DeskDashboard() {
           { value: "geral", label: "Visão geral" },
           { value: "sla", label: "Relatório de SLA" },
         ]}
-      />
+      />}
 
-      {tab === "geral" ? (
+      {tab === "geral" || !canSla ? (
         <>
           <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <StatCard label="Abertos" value={String(open)} icon={TicketIcon} tone={TONE.danger} />
             <StatCard label="Em atendimento" value={String(inProgress)} icon={PlayCircle} tone={TONE.info} />
             <StatCard label="Pendentes" value={String(pending)} icon={PauseCircle} tone={TONE.warn} />
             <StatCard label="Resolvidos" value={String(resolved)} icon={CheckCircle2} tone={TONE.ok} />
-            <StatCard label="SLA médio" value={`${avgSla}%`} hint="meta 92%" icon={Gauge} tone={TONE.purple} />
+            {canSla && <StatCard label="SLA médio" value={`${avgSla}%`} hint="meta 92%" icon={Gauge} tone={TONE.purple} />}
             <StatCard
               label="Tempo médio de resolução"
               value={avgResolutionLabel}
@@ -140,7 +143,7 @@ function DeskDashboard() {
               )}
             </SectionCard>
 
-            <SectionCard title="Chamados críticos" description="Prioridade crítica ou SLA em risco">
+            <SectionCard title="Chamados críticos" description={canSla ? "Prioridade crítica ou SLA em risco" : "Prioridade crítica"}>
               {critical.length === 0 ? (
                 <EmptyState icon={AlertTriangle} title="Nenhum chamado crítico" />
               ) : (
@@ -157,7 +160,7 @@ function DeskDashboard() {
                           <span>·</span>
                           <span className="truncate">{t.requester.name}</span>
                           <span className="ml-auto flex items-center gap-2">
-                            <SlaBar percent={t.slaPercent} />
+                            {canSla && <SlaBar percent={t.slaPercent} />}
                             <span>{formatDate(t.openedAt)}</span>
                           </span>
                         </div>

@@ -1,8 +1,8 @@
 # Validações (Frontend)
 
-## Sem `react-hook-form`/`zod` em uso real
+## Sem `react-hook-form`/`zod`
 
-Ambas as bibliotecas estão instaladas (`package.json`), mas a única referência a `react-hook-form`/`zodResolver` em todo `src/` está em `components/ui/form.tsx` — um componente base (padrão shadcn) que **nenhuma tela do projeto instancia**. Toda validação de formulário real é manual.
+Nenhuma tela do projeto usa essas bibliotecas — a única referência a `react-hook-form`/`zodResolver` em todo `src/` era `components/ui/form.tsx`, um componente base (padrão shadcn) que nenhuma tela instanciava. Removidos na limpeza de código morto de setembro/2026 (`react-hook-form`, `zod`, `@hookform/resolvers`, `date-fns` do `package.json`, e o arquivo `components/ui/form.tsx`). Toda validação de formulário real é manual.
 
 ## Padrão de validação manual — `HubCrud`
 

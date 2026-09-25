@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { KeyRound, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/rooster/page-header";
-import { Avatar, Btn, Chip, TONE } from "@/components/shared/primitives";
+import { Avatar, Btn, Chip, TONE } from "@/components/shared";
 import { HubCrud, type HubField, OfflineBanner } from "@/components/rooster/hub/crud-panel";
 import { fmtCpf, fmtDateTime, initials } from "@/components/rooster/hub/format";
 import { Field, TextInput } from "@/components/shared/form";

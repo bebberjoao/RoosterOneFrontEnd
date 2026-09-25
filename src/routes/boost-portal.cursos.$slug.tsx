@@ -9,7 +9,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, BookOpen, CheckCircle2, Clock, FileText, Layers, Link as LinkIcon, PlayCircle, Users } from "lucide-react";
 import { cursosBoostPortalService, nivelLabel, type CursoDetalhePublico, type TipoAula } from "@/services/boost-portal/cursos.service";
 import { BoostApiError, useBoostAuth } from "@/services/boost-portal/auth-context";
-import { EmptyState, LoadingBlock } from "@/components/shared/primitives";
+import { EmptyState, LoadingBlock } from "@/components/shared";
 
 export const Route = createFileRoute("/boost-portal/cursos/$slug")({
   validateSearch: (search: Record<string, unknown>) =>

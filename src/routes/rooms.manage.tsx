@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CalendarCheck2, CalendarClock, CheckCircle2, CircleX, Clock3, MessageCircle, Reply, XCircle } from "lucide-react";
-import { Btn, CrudHeader, CrudToolbar, DataTable, Field, Modal, StatCard, TextArea, TONE, type Column } from "@/components/shared";
-import { useRole, ROLE_META } from "@/components/rooster/role-context";
+import { Btn, CrudHeader, CrudToolbar, DataTable, Field, Modal, Select, StatCard, TextArea, TextInput, TONE, type Column } from "@/components/shared";
+import { useRole, useCurrentPerson } from "@/components/rooster/role-context";
 import { StatusBadge } from "@/components/rooster/rooms/badges";
 import { STATUS_LABEL, formatDate } from "@/components/rooster/rooms/labels";
 import { roomService } from "@/services/mock-api";
@@ -21,11 +21,15 @@ export const Route = createFileRoute("/rooms/manage")({
 function ManageReservations() {
   const navigate = useNavigate();
   const { role } = useRole();
-  const person = ROLE_META[role].person;
+  const person = useCurrentPerson();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"all" | Reservation["status"]>("all");
+  const [dateMode, setDateMode] = useState<"all" | "day" | "period">("all");
+  const [singleDate, setSingleDate] = useState("");
+  const [periodStart, setPeriodStart] = useState("");
+  const [periodEnd, setPeriodEnd] = useState("");
   const [dialog, setDialog] = useState<{ kind: "reply" | "cancel"; item: Reservation } | null>(null);
   const [text, setText] = useState("");
 
@@ -37,8 +41,14 @@ function ManageReservations() {
 
   const rows = useMemo(() => reservations.filter((r) => {
     const room = rooms.find((item) => item.id === r.roomId);
-    return `${r.code} ${r.event} ${r.responsible} ${room?.name ?? ""}`.toLowerCase().includes(search.toLowerCase()) && (status === "all" || r.status === status);
-  }), [reservations, rooms, search, status]);
+    const matchesSearch = `${r.code} ${r.event} ${r.responsible} ${room?.name ?? ""}`.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = status === "all" || r.status === status;
+    const matchesDate =
+      dateMode === "day" ? (!singleDate || r.date === singleDate) :
+      dateMode === "period" ? ((!periodStart || r.date >= periodStart) && (!periodEnd || r.date <= periodEnd)) :
+      true;
+    return matchesSearch && matchesStatus && matchesDate;
+  }), [reservations, rooms, search, status, dateMode, singleDate, periodStart, periodEnd]);
 
   async function confirmDialog() {
     if (!dialog || !text.trim()) return;
@@ -90,6 +100,28 @@ function ManageReservations() {
       <StatCard label="Canceladas" value={String(reservations.filter((r) => r.status === "cancelada").length)} hint="Com motivo registrado" icon={CircleX} tone={TONE.danger} />
     </div>
     <div className="mb-3 flex flex-wrap gap-2">{(["all", "analise", "confirmada", "andamento", "finalizada", "cancelada"] as const).map((value) => <button key={value} onClick={() => setStatus(value)} className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${status === value ? "border-foreground bg-foreground text-background" : "bg-card hover:bg-accent"}`}>{value === "all" ? "Todas" : STATUS_LABEL[value]}</button>)}</div>
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <Select
+        className="w-44"
+        value={dateMode}
+        onChange={(v) => setDateMode(v as typeof dateMode)}
+        options={[
+          { value: "all", label: "Todas as datas" },
+          { value: "day", label: "Um dia específico" },
+          { value: "period", label: "Um período" },
+        ]}
+      />
+      {dateMode === "day" && (
+        <TextInput type="date" className="w-44" value={singleDate} onChange={(e) => setSingleDate(e.target.value)} />
+      )}
+      {dateMode === "period" && (
+        <>
+          <TextInput type="date" className="w-44" value={periodStart} max={periodEnd || undefined} onChange={(e) => setPeriodStart(e.target.value)} />
+          <span className="text-xs text-muted-foreground">até</span>
+          <TextInput type="date" className="w-44" value={periodEnd} min={periodStart || undefined} onChange={(e) => setPeriodEnd(e.target.value)} />
+        </>
+      )}
+    </div>
     <CrudToolbar search={search} onSearch={setSearch} placeholder="Buscar por código, reserva, solicitante ou ambiente..." />
     <DataTable rows={rows} columns={columns} onRowClick={(reservation) => navigate({ to: "/rooms/reservations/$id", params: { id: reservation.id } })} emptyMessage="Nenhuma reserva encontrada." />
     <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Clock3 className="h-3.5 w-3.5" /> Abra uma reserva para ver a conversa completa e o histórico.</p>

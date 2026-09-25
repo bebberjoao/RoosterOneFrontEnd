@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Save, Search, Users } from "lucide-react";
 import { PageHeader } from "@/components/rooster/page-header";
-import { Avatar, Btn, Chip, EmptyState, TONE } from "@/components/shared/primitives";
+import { Avatar, Btn, Chip, EmptyState, TONE } from "@/components/shared";
 import { Modal } from "@/components/shared/overlays";
 import { Checkbox } from "@/components/ui/checkbox";
 import { HubCrud, type HubField, OfflineBanner } from "@/components/rooster/hub/crud-panel";

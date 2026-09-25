@@ -5,6 +5,8 @@ import { session, type SessionUser } from "@/services/hub/session";
 type LoginResponse = {
   usuario: SessionUser;
   accessToken: string;
+  /** Trocado por um par novo quando o access token expira — ver `client.ts`. */
+  refreshToken: string;
   /** Permissões efetivas do usuário no momento do login — mesmo formato de `Permissao.nome`/`permissionKey()`. */
   acesso: { permissoes: Array<{ nome: string }> } | null;
 };
@@ -49,9 +51,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, senha: string) => {
     const res = await request<LoginResponse>("/auth/login", { method: "POST", body: { email, senha } });
     const permissoes = (res.acesso?.permissoes ?? []).map((p) => p.nome);
-    session.set(res.accessToken, res.usuario, permissoes);
+    session.set(res.accessToken, res.usuario, permissoes, res.refreshToken);
   };
-  const logout = () => session.clear();
+
+  const logout = () => {
+    // Avisa o servidor para revogar a sessão, mas não espera nem trava a saída
+    // em caso de falha: do ponto de vista do usuário, sair é local e imediato.
+    const refresh = session.refreshToken;
+    if (refresh) {
+      void request("/auth/logout", { method: "POST", body: { refreshToken: refresh } }).catch(() => {});
+    }
+    session.clear();
+  };
 
   const requestPasswordReset = async (email: string) => {
     await request("/auth/esqueci-senha", { method: "POST", body: { email } });

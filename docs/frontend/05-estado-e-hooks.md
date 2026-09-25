@@ -5,7 +5,8 @@
 `QueryClientProvider → ThemeProvider → AuthProvider → RoleProvider` — ver `01-arquitetura.md`.
 
 - **`auth-context.tsx` (`useAuth`)** — sessão real: `authed`, `ready`, `usuario`, `login`, `logout`, `requestPasswordReset`, `resetPassword`.
-- **`role-context.tsx` (`useRole`)** — seletor de persona de **demonstração** ("Visão"), não é a sessão real. Ver `08-autorizacao.md` para o acoplamento entre os dois.
+- **`role-context.tsx` (`useRole`, `useCurrentPerson`)** — o perfil de interface (admin, professor, aluno…) é **deduzido das permissões reais da sessão** (`deriveRole`), sem troca manual; `useCurrentPerson()` devolve nome e iniciais do usuário realmente logado. Ver `08-autorizacao.md`.
+- **`notifications/use-notificacoes.ts` (`useNotificacoes`)** — caixa de entrada real, com **um único estado compartilhado** entre o sino da barra superior, a página `/notifications` e o painel do aluno (assim os três mostram sempre o mesmo número de não lidas). Consulta `GET /notificacoes/minhas` ao montar, a cada 30 s e ao voltar o foco à aba; marcar como lida é otimista (atualiza a tela na hora e recarrega se a API falhar); limpa a caixa ao trocar de usuário.
 - **`theme-context.tsx`** — tema claro/escuro, persistido em `localStorage`.
 
 ## Contexts montados dentro de `AppShell` (só em rota autenticada)
@@ -40,4 +41,4 @@ As telas de Academy (gestão), Learn e Student seguem o mesmo padrão desde que 
 
 ## Estado local de formulário
 
-Sem `react-hook-form` em uso real (só existe como dependência de um componente base em `components/ui/form.tsx`, não instanciado por nenhuma tela) — formulários usam `useState` por campo e uma função de validação síncrona por campo (ex.: `HubField.validate` em `HubCrud`). Ver `09-validacoes.md`.
+Sem `react-hook-form` (removido do `package.json` na limpeza de código morto de setembro/2026 — não tinha uso real) — formulários usam `useState` por campo e uma função de validação síncrona por campo (ex.: `HubField.validate` em `HubCrud`). Ver `09-validacoes.md`.

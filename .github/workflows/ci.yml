@@ -1,0 +1,46 @@
+# CI do frontend — mesmas verificações do CONTRIBUTING.md.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    name: Tipos, testes, lint e build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Checagem de tipos
+        run: npx tsc --noEmit
+
+      - name: Testes (Vitest, inclui acessibilidade)
+        run: npm test
+
+      - name: Build de produção
+        # É a rede que pega erro de importação e de rota que o tsc não vê —
+        # o route tree do TanStack é gerado aqui.
+        run: npm run build
+
+  auditoria:
+    name: Varredura de dependência
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run audit

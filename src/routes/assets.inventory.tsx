@@ -15,7 +15,7 @@ import {
   fmtDate, fmtDateTime, money, type Asset, type MovementType,
 } from "@/components/rooster/assets/mock-data";
 import { assetsCan } from "@/components/rooster/assets/permissions";
-import { ROLE_META, useRole } from "@/components/rooster/role-context";
+import { useCurrentPerson, useRole } from "@/components/rooster/role-context";
 import {
   Boxes, Plus, Pencil, Trash2, Image as ImageIcon, Building2, Tags, ChevronRight, User, Link2,
 } from "lucide-react";
@@ -128,7 +128,7 @@ function InventoryPage() {
     createCategory, updateCategory, deleteCategory,
   } = useAssets();
   const { sectors, users, usersOfSector } = useHubDirectory();
-  const me = ROLE_META[role].person.name;
+  const me = useCurrentPerson().name;
 
   // Navegação: categorias -> itens
   const [categoryId, setCategoryId] = useState<string | null>(null);

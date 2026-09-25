@@ -19,7 +19,7 @@ Reexportados via `index.ts` (import único `@/components/shared`), usados por qu
 
 ## Componentes de domínio (`src/components/rooster/<modulo>/`)
 
-Cada módulo (Hub/Desk/Rooms/Assets — e também os módulos só-mock) tem sua própria pasta com badges, formulários e stores específicos daquele domínio (ex.: `desk/categories-store.ts`, `assets/store.tsx`, `rooms/labels.ts`). Não seguem um contrato genérico — são específicos da tela que os usa.
+Cada um dos 9 módulos tem sua própria pasta com badges, formulários e stores específicos daquele domínio (ex.: `desk/categories-store.ts`, `assets/store.tsx`, `rooms/labels.ts`). Não seguem um contrato genérico — são específicos da tela que os usa.
 
 ### `src/components/rooster/academy/manage/` — abas de Gestão acadêmica
 

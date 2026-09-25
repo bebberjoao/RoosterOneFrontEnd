@@ -57,8 +57,8 @@ Nem todos os providers ficam no root — alguns só existem dentro de layouts es
 `src/components/rooster/app-shell.tsx` é o componente que todo layout de módulo (`hub.tsx`, `desk.tsx`, `rooms.tsx`, `assets.tsx`, `finance.tsx`, `student.tsx`, `academy.tsx`, `learn.tsx`, `boost.tsx`, `settings.tsx`, e também `index.tsx`) usa para envolver seu `<Outlet />`. Ele:
 
 1. Lê `authed`/`ready` de `useAuth()`. Se `ready && !authed`, redireciona para `/login` via `navigate({ to: "/login", replace: true })`.
-2. Enquanto `!ready || !authed`, renderiza uma tela em branco (evita "flash" de conteúdo protegido).
-3. Envolve o conteúdo em `PermissionProvider` -> `SidebarProvider` -> `AppSidebar` + `AppTopbar` + `<main>` com `RequireAccess route={pathname}` (bloqueia a tela se o usuário ativo não tiver a permissão de acesso — ver `08-autorizacao.md`).
+2. Enquanto `!ready || !authed`, renderiza um esqueleto de carregamento (`Skeleton` de cabeçalho, cartões e bloco de conteúdo) — evita "flash" de conteúdo protegido sem deixar a tela vazia.
+3. Envolve o conteúdo em `PermissionProvider` -> `GlobalSearchProvider` (command palette Ctrl/Cmd+K) -> `SidebarProvider` -> `AppSidebar` + `AppTopbar` + `<main>` com `RequireAccess route={pathname}` (bloqueia a tela se o usuário ativo não tiver a permissão de acesso — ver `08-autorizacao.md`).
 
 `login.tsx` e `redefinir-senha.tsx` **não** usam `AppShell` — são as únicas rotas públicas.
 

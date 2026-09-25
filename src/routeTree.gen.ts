@@ -19,6 +19,7 @@ import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as HubRouteImport } from './routes/hub'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as RoomsRouteImport } from './routes/rooms'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -32,8 +33,10 @@ import { Route as AssetsInventoryRouteImport } from './routes/assets.inventory'
 import { Route as BoostPortalIndexRouteImport } from './routes/boost-portal.index'
 import { Route as BoostPortalCadastroRouteImport } from './routes/boost-portal.cadastro'
 import { Route as BoostPortalEntrarRouteImport } from './routes/boost-portal.entrar'
-import { Route as BoostPortalPainelRouteImport } from './routes/boost-portal.painel'
+import { Route as BoostPortalVerificarRouteImport } from './routes/boost-portal.verificar'
 import { Route as BoostIndexRouteImport } from './routes/boost.index'
+import { Route as BoostConversasRouteImport } from './routes/boost.conversas'
+import { Route as BoostStudentsRouteImport } from './routes/boost.students'
 import { Route as DeskIndexRouteImport } from './routes/desk.index'
 import { Route as DeskCategoriesRouteImport } from './routes/desk.categories'
 import { Route as DeskTeamRouteImport } from './routes/desk.team'
@@ -70,6 +73,7 @@ import { Route as StudentHistoryRouteImport } from './routes/student.history'
 import { Route as StudentNotificationsRouteImport } from './routes/student.notifications'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
 import { Route as BoostPortalCursosSlugRouteImport } from './routes/boost-portal.cursos.$slug'
+import { Route as BoostPortalPainelIndexRouteImport } from './routes/boost-portal.painel.index'
 import { Route as BoostPortalPainelMatriculaIdRouteImport } from './routes/boost-portal.painel.$matriculaId'
 import { Route as BoostManageIdRouteImport } from './routes/boost.manage.$id'
 import { Route as DeskCategoriesIndexRouteImport } from './routes/desk.categories.index'
@@ -127,6 +131,11 @@ const LearnRoute = LearnRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
@@ -194,14 +203,24 @@ const BoostPortalEntrarRoute = BoostPortalEntrarRouteImport.update({
   path: '/entrar',
   getParentRoute: () => BoostPortalRoute,
 } as any)
-const BoostPortalPainelRoute = BoostPortalPainelRouteImport.update({
-  id: '/painel',
-  path: '/painel',
+const BoostPortalVerificarRoute = BoostPortalVerificarRouteImport.update({
+  id: '/verificar',
+  path: '/verificar',
   getParentRoute: () => BoostPortalRoute,
 } as any)
 const BoostIndexRoute = BoostIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => BoostRoute,
+} as any)
+const BoostConversasRoute = BoostConversasRouteImport.update({
+  id: '/conversas',
+  path: '/conversas',
+  getParentRoute: () => BoostRoute,
+} as any)
+const BoostStudentsRoute = BoostStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
   getParentRoute: () => BoostRoute,
 } as any)
 const DeskIndexRoute = DeskIndexRouteImport.update({
@@ -384,11 +403,16 @@ const BoostPortalCursosSlugRoute = BoostPortalCursosSlugRouteImport.update({
   path: '/cursos/$slug',
   getParentRoute: () => BoostPortalRoute,
 } as any)
+const BoostPortalPainelIndexRoute = BoostPortalPainelIndexRouteImport.update({
+  id: '/painel/',
+  path: '/painel/',
+  getParentRoute: () => BoostPortalRoute,
+} as any)
 const BoostPortalPainelMatriculaIdRoute =
   BoostPortalPainelMatriculaIdRouteImport.update({
-    id: '/$matriculaId',
-    path: '/$matriculaId',
-    getParentRoute: () => BoostPortalPainelRoute,
+    id: '/painel/$matriculaId',
+    path: '/painel/$matriculaId',
+    getParentRoute: () => BoostPortalRoute,
   } as any)
 const BoostManageIdRoute = BoostManageIdRouteImport.update({
   id: '/manage/$id',
@@ -437,6 +461,7 @@ export interface FileRoutesByFullPath {
   '/hub': typeof HubRouteWithChildren
   '/learn': typeof LearnRouteWithChildren
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/rooms': typeof RoomsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -447,7 +472,9 @@ export interface FileRoutesByFullPath {
   '/assets/inventory': typeof AssetsInventoryRoute
   '/boost-portal/cadastro': typeof BoostPortalCadastroRoute
   '/boost-portal/entrar': typeof BoostPortalEntrarRoute
-  '/boost-portal/painel': typeof BoostPortalPainelRouteWithChildren
+  '/boost-portal/verificar': typeof BoostPortalVerificarRoute
+  '/boost/conversas': typeof BoostConversasRoute
+  '/boost/students': typeof BoostStudentsRoute
   '/desk/categories': typeof DeskCategoriesRouteWithChildren
   '/desk/team': typeof DeskTeamRoute
   '/desk/tickets': typeof DeskTicketsRouteWithChildren
@@ -494,12 +521,14 @@ export interface FileRoutesByFullPath {
   '/desk/tickets/$id': typeof DeskTicketsIdRoute
   '/learn/activities/$id': typeof LearnActivitiesIdRoute
   '/rooms/reservations/$id': typeof RoomsReservationsIdRoute
+  '/boost-portal/painel/': typeof BoostPortalPainelIndexRoute
   '/desk/categories/': typeof DeskCategoriesIndexRoute
   '/rooms/reservations/': typeof RoomsReservationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/settings': typeof SettingsRoute
   '/academy/attendance': typeof AcademyAttendanceRoute
@@ -508,7 +537,9 @@ export interface FileRoutesByTo {
   '/assets/inventory': typeof AssetsInventoryRoute
   '/boost-portal/cadastro': typeof BoostPortalCadastroRoute
   '/boost-portal/entrar': typeof BoostPortalEntrarRoute
-  '/boost-portal/painel': typeof BoostPortalPainelRouteWithChildren
+  '/boost-portal/verificar': typeof BoostPortalVerificarRoute
+  '/boost/conversas': typeof BoostConversasRoute
+  '/boost/students': typeof BoostStudentsRoute
   '/desk/team': typeof DeskTeamRoute
   '/desk/tickets': typeof DeskTicketsRouteWithChildren
   '/finance/boletos': typeof FinanceBoletosRoute
@@ -554,6 +585,7 @@ export interface FileRoutesByTo {
   '/desk/tickets/$id': typeof DeskTicketsIdRoute
   '/learn/activities/$id': typeof LearnActivitiesIdRoute
   '/rooms/reservations/$id': typeof RoomsReservationsIdRoute
+  '/boost-portal/painel': typeof BoostPortalPainelIndexRoute
   '/desk/categories': typeof DeskCategoriesIndexRoute
   '/rooms/reservations': typeof RoomsReservationsIndexRoute
 }
@@ -569,6 +601,7 @@ export interface FileRoutesById {
   '/hub': typeof HubRouteWithChildren
   '/learn': typeof LearnRouteWithChildren
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/rooms': typeof RoomsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -579,7 +612,9 @@ export interface FileRoutesById {
   '/assets/inventory': typeof AssetsInventoryRoute
   '/boost-portal/cadastro': typeof BoostPortalCadastroRoute
   '/boost-portal/entrar': typeof BoostPortalEntrarRoute
-  '/boost-portal/painel': typeof BoostPortalPainelRouteWithChildren
+  '/boost-portal/verificar': typeof BoostPortalVerificarRoute
+  '/boost/conversas': typeof BoostConversasRoute
+  '/boost/students': typeof BoostStudentsRoute
   '/desk/categories': typeof DeskCategoriesRouteWithChildren
   '/desk/team': typeof DeskTeamRoute
   '/desk/tickets': typeof DeskTicketsRouteWithChildren
@@ -626,6 +661,7 @@ export interface FileRoutesById {
   '/desk/tickets/$id': typeof DeskTicketsIdRoute
   '/learn/activities/$id': typeof LearnActivitiesIdRoute
   '/rooms/reservations/$id': typeof RoomsReservationsIdRoute
+  '/boost-portal/painel/': typeof BoostPortalPainelIndexRoute
   '/desk/categories/': typeof DeskCategoriesIndexRoute
   '/rooms/reservations/': typeof RoomsReservationsIndexRoute
 }
@@ -642,6 +678,7 @@ export interface FileRouteTypes {
     | '/hub'
     | '/learn'
     | '/login'
+    | '/notifications'
     | '/redefinir-senha'
     | '/rooms'
     | '/settings'
@@ -652,7 +689,9 @@ export interface FileRouteTypes {
     | '/assets/inventory'
     | '/boost-portal/cadastro'
     | '/boost-portal/entrar'
-    | '/boost-portal/painel'
+    | '/boost-portal/verificar'
+    | '/boost/conversas'
+    | '/boost/students'
     | '/desk/categories'
     | '/desk/team'
     | '/desk/tickets'
@@ -699,12 +738,14 @@ export interface FileRouteTypes {
     | '/desk/tickets/$id'
     | '/learn/activities/$id'
     | '/rooms/reservations/$id'
+    | '/boost-portal/painel/'
     | '/desk/categories/'
     | '/rooms/reservations/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/notifications'
     | '/redefinir-senha'
     | '/settings'
     | '/academy/attendance'
@@ -713,7 +754,9 @@ export interface FileRouteTypes {
     | '/assets/inventory'
     | '/boost-portal/cadastro'
     | '/boost-portal/entrar'
-    | '/boost-portal/painel'
+    | '/boost-portal/verificar'
+    | '/boost/conversas'
+    | '/boost/students'
     | '/desk/team'
     | '/desk/tickets'
     | '/finance/boletos'
@@ -759,6 +802,7 @@ export interface FileRouteTypes {
     | '/desk/tickets/$id'
     | '/learn/activities/$id'
     | '/rooms/reservations/$id'
+    | '/boost-portal/painel'
     | '/desk/categories'
     | '/rooms/reservations'
   id:
@@ -773,6 +817,7 @@ export interface FileRouteTypes {
     | '/hub'
     | '/learn'
     | '/login'
+    | '/notifications'
     | '/redefinir-senha'
     | '/rooms'
     | '/settings'
@@ -783,7 +828,9 @@ export interface FileRouteTypes {
     | '/assets/inventory'
     | '/boost-portal/cadastro'
     | '/boost-portal/entrar'
-    | '/boost-portal/painel'
+    | '/boost-portal/verificar'
+    | '/boost/conversas'
+    | '/boost/students'
     | '/desk/categories'
     | '/desk/team'
     | '/desk/tickets'
@@ -830,6 +877,7 @@ export interface FileRouteTypes {
     | '/desk/tickets/$id'
     | '/learn/activities/$id'
     | '/rooms/reservations/$id'
+    | '/boost-portal/painel/'
     | '/desk/categories/'
     | '/rooms/reservations/'
   fileRoutesById: FileRoutesById
@@ -845,6 +893,7 @@ export interface RootRouteChildren {
   HubRoute: typeof HubRouteWithChildren
   LearnRoute: typeof LearnRouteWithChildren
   LoginRoute: typeof LoginRoute
+  NotificationsRoute: typeof NotificationsRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RoomsRoute: typeof RoomsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
@@ -921,6 +970,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/redefinir-senha': {
@@ -1014,11 +1070,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BoostPortalEntrarRouteImport
       parentRoute: typeof BoostPortalRoute
     }
-    '/boost-portal/painel': {
-      id: '/boost-portal/painel'
-      path: '/painel'
-      fullPath: '/boost-portal/painel'
-      preLoaderRoute: typeof BoostPortalPainelRouteImport
+    '/boost-portal/verificar': {
+      id: '/boost-portal/verificar'
+      path: '/verificar'
+      fullPath: '/boost-portal/verificar'
+      preLoaderRoute: typeof BoostPortalVerificarRouteImport
       parentRoute: typeof BoostPortalRoute
     }
     '/boost/': {
@@ -1026,6 +1082,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/boost/'
       preLoaderRoute: typeof BoostIndexRouteImport
+      parentRoute: typeof BoostRoute
+    }
+    '/boost/conversas': {
+      id: '/boost/conversas'
+      path: '/conversas'
+      fullPath: '/boost/conversas'
+      preLoaderRoute: typeof BoostConversasRouteImport
+      parentRoute: typeof BoostRoute
+    }
+    '/boost/students': {
+      id: '/boost/students'
+      path: '/students'
+      fullPath: '/boost/students'
+      preLoaderRoute: typeof BoostStudentsRouteImport
       parentRoute: typeof BoostRoute
     }
     '/desk/': {
@@ -1280,12 +1350,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BoostPortalCursosSlugRouteImport
       parentRoute: typeof BoostPortalRoute
     }
+    '/boost-portal/painel/': {
+      id: '/boost-portal/painel/'
+      path: '/painel'
+      fullPath: '/boost-portal/painel/'
+      preLoaderRoute: typeof BoostPortalPainelIndexRouteImport
+      parentRoute: typeof BoostPortalRoute
+    }
     '/boost-portal/painel/$matriculaId': {
       id: '/boost-portal/painel/$matriculaId'
-      path: '/$matriculaId'
+      path: '/painel/$matriculaId'
       fullPath: '/boost-portal/painel/$matriculaId'
       preLoaderRoute: typeof BoostPortalPainelMatriculaIdRouteImport
-      parentRoute: typeof BoostPortalPainelRoute
+      parentRoute: typeof BoostPortalRoute
     }
     '/boost/manage/$id': {
       id: '/boost/manage/$id'
@@ -1370,42 +1447,39 @@ const AssetsRouteWithChildren =
   AssetsRoute._addFileChildren(AssetsRouteChildren)
 
 interface BoostRouteChildren {
+  BoostConversasRoute: typeof BoostConversasRoute
+  BoostStudentsRoute: typeof BoostStudentsRoute
   BoostIndexRoute: typeof BoostIndexRoute
   BoostManageIdRoute: typeof BoostManageIdRoute
 }
 
 const BoostRouteChildren: BoostRouteChildren = {
+  BoostConversasRoute: BoostConversasRoute,
+  BoostStudentsRoute: BoostStudentsRoute,
   BoostIndexRoute: BoostIndexRoute,
   BoostManageIdRoute: BoostManageIdRoute,
 }
 
 const BoostRouteWithChildren = BoostRoute._addFileChildren(BoostRouteChildren)
 
-interface BoostPortalPainelRouteChildren {
-  BoostPortalPainelMatriculaIdRoute: typeof BoostPortalPainelMatriculaIdRoute
-}
-
-const BoostPortalPainelRouteChildren: BoostPortalPainelRouteChildren = {
-  BoostPortalPainelMatriculaIdRoute: BoostPortalPainelMatriculaIdRoute,
-}
-
-const BoostPortalPainelRouteWithChildren =
-  BoostPortalPainelRoute._addFileChildren(BoostPortalPainelRouteChildren)
-
 interface BoostPortalRouteChildren {
   BoostPortalCadastroRoute: typeof BoostPortalCadastroRoute
   BoostPortalEntrarRoute: typeof BoostPortalEntrarRoute
-  BoostPortalPainelRoute: typeof BoostPortalPainelRouteWithChildren
+  BoostPortalVerificarRoute: typeof BoostPortalVerificarRoute
   BoostPortalIndexRoute: typeof BoostPortalIndexRoute
   BoostPortalCursosSlugRoute: typeof BoostPortalCursosSlugRoute
+  BoostPortalPainelMatriculaIdRoute: typeof BoostPortalPainelMatriculaIdRoute
+  BoostPortalPainelIndexRoute: typeof BoostPortalPainelIndexRoute
 }
 
 const BoostPortalRouteChildren: BoostPortalRouteChildren = {
   BoostPortalCadastroRoute: BoostPortalCadastroRoute,
   BoostPortalEntrarRoute: BoostPortalEntrarRoute,
-  BoostPortalPainelRoute: BoostPortalPainelRouteWithChildren,
+  BoostPortalVerificarRoute: BoostPortalVerificarRoute,
   BoostPortalIndexRoute: BoostPortalIndexRoute,
   BoostPortalCursosSlugRoute: BoostPortalCursosSlugRoute,
+  BoostPortalPainelMatriculaIdRoute: BoostPortalPainelMatriculaIdRoute,
+  BoostPortalPainelIndexRoute: BoostPortalPainelIndexRoute,
 }
 
 const BoostPortalRouteWithChildren = BoostPortalRoute._addFileChildren(
@@ -1575,6 +1649,7 @@ const rootRouteChildren: RootRouteChildren = {
   HubRoute: HubRouteWithChildren,
   LearnRoute: LearnRouteWithChildren,
   LoginRoute: LoginRoute,
+  NotificationsRoute: NotificationsRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RoomsRoute: RoomsRouteWithChildren,
   SettingsRoute: SettingsRoute,

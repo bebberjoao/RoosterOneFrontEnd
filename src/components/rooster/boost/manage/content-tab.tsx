@@ -2,9 +2,10 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ChevronDown, ChevronRight, Download, FileText, Link as LinkIcon, Loader2,
-  Pencil, Plus, Trash2, Upload, Video,
+  Pencil, Plus, Trash2, Upload, Video, X,
 } from "lucide-react";
 import { Btn, ConfirmDialog, Field, Modal, SelectInput, TextArea, TextInput } from "@/components/shared";
+import { API_URL, API_VERSION_PREFIX } from "@/services/hub/client";
 import {
   boostService,
   LESSON_TYPE_LABEL,
@@ -45,6 +46,13 @@ export function CourseContentTab({ courseId, initialModules }: { courseId: strin
 
   const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Vídeo hospedado, dentro do modal de edição de aula — só disponível para
+  // aula já salva (precisa de um id pra enviar o arquivo).
+  const [videoMode, setVideoMode] = useState<"link" | "file">("link");
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
 
   function toggle(id: string) {
     setExpanded((e) => ({ ...e, [id]: !e[id] }));
@@ -97,6 +105,8 @@ export function CourseContentTab({ courseId, initialModules }: { courseId: strin
     const mod = modules.find((m) => m.id === moduleId);
     setLessonDraft({ ...EMPTY_LESSON, order: (mod?.lessons.length ?? 0) + 1 });
     setLessonModal({ moduleId });
+    setVideoMode("link");
+    setVideoPreviewUrl(null);
   }
   function openEditLesson(moduleId: string, lesson: BoostLesson) {
     setLessonDraft({
@@ -104,6 +114,8 @@ export function CourseContentTab({ courseId, initialModules }: { courseId: strin
       contentUrl: lesson.contentUrl ?? "", contentText: lesson.contentText ?? "", durationMin: lesson.durationMin ?? 0,
     });
     setLessonModal({ moduleId, editing: lesson });
+    setVideoMode(lesson.hostedVideo ? "file" : "link");
+    setVideoPreviewUrl(null);
   }
   async function saveLesson() {
     if (!lessonModal || !lessonDraft.title.trim()) {
@@ -190,6 +202,57 @@ export function CourseContentTab({ courseId, initialModules }: { courseId: strin
     }
   }
 
+  /** Atualiza a aula em `modules` com o retorno do backend, sem depender de refetch. */
+  function patchLessonInState(moduleId: string, updated: BoostLesson) {
+    setModules((ms) =>
+      ms.map((m) =>
+        m.id !== moduleId ? m : { ...m, lessons: m.lessons.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)) },
+      ),
+    );
+  }
+
+  async function handleUploadVideo(file: File) {
+    if (!lessonModal?.editing) return;
+    const { moduleId, editing } = lessonModal;
+    setVideoProgress(0);
+    setVideoPreviewUrl(null);
+    try {
+      const updated = await boostService.uploadVideo(editing.id, file, setVideoProgress);
+      patchLessonInState(moduleId, updated);
+      setLessonModal({ moduleId, editing: updated });
+      toast.success("Vídeo enviado com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar vídeo");
+    } finally {
+      setVideoProgress(null);
+    }
+  }
+
+  async function handleRemoveVideo() {
+    if (!lessonModal?.editing) return;
+    const { moduleId, editing } = lessonModal;
+    try {
+      const updated = await boostService.removeVideo(editing.id);
+      patchLessonInState(moduleId, updated);
+      setLessonModal({ moduleId, editing: updated });
+      setVideoPreviewUrl(null);
+      toast.success("Vídeo removido com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao remover vídeo");
+    }
+  }
+
+  /** Busca um token de stream de 5 min e monta a URL de prévia — só quando o instrutor pede, não a cada abertura do modal. */
+  async function handleLoadPreview() {
+    if (!lessonModal?.editing) return;
+    try {
+      const token = await boostService.getStreamToken(lessonModal.editing.id);
+      setVideoPreviewUrl(`${API_URL}${API_VERSION_PREFIX}/aulas-boost/${lessonModal.editing.id}/video?token=${token}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao carregar prévia do vídeo");
+    }
+  }
+
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
@@ -237,6 +300,11 @@ export function CourseContentTab({ courseId, initialModules }: { courseId: strin
                                 <span className="rounded-md border border-border/60 bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground">
                                   {LESSON_TYPE_LABEL[l.type]}
                                 </span>
+                                {l.hostedVideo && (
+                                  <span className="rounded-md border border-emerald-600/30 bg-emerald-50/60 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400">
+                                    hospedado ({fmtSize(l.hostedVideo.size)})
+                                  </span>
+                                )}
                                 {l.durationMin ? <span className="text-[11px] text-muted-foreground">{l.durationMin} min</span> : null}
                                 <span className="text-[11px] text-muted-foreground">ordem {l.order}</span>
                               </div>
@@ -334,8 +402,82 @@ export function CourseContentTab({ courseId, initialModules }: { courseId: strin
           </div>
           {lessonDraft.type === "texto" ? (
             <Field label="Conteúdo (texto)"><TextArea value={lessonDraft.contentText} onChange={(e) => setLessonDraft({ ...lessonDraft, contentText: e.target.value })} /></Field>
+          ) : lessonDraft.type === "video" ? (
+            <div className="space-y-3">
+              <div className="flex gap-1.5 rounded-lg border border-border/60 bg-muted/30 p-1">
+                <button
+                  type="button"
+                  onClick={() => setVideoMode("link")}
+                  className={`flex-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${videoMode === "link" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  Link externo (YouTube/Vimeo)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVideoMode("file")}
+                  className={`flex-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${videoMode === "file" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  Enviar arquivo de vídeo
+                </button>
+              </div>
+
+              {videoMode === "link" ? (
+                <Field label="URL do vídeo" hint="YouTube, Vimeo ou link direto de arquivo de vídeo.">
+                  <TextInput value={lessonDraft.contentUrl} onChange={(e) => setLessonDraft({ ...lessonDraft, contentUrl: e.target.value })} placeholder="https://…" />
+                </Field>
+              ) : !lessonModal?.editing ? (
+                <p className="rounded-lg border border-dashed bg-background/40 p-3 text-xs text-muted-foreground">
+                  Salve a aula primeiro (com um título) para poder enviar o arquivo de vídeo.
+                </p>
+              ) : (
+                <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+                  {lessonModal.editing.hostedVideo ? (
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="flex items-center gap-1.5 text-xs font-medium">
+                          <Video className="h-3.5 w-3.5" /> {lessonModal.editing.hostedVideo.fileName}
+                          <span className="font-normal text-muted-foreground">({fmtSize(lessonModal.editing.hostedVideo.size)})</span>
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Btn onClick={handleLoadPreview}>Carregar prévia</Btn>
+                          <Btn onClick={handleRemoveVideo} className="text-destructive"><X className="h-3.5 w-3.5" /> Remover</Btn>
+                        </div>
+                      </div>
+                      {videoPreviewUrl && (
+                        // eslint-disable-next-line jsx-a11y/media-has-caption -- prévia interna do instrutor, sem legenda cadastrada ainda
+                        <video src={videoPreviewUrl} controls className="mt-2 aspect-video w-full rounded-lg bg-black" />
+                      )}
+                      <p className="mt-2 text-[11px] text-muted-foreground">Enviar outro arquivo substitui este vídeo.</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Nenhum vídeo enviado ainda para esta aula.</p>
+                  )}
+
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file) handleUploadVideo(file);
+                    }}
+                  />
+                  <Btn onClick={() => videoInputRef.current?.click()} disabled={videoProgress !== null}>
+                    {videoProgress !== null ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                    {videoProgress !== null ? `Enviando... ${videoProgress}%` : "Escolher arquivo (até 2GB — mp4, webm ou mov)"}
+                  </Btn>
+                  {videoProgress !== null && (
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="h-full bg-foreground transition-all" style={{ width: `${videoProgress}%` }} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
-            <Field label={lessonDraft.type === "link" ? "URL do link" : "URL do conteúdo"} hint="Vídeo/PDF hospedados externamente — materiais para download ficam na seção de materiais, abaixo.">
+            <Field label={lessonDraft.type === "link" ? "URL do link" : "URL do conteúdo"} hint="PDF hospedado externamente — materiais para download ficam na seção de materiais, abaixo.">
               <TextInput value={lessonDraft.contentUrl} onChange={(e) => setLessonDraft({ ...lessonDraft, contentUrl: e.target.value })} placeholder="https://…" />
             </Field>
           )}

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { ticketService, type TicketAttachment } from "@/services/mock-api";
 import { Breadcrumbs } from "@/components/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,7 @@ import {
   type TicketEvent,
 } from "@/components/rooster/desk/mock-data";
 import type { Ticket, TicketCategory } from "@/mock/database/tickets";
+import { useCan } from "@/components/rooster/hub/permission-context";
 import { StatusBadge, PriorityBadge, SlaBar } from "@/components/rooster/desk/badges";
 import {
   ArrowLeft,
@@ -51,6 +52,7 @@ export const Route = createFileRoute("/desk/tickets/$id")({
 function TicketDetail() {
   const initial = Route.useLoaderData() as Ticket;
   const navigate = useNavigate();
+  const canSla = useCan("/desk/tickets", "ver-sla");
   const [ticket, setTicket] = useState(initial);
   const [tab, setTab] = useState<"public" | "internal">("public");
   const [reply, setReply] = useState("");
@@ -68,8 +70,17 @@ function TicketDetail() {
     ticketService.getAgentsWithIds().then(setAgents).catch(() => setAgents([]));
     ticketService.getCategories().then(setCategories).catch(() => setCategories([]));
     ticketService.getAttachments(ticket.id).then(setAttachments).catch(() => setAttachments([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket.id]);
+
+  // Anexos aparecem NA conversa, na ordem em que foram enviados. Como o anexo não tem marca de
+  // "interno", ele só entra na aba pública (o solicitante já o via antes, na barra lateral).
+  const timeline = useMemo(() => {
+    const eventos = ticket.events
+      .filter((e: TicketEvent) => (tab === "internal" ? e.kind === "message" && e.internal : !(e.kind === "message" && e.internal)))
+      .map((event: TicketEvent, index: number) => ({ kind: "event" as const, at: event.at, event, index }));
+    const anexos = tab === "internal" ? [] : attachments.map((attachment) => ({ kind: "attachment" as const, at: attachment.criadoEm, attachment }));
+    return [...eventos, ...anexos].sort((x, y) => x.at.localeCompare(y.at));
+  }, [ticket.events, attachments, tab]);
 
   async function reload() {
     const fresh = await ticketService.getById(ticket.id);
@@ -176,12 +187,14 @@ function TicketDetail() {
           <SidebarCard title="Detalhes">
             <Field label="Status"><StatusBadge status={ticket.status} /></Field>
             <Field label="Prioridade"><PriorityBadge priority={ticket.priority} /></Field>
-            <Field label="SLA">
-              <div className="flex items-center gap-2">
-                <SlaBar percent={ticket.slaPercent} />
-                <span className="text-xs text-muted-foreground">até {formatDate(ticket.slaDeadline)}</span>
-              </div>
-            </Field>
+            {canSla && (
+              <Field label="SLA">
+                <div className="flex items-center gap-2">
+                  <SlaBar percent={ticket.slaPercent} />
+                  <span className="text-xs text-muted-foreground">até {formatDate(ticket.slaDeadline)}</span>
+                </div>
+              </Field>
+            )}
             <Field label="Categoria">
               <span className="text-sm">{categoryName(ticket.categoryId)}</span>
               <div className="text-xs text-muted-foreground">{ticket.subcategory}</div>
@@ -210,26 +223,6 @@ function TicketDetail() {
               </div>
             </SidebarCard>
           )}
-
-          {attachments.length > 0 && (
-            <SidebarCard title="Anexos">
-              <div className="space-y-2">
-                {attachments.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => ticketService.downloadAttachment(ticket.id, a)}
-                    className="flex w-full items-center gap-2 rounded-lg border border-border/60 px-2.5 py-2 text-left text-xs hover:bg-muted/40"
-                  >
-                    <FileText className="h-3.5 w-3.5 flex-none text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate font-medium">{a.nomeArquivo ?? "arquivo"}</span>
-                    <span className="flex-none text-muted-foreground">{formatBytes(a.tamanho)}</span>
-                    <Download className="h-3.5 w-3.5 flex-none text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            </SidebarCard>
-          )}
         </aside>
 
         {/* Timeline */}
@@ -253,11 +246,18 @@ function TicketDetail() {
 
           <div className="max-h-[540px] space-y-5 overflow-y-auto px-5 py-5">
             <p className="rounded-lg bg-muted/40 p-3 text-sm text-foreground/90">{ticket.description}</p>
-            {ticket.events
-              .filter((e: TicketEvent) => (tab === "internal" ? e.kind === "message" && e.internal : !(e.kind === "message" && e.internal)))
-              .map((e: TicketEvent, i: number) => (
-                <TimelineEvent key={i} event={e} />
-              ))}
+            {timeline.map((item) =>
+              item.kind === "attachment" ? (
+                <AttachmentMessage
+                  key={"a-" + item.attachment.id}
+                  attachment={item.attachment}
+                  fromRequester={item.attachment.usuario?.nome === ticket.requester.name}
+                  onDownload={() => ticketService.downloadAttachment(ticket.id, item.attachment)}
+                />
+              ) : (
+                <TimelineEvent key={"e-" + item.index} event={item.event} />
+              ),
+            )}
           </div>
 
           <Separator />
@@ -272,16 +272,18 @@ function TicketDetail() {
             <div className="mt-2 flex items-center justify-between">
               <div className="flex items-center gap-1">
                 <input ref={fileInputRef} type="file" className="hidden" onChange={handleFilePicked} />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  disabled={uploading}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                  {uploading ? "Enviando…" : "Anexar"}
-                </Button>
+                {tab === "public" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                    {uploading ? "Enviando…" : "Anexar"}
+                  </Button>
+                )}
                 {tab === "internal" && (
                   <span className="ml-1 inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
                     <Lock className="h-3 w-3" /> Interno
@@ -350,6 +352,52 @@ function QuickSelect({ label, options, defaultValue }: { label: string; options:
           {options.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+function AttachmentMessage({
+  attachment,
+  fromRequester,
+  onDownload,
+}: {
+  attachment: TicketAttachment;
+  fromRequester: boolean;
+  onDownload: () => void;
+}) {
+  const author = attachment.usuario?.nome ?? "—";
+  const initials = author.split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <div className="flex gap-3">
+      <span
+        className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-xs font-medium"
+        style={{
+          backgroundColor: fromRequester ? "var(--muted)" : "color-mix(in oklab, oklch(0.6 0.18 260) 15%, transparent)",
+          color: fromRequester ? "var(--foreground)" : "oklch(0.5 0.18 260)",
+        }}
+      >
+        {initials}
+      </span>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-medium text-foreground">{author}</span>
+          <span className="text-muted-foreground">{fromRequester ? "Solicitante" : "Técnico"}</span>
+          <span className="text-muted-foreground">anexou um arquivo</span>
+          <span className="ml-auto text-muted-foreground">{formatDate(attachment.criadoEm)}</span>
+        </div>
+        <button
+          type="button"
+          onClick={onDownload}
+          className="mt-1 flex w-full max-w-md items-center gap-3 rounded-lg border border-border/60 bg-muted/40 p-3 text-left hover:bg-muted"
+        >
+          <FileText className="h-5 w-5 flex-none text-muted-foreground" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">{attachment.nomeArquivo ?? "arquivo"}</span>
+            <span className="block text-xs text-muted-foreground">{formatBytes(attachment.tamanho)}</span>
+          </span>
+          <Download className="h-4 w-4 flex-none text-muted-foreground" />
+        </button>
+      </div>
     </div>
   );
 }

@@ -2,8 +2,8 @@
 // Google Forms. Semeado a partir de src/mock/database/activities.ts para que as
 // atividades já existentes apareçam nas turmas. Trocar por API real depois.
 import { useSyncExternalStore } from "react";
-import { ACTIVITIES, QUESTIONS } from "./mock-data";
-import type { ActivityStatus, ActivityType } from "./mock-data";
+import { ACTIVITIES, QUESTIONS } from "./forms-seed";
+import type { ActivityStatus, ActivityType } from "./forms-seed";
 
 export type FormQuestionType = "multipla-uma" | "multipla-varias" | "discursiva" | "vf" | "arquivo";
 

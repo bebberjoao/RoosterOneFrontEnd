@@ -5,7 +5,7 @@ import { CrudToolbar } from "@/components/shared/crud-page";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { ConfirmDialog, Modal } from "@/components/shared/overlays";
 import { Field, SelectInput, TextArea, TextInput } from "@/components/shared/form";
-import { Btn } from "@/components/shared/primitives";
+import { Btn } from "@/components/shared";
 import type { HubResource } from "@/services/hub";
 import { useApiOffline, useResource } from "./use-hub";
 

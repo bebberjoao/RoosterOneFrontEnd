@@ -32,7 +32,6 @@ import {
   ListChecks,
   Boxes,
   ArrowLeftRight,
-  
   Receipt,
   FileCheck2,
   BarChart3,
@@ -48,8 +47,6 @@ import {
   Settings as SettingsIcon,
   CalendarPlus,
   MessagesSquare,
-} from "lucide-react";
-import {
   UserCheck,
   NotebookPen,
   Activity,
@@ -234,11 +231,14 @@ export const MODULES: ModuleItem[] = [
     description: "Cursos extracurriculares, videoaulas e certificados.",
     accent: "oklch(0.68 0.18 40)",
     // Aluno usa o portal público do Boost (autenticação própria, fora do shell do Hub) —
-    // aqui dentro é só o lado do instrutor, que gerencia os próprios cursos.
-    roles: ["admin", "professor"],
+    // aqui dentro é a GESTÃO dos cursos (por permissão) e as CONVERSAS do orientador.
+    roles: ["admin", "professor", "coordenador"],
     children: [
-      { id: "bo-dash", title: "Dashboard", to: "/boost", icon: LayoutDashboard },
-      { id: "bo-cur", title: "Meus cursos", to: "/boost", icon: BookMarked },
+      { id: "bo-cur", title: "Cursos", to: "/boost", icon: BookMarked },
+      { id: "bo-conv", title: "Conversas", to: "/boost/conversas", icon: MessagesSquare },
+      // Gestão entre cursos (contas externas do portal público) — só admin,
+      // diferente do resto do Boost, que já é aberto a professor também.
+      { id: "bo-students", title: "Alunos externos", to: "/boost/students", icon: UsersIcon, roles: ["admin"] },
     ],
   },
 ];

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, CalendarRange, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 import { academyService, type CalendarEvent, type Term, type SchoolClass } from "@/services/mock-api/academy.service";
-import { EVENT_TONE, EVENT_LABEL } from "@/components/rooster/academy/mock-data";
+import { EVENT_TONE, EVENT_LABEL } from "@/components/rooster/academy/event-labels";
 import {
   TabBar, Btn, Drawer, Modal, ConfirmDialog, Field, TextInput, SelectInput, SectionCard,
 } from "@/components/shared";

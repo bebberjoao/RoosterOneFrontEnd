@@ -1,8 +1,8 @@
 // Player do curso — exige sessão Boost + matrícula (GET /boost/me/matriculas/:id
 // já garante isso no backend: 404 se o id não existe ou não pertence ao
 // aluno logado). Lista de aulas com status de conclusão, conteúdo da aula
-// selecionada, ação "marcar como concluída" e o chat do curso (REST +
-// WebSocket via useBoostPortalSocket).
+// selecionada, ação "marcar como concluída" e a conversa do aluno com os
+// orientadores do curso (REST + WebSocket via useBoostPortalSocket).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -10,11 +10,11 @@ import {
   MessageSquare, PlayCircle, Send, ArrowLeft,
 } from "lucide-react";
 import {
-  cursosBoostPortalService, type AulaCompleta, type MatriculaDetalhe, type Mensagem, type TipoAula,
+  cursosBoostPortalService, mensagemToFront, type AulaCompleta, type MatriculaDetalhe, type Mensagem, type TipoAula,
 } from "@/services/boost-portal/cursos.service";
 import { useBoostAuth } from "@/services/boost-portal/auth-context";
 import { useBoostPortalSocket } from "@/hooks/use-boost-portal-socket";
-import { EmptyState, ProgressBar, TONE, LoadingBlock } from "@/components/shared/primitives";
+import { EmptyState, ProgressBar, TONE, LoadingBlock } from "@/components/shared";
 
 export const Route = createFileRoute("/boost-portal/painel/$matriculaId")({
   head: () => ({ meta: [{ title: "Meu curso — Rooster Boost" }] }),
@@ -44,10 +44,18 @@ function PlayerPage() {
   const [concluindo, setConcluindo] = useState(false);
   const [erroAcao, setErroAcao] = useState<string | null>(null);
 
+  const [conversaId, setConversaId] = useState("");
+  const [orientadores, setOrientadores] = useState<{ id: string; nome: string }[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [novaMensagem, setNovaMensagem] = useState("");
   const [carregandoChat, setCarregandoChat] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Vídeo hospedado: token de stream (curto, 5min) + player com progresso real.
+  const [videoStreamUrl, setVideoStreamUrl] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const ultimoReporteRef = useRef(0);
+  const posicaoAplicadaRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -87,9 +95,14 @@ function PlayerPage() {
     let alive = true;
     setCarregandoChat(true);
     cursosBoostPortalService
-      .getMensagens(cursoId)
-      .then((rows) => {
-        if (alive) setMensagens(rows);
+      .getConversa(cursoId)
+      .then((c) => {
+        if (!alive) return;
+        setConversaId(c.conversaId);
+        setOrientadores(c.orientadores);
+        setMensagens(c.mensagens);
+        // abrir a conversa conta como leitura das respostas do orientador
+        void cursosBoostPortalService.marcarConversaLida(cursoId).catch(() => {});
       })
       .catch(() => {})
       .finally(() => {
@@ -100,12 +113,10 @@ function PlayerPage() {
     };
   }, [cursoId]);
 
-  useBoostPortalSocket(cursoId, (msg) => {
-    setMensagens((prev) => {
-      const m = msg as { id: string };
-      if (prev.some((p) => p.id === m.id)) return prev;
-      return [...prev, normalizaMensagemSocket(msg, cursoId)];
-    });
+  useBoostPortalSocket(conversaId, (msg) => {
+    const nova = mensagemToFront(msg as Parameters<typeof mensagemToFront>[0]);
+    setMensagens((prev) => (prev.some((p) => p.id === nova.id) ? prev : [...prev, nova]));
+    if (nova.autorTipo === "professor" && cursoId) void cursosBoostPortalService.marcarConversaLida(cursoId).catch(() => {});
   });
 
   useEffect(() => {
@@ -114,6 +125,59 @@ function PlayerPage() {
 
   const todasAulas = useMemo(() => matricula?.curso.modulos.flatMap((m) => m.aulas) ?? [], [matricula]);
   const aulaAtiva: AulaCompleta | undefined = todasAulas.find((a) => a.id === aulaAtivaId);
+
+  // Busca o token de stream sempre que a aula ativa (com vídeo hospedado) muda — token
+  // de 5 min, então não faz sentido buscar antes de precisar nem reaproveitar entre aulas.
+  useEffect(() => {
+    setVideoStreamUrl(null);
+    posicaoAplicadaRef.current = null;
+    if (!aulaAtiva?.hostedVideo) return;
+    let ativo = true;
+    cursosBoostPortalService
+      .getStreamToken(aulaAtiva.id)
+      .then((token) => {
+        if (ativo) setVideoStreamUrl(cursosBoostPortalService.streamUrl(aulaAtiva.id, token));
+      })
+      .catch(() => {
+        if (ativo) setErroAcao("Não foi possível carregar o vídeo. Tente novamente.");
+      });
+    return () => {
+      ativo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aulaAtiva?.id, aulaAtiva?.hostedVideo]);
+
+  /** Retoma de onde o aluno parou, uma vez por aula (não a cada re-render). */
+  function aoCarregarMetadadosDoVideo() {
+    const video = videoRef.current;
+    if (!video || !aulaAtiva || posicaoAplicadaRef.current === aulaAtiva.id) return;
+    if (aulaAtiva.posicaoSeg > 0 && aulaAtiva.posicaoSeg < video.duration) video.currentTime = aulaAtiva.posicaoSeg;
+    posicaoAplicadaRef.current = aulaAtiva.id;
+  }
+
+  /**
+   * Reporta posição/percentual assistido, no máximo uma vez a cada ~8s (via
+   * `onTimeUpdate`, que dispara várias vezes por segundo — sem o throttle
+   * seria uma chamada à API a cada tick). `forcar` ignora o intervalo, usado
+   * no fim do vídeo. O backend decide sozinho se isso completa a aula
+   * (limiar de ~90% assistido); quando completa, recarrega a matrícula para
+   * refletir progresso/certificado sem exigir o botão manual.
+   */
+  async function reportarProgressoVideo(forcar = false) {
+    const video = videoRef.current;
+    if (!video || !aulaAtiva?.hostedVideo || !video.duration) return;
+    const agora = Date.now();
+    if (!forcar && agora - ultimoReporteRef.current < 8000) return;
+    ultimoReporteRef.current = agora;
+    const percentual = Math.min(100, Math.round((video.currentTime / video.duration) * 100));
+    try {
+      const { concluida } = await cursosBoostPortalService.reportarProgresso(aulaAtiva.id, Math.floor(video.currentTime), percentual);
+      if (concluida) await carregarMatricula();
+    } catch {
+      // Progresso de vídeo é silencioso de propósito — um erro pontual a
+      // cada poucos segundos não deve interromper a experiência de assistir.
+    }
+  }
 
   async function marcarConcluida() {
     if (!aulaAtiva) return;
@@ -143,8 +207,8 @@ function PlayerPage() {
     try {
       const criada = await cursosBoostPortalService.enviarMensagem(cursoId, texto);
       setMensagens((prev) => (prev.some((p) => p.id === criada.id) ? prev : [...prev, criada]));
-    } catch {
-      setErroAcao("Não foi possível enviar a mensagem.");
+    } catch (err) {
+      setErroAcao(err instanceof Error ? err.message : "Não foi possível enviar a mensagem.");
     }
   }
 
@@ -242,7 +306,26 @@ function PlayerPage() {
               </div>
 
               <div className="mt-4">
-                {aulaAtiva.conteudoUrl && embedUrl(aulaAtiva.conteudoUrl) ? (
+                {aulaAtiva.hostedVideo ? (
+                  videoStreamUrl ? (
+                    // eslint-disable-next-line jsx-a11y/media-has-caption -- vídeo enviado pelo instrutor, sem legenda cadastrada
+                    <video
+                      key={aulaAtiva.id}
+                      ref={videoRef}
+                      src={videoStreamUrl}
+                      controls
+                      onLoadedMetadata={aoCarregarMetadadosDoVideo}
+                      onTimeUpdate={() => void reportarProgressoVideo()}
+                      onPause={() => void reportarProgressoVideo(true)}
+                      onEnded={() => void reportarProgressoVideo(true)}
+                      className="aspect-video w-full rounded-xl bg-black"
+                    />
+                  ) : (
+                    <div className="flex aspect-video w-full items-center justify-center rounded-xl bg-black text-xs text-white/60">
+                      Carregando vídeo…
+                    </div>
+                  )
+                ) : aulaAtiva.conteudoUrl && embedUrl(aulaAtiva.conteudoUrl) ? (
                   <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
                     <iframe src={embedUrl(aulaAtiva.conteudoUrl)!} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={aulaAtiva.titulo} />
                   </div>
@@ -256,7 +339,7 @@ function PlayerPage() {
 
                 {aulaAtiva.conteudoTexto ? (
                   <p className="mt-4 whitespace-pre-line text-sm text-muted-foreground">{aulaAtiva.conteudoTexto}</p>
-                ) : !aulaAtiva.conteudoUrl ? (
+                ) : !aulaAtiva.conteudoUrl && !aulaAtiva.hostedVideo ? (
                   <p className="mt-4 text-sm text-muted-foreground">Esta aula ainda não tem conteúdo publicado.</p>
                 ) : null}
 
@@ -301,13 +384,20 @@ function PlayerPage() {
           {/* Chat */}
           <div className="rounded-2xl border bg-card">
             <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold">
-              <MessageSquare className="h-4 w-4" /> Conversar com o instrutor
+              <MessageSquare className="h-4 w-4" /> Fale com seu orientador
+              {orientadores.length > 0 && (
+                <span className="ml-auto truncate text-[11px] font-normal text-muted-foreground">{orientadores.map((o) => o.nome).join(", ")}</span>
+              )}
             </div>
             <div className="flex h-64 flex-col gap-2 overflow-y-auto p-4">
               {carregandoChat ? (
                 <p className="text-center text-xs text-muted-foreground">Carregando conversa…</p>
               ) : mensagens.length === 0 ? (
-                <p className="text-center text-xs text-muted-foreground">Nenhuma mensagem ainda. Envie a primeira!</p>
+                <p className="text-center text-xs text-muted-foreground">
+                  {orientadores.length === 0
+                    ? "Este curso ainda não tem orientador para responder suas dúvidas."
+                    : "Nenhuma mensagem ainda. Tire sua dúvida — um orientador responde por aqui."}
+                </p>
               ) : (
                 mensagens.map((m) => (
                   <div key={m.id} className={`max-w-[80%] rounded-xl px-3 py-2 text-xs ${m.autorTipo === "professor" ? "self-start bg-muted" : "self-end bg-foreground text-background"}`}>
@@ -328,10 +418,11 @@ function PlayerPage() {
               <input
                 value={novaMensagem}
                 onChange={(e) => setNovaMensagem(e.target.value)}
-                placeholder="Escreva uma mensagem…"
+                placeholder={orientadores.length === 0 ? "Sem orientador disponível no momento" : "Escreva sua dúvida…"}
+                disabled={orientadores.length === 0}
                 className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
               />
-              <button type="submit" disabled={!novaMensagem.trim()} className="rounded-lg bg-foreground p-2 text-background disabled:opacity-50">
+              <button type="submit" disabled={!novaMensagem.trim() || orientadores.length === 0} className="rounded-lg bg-foreground p-2 text-background disabled:opacity-50">
                 <Send className="h-4 w-4" />
               </button>
             </form>
@@ -340,18 +431,4 @@ function PlayerPage() {
       </div>
     </>
   );
-}
-
-/** O payload do evento `mensagem:nova` é o registro cru do Prisma (mesmo shape de MensagemBack) — normaliza pro tipo "front". */
-function normalizaMensagemSocket(raw: unknown, cursoId: string): Mensagem {
-  const m = raw as {
-    id: string; mensagem: string; criadoEm: string | null;
-    boostUsuario?: { nome: string } | null; professor?: { usuario?: { nome: string } } | null;
-  };
-  const deProfessor = !!m.professor;
-  return {
-    id: m.id, cursoId, mensagem: m.mensagem, criadoEm: m.criadoEm,
-    autorNome: deProfessor ? (m.professor?.usuario?.nome ?? "Instrutor") : (m.boostUsuario?.nome ?? "Aluno"),
-    autorTipo: deProfessor ? "professor" : "aluno",
-  };
 }

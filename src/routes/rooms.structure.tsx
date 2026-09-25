@@ -597,6 +597,32 @@ function RoomModal({
         <Field label="Capacidade"><TextInput type="number" value={form.capacity ?? 0} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })} /></Field>
         <Field label="Área (m²)"><TextInput type="number" value={form.area ?? 0} onChange={(e) => setForm({ ...form, area: Number(e.target.value) })} /></Field>
         <Field label="Horário de funcionamento" hint="Ex.: 07:00 – 22:00"><TextInput value={form.openingHours ?? ""} onChange={(e) => setForm({ ...form, openingHours: e.target.value })} /></Field>
+        <Field
+          label="Dias de funcionamento"
+          className="md:col-span-2"
+          hint="Dias em que este ambiente aceita reserva — nem toda instituição funciona aos sábados, e uma sala específica pode ter uma exceção própria."
+        >
+          <div className="flex flex-wrap gap-1.5">
+            {(Object.keys(WEEKDAY_LABEL) as (keyof typeof WEEKDAY_LABEL)[]).map((day) => {
+              const on = (form.weekdays ?? []).includes(day);
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      weekdays: on ? (form.weekdays ?? []).filter((d) => d !== day) : [...(form.weekdays ?? []), day],
+                    })
+                  }
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${on ? "bg-foreground text-background" : "hover:bg-accent"}`}
+                >
+                  {WEEKDAY_LABEL[day]}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
         <Field label="Descrição" className="md:col-span-2"><TextArea value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
         <div className="md:col-span-2">
           <SlotEditor

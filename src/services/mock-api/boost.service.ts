@@ -4,10 +4,10 @@
 // as telas de gestão de curso já conhecem. Não há mais fallback para dado mockado — ver
 // src/components/rooster/boost/mock-data.ts (obsoleto, mantido só para referência).
 //
-// Escopo: apenas as rotas que o instrutor (professor) usa para gerenciar os próprios
-// cursos. O catálogo público do aluno (portal externo) é responsabilidade de outro time
-// e não é servido por este arquivo.
-import { request, uploadFile, requestBlob } from "@/services/hub/client";
+// Escopo: as rotas do lado do Hub — GESTÃO dos cursos (por permissão, sem "dono": quem tem a
+// permissão gere qualquer curso) e as CONVERSAS do orientador com os alunos. O portal público
+// do aluno é servido por services/boost-portal/cursos.service.ts.
+import { request, uploadFile, uploadFileWithProgress, requestBlob } from "@/services/hub/client";
 
 export type CourseLevel = "iniciante" | "intermediario" | "avancado";
 export type CourseStatus = "rascunho" | "publicado" | "arquivado";
@@ -54,8 +54,12 @@ export type BoostCourse = {
   cover: string;
   status: CourseStatus;
   certificate: boolean;
-  professorId?: string;
+  /** Modelo do texto do certificado ({aluno}, {curso}, {cargaHoraria}, {data}); vazio = texto padrão. */
+  certificateText: string;
 };
+
+/** Professor vinculado a um curso para conversar com os alunos (não edita o curso). */
+export type BoostOrientator = { id: string; name: string; email?: string };
 
 export type BoostMaterial = { id: string; fileName: string; size: number; type?: string; lessonId: string };
 
@@ -69,6 +73,18 @@ export type BoostLesson = {
   contentText?: string;
   durationMin?: number;
   materials: BoostMaterial[];
+  /** Presente só quando a aula tem vídeo enviado pelo instrutor (em vez de link externo). */
+  hostedVideo?: { fileName: string; size: number; mimeType: string };
+};
+
+/** Conta externa do portal público (`BoostUsuario`) — visão do painel administrativo. */
+export type ExternalStudent = {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+  createdAt: string;
+  enrollmentCount: number;
 };
 
 export type BoostModule = { id: string; title: string; order: number; courseId: string; lessons: BoostLesson[] };
@@ -90,6 +106,18 @@ export type BoostEnrollment = {
 
 export type BoostMessage = { id: string; text: string; createdAt: string; authorName: string; fromInstructor: boolean };
 
+/** Uma conversa contínua por (curso, aluno) — item da caixa de entrada do orientador. */
+export type BoostConversation = {
+  id: string;
+  courseId: string;
+  courseTitle: string;
+  studentId: string;
+  studentName: string;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+  unread: number;
+};
+
 // ================= Tipos "back" (DTOs do NestJS) =================
 
 type MaterialBack = { id: string; nome?: string | null; tamanho?: number | null; tipo?: string | null; aulaId: string };
@@ -104,6 +132,18 @@ type AulaBack = {
   conteudoTexto?: string | null;
   duracaoMin?: number | null;
   materiais?: MaterialBack[];
+  videoArquivo?: string | null;
+  videoTamanho?: number | null;
+  videoMimeType?: string | null;
+};
+
+type ExternalStudentBack = {
+  id: string;
+  nome: string;
+  email: string;
+  ativo: boolean;
+  criadoEm: string;
+  _count: { matriculas: number };
 };
 
 type ModuloBack = { id: string; titulo: string; ordem: number; cursoId: string; aulas?: AulaBack[] };
@@ -118,8 +158,20 @@ type CursoBoostBack = {
   capa?: string | null;
   status: CourseStatus;
   emiteCertificado?: boolean;
-  professorId?: string;
+  certificadoTexto?: string | null;
+  orientadores?: Array<{ professor: { id: string; usuario: { id: string; nome: string; email?: string } } }>;
   modulos?: ModuloBack[];
+};
+
+type ConversaBack = {
+  id: string;
+  cursoId: string;
+  boostUsuarioId: string;
+  ultimaMensagemEm?: string | null;
+  ultimaMensagem: string | null;
+  naoLidas: number;
+  boostUsuario: { id: string; nome: string };
+  curso: { id: string; titulo: string };
 };
 
 type AlunoBoostBack = {
@@ -155,11 +207,24 @@ function courseToFront(b: CursoBoostBack): BoostCourse {
     cover: b.capa ?? "",
     status: b.status,
     certificate: b.emiteCertificado ?? false,
-    professorId: b.professorId,
+    certificateText: b.certificadoTexto ?? "",
   };
 }
 
-function courseToDto(f: Partial<BoostCourse>): Record<string, unknown> {
+function conversationToFront(b: ConversaBack): BoostConversation {
+  return {
+    id: b.id,
+    courseId: b.cursoId,
+    courseTitle: b.curso.titulo,
+    studentId: b.boostUsuarioId,
+    studentName: b.boostUsuario.nome,
+    lastMessage: b.ultimaMensagem,
+    lastMessageAt: b.ultimaMensagemEm ?? null,
+    unread: b.naoLidas,
+  };
+}
+
+function courseToDto(f: Partial<BoostCourse>, includeCertificate = false): Record<string, unknown> {
   return {
     ...(f.title !== undefined && { titulo: f.title }),
     ...(f.description !== undefined && { descricao: f.description }),
@@ -168,7 +233,9 @@ function courseToDto(f: Partial<BoostCourse>): Record<string, unknown> {
     ...(f.workloadHours !== undefined && { cargaHoraria: f.workloadHours }),
     ...(f.cover !== undefined && { capa: f.cover }),
     ...(f.status !== undefined && { status: f.status }),
-    ...(f.certificate !== undefined && { emiteCertificado: f.certificate }),
+    // `emiteCertificado` só entra na CRIAÇÃO. Depois, alterar certificado é a ação própria
+    // `certificado` (PATCH /cursos-boost/:id/certificado) — o PATCH genérico rejeita o campo.
+    ...(includeCertificate && f.certificate !== undefined && { emiteCertificado: f.certificate }),
   };
 }
 
@@ -187,7 +254,15 @@ function lessonToFront(b: AulaBack): BoostLesson {
     contentText: b.conteudoTexto ?? undefined,
     durationMin: b.duracaoMin ?? undefined,
     materials: (b.materiais ?? []).map(materialToFront),
+    hostedVideo:
+      b.videoArquivo && b.videoMimeType
+        ? { fileName: b.videoArquivo, size: b.videoTamanho ?? 0, mimeType: b.videoMimeType }
+        : undefined,
   };
+}
+
+function externalStudentToFront(b: ExternalStudentBack): ExternalStudent {
+  return { id: b.id, name: b.nome, email: b.email, active: b.ativo, createdAt: b.criadoEm, enrollmentCount: b._count.matriculas };
 }
 
 function moduleToFront(b: ModuloBack): BoostModule {
@@ -237,9 +312,9 @@ function qs(params: Record<string, string | undefined>) {
 }
 
 export const boostService = {
-  // ---------- Cursos (apenas os do professor autenticado — ver `minhas=true`) ----------
-  async getMyCourses(): Promise<BoostCourse[]> {
-    const rows = await request<CursoBoostBack[]>(`/cursos-boost${qs({ minhas: "true" })}`);
+  // ---------- Cursos (todos — a gestão é por permissão, não por dono) ----------
+  async getCourses(): Promise<BoostCourse[]> {
+    const rows = await request<CursoBoostBack[]>("/cursos-boost");
     return rows.map(courseToFront);
   },
   /** Retorna `undefined` tanto para "não existe" quanto para "existe mas não é seu" (403) — a tela trata os dois casos com a mesma mensagem amigável. */
@@ -254,7 +329,7 @@ export const boostService = {
     title: string; description?: string; category?: string; level?: CourseLevel;
     workloadHours: number; cover?: string; status?: CourseStatus; certificate?: boolean;
   }): Promise<BoostCourse> {
-    const created = await request<CursoBoostBack>("/cursos-boost", { method: "POST", body: courseToDto(dto) });
+    const created = await request<CursoBoostBack>("/cursos-boost", { method: "POST", body: courseToDto(dto, true) });
     return courseToFront(created);
   },
   async update(id: string, dto: Partial<BoostCourse>): Promise<BoostCourse> {
@@ -264,6 +339,33 @@ export const boostService = {
   async remove(id: string): Promise<boolean> {
     await request<void>(`/cursos-boost/${id}`, { method: "DELETE" });
     return true;
+  },
+  /** Liga/desliga o certificado e ajusta texto e carga horária — exige a ação `certificado`. */
+  async updateCertificate(id: string, dto: { certificate?: boolean; certificateText?: string; workloadHours?: number }): Promise<BoostCourse> {
+    const body: Record<string, unknown> = {};
+    if (dto.certificate !== undefined) body.emiteCertificado = dto.certificate;
+    if (dto.certificateText !== undefined) body.certificadoTexto = dto.certificateText;
+    if (dto.workloadHours !== undefined) body.cargaHoraria = dto.workloadHours;
+    return courseToFront(await request<CursoBoostBack>(`/cursos-boost/${id}/certificado`, { method: "PATCH", body }));
+  },
+
+  // ---------- Orientadores ----------
+  async getOrientators(courseId: string): Promise<BoostOrientator[]> {
+    const rows = await request<NonNullable<CursoBoostBack["orientadores"]>>(`/cursos-boost/${courseId}/orientadores`);
+    return rows.map((o) => ({ id: o.professor.id, name: o.professor.usuario.nome, email: o.professor.usuario.email }));
+  },
+  /** Substitui a lista de orientadores do curso — exige a ação `vincular-orientadores`. */
+  async setOrientators(courseId: string, professorIds: string[]): Promise<BoostOrientator[]> {
+    const rows = await request<NonNullable<CursoBoostBack["orientadores"]>>(`/cursos-boost/${courseId}/orientadores`, {
+      method: "PUT",
+      body: { professorIds },
+    });
+    return rows.map((o) => ({ id: o.professor.id, name: o.professor.usuario.nome, email: o.professor.usuario.email }));
+  },
+  /** Professores que podem ser vinculados (não exige permissão do Academy). */
+  async getProfessors(): Promise<BoostOrientator[]> {
+    const rows = await request<Array<{ id: string; nome: string; email: string | null }>>("/boost-professores");
+    return rows.map((p) => ({ id: p.id, name: p.nome, email: p.email ?? undefined }));
   },
 
   // ---------- Módulos ----------
@@ -341,22 +443,73 @@ export const boostService = {
     URL.revokeObjectURL(url);
   },
 
+  // ---------- Vídeo hospedado ----------
+  /**
+   * Envia o vídeo da aula (até 2GB — mp4, webm ou mov) reportando progresso.
+   * Usa `uploadFileWithProgress` (XHR), não `uploadFile`/`fetch`: é o único
+   * jeito confiável de expor progresso de upload de arquivo grande.
+   */
+  async uploadVideo(lessonId: string, file: File, onProgress?: (percent: number) => void): Promise<BoostLesson> {
+    const form = new FormData();
+    form.append("arquivo", file);
+    const updated = await uploadFileWithProgress<AulaBack>(`/aulas-boost/${lessonId}/video`, form, onProgress);
+    return lessonToFront(updated);
+  },
+  async removeVideo(lessonId: string): Promise<BoostLesson> {
+    const updated = await request<AulaBack>(`/aulas-boost/${lessonId}/video`, { method: "DELETE" });
+    return lessonToFront(updated);
+  },
+  /**
+   * Token de 5 minutos para o `<video src>` da prévia do instrutor —
+   * a tag não anexa o cabeçalho Authorization, então precisa desse token na
+   * própria URL. Ver `common/stream-token.util.ts` no backend.
+   */
+  async getStreamToken(lessonId: string): Promise<string> {
+    const { token } = await request<{ token: string }>(`/aulas-boost/${lessonId}/stream-token`);
+    return token;
+  },
+
   // ---------- Alunos matriculados / progresso ----------
   async getStudents(courseId: string): Promise<BoostEnrollment[]> {
     const rows = await request<AlunoBoostBack[]>(`/cursos-boost/${courseId}/alunos`);
     return rows.map(enrollmentToFront);
   },
 
-  // ---------- Chat interno do curso ----------
-  async getMessages(courseId: string): Promise<BoostMessage[]> {
-    const rows = await request<MensagemBack[]>(`/cursos-boost/${courseId}/mensagens`);
-    return rows.map(messageToFront);
+  // ---------- Contas externas (painel admin) ----------
+  async listExternalStudents(): Promise<ExternalStudent[]> {
+    const rows = await request<ExternalStudentBack[]>("/boost-alunos-externos");
+    return rows.map(externalStudentToFront);
   },
-  async sendMessage(courseId: string, text: string): Promise<BoostMessage> {
-    const created = await request<MensagemBack>(`/cursos-boost/${courseId}/mensagens`, {
-      method: "POST",
-      body: { mensagem: text },
+  async toggleExternalStudent(id: string, active: boolean): Promise<ExternalStudent> {
+    const updated = await request<ExternalStudentBack & { _count?: { matriculas: number } }>(`/boost-alunos-externos/${id}`, {
+      method: "PATCH",
+      body: { ativo: active },
     });
-    return messageToFront(created);
+    // A resposta do PATCH não traz `_count` (endpoint devolve só os campos básicos) —
+    // a tela já tem a contagem da listagem em memória, então mantém 0 aqui e recarrega a lista.
+    return externalStudentToFront({ ...updated, _count: updated._count ?? { matriculas: 0 } });
+  },
+  /** Gera e devolve uma senha temporária (visível só nesta resposta) para a conta externa. */
+  async resetExternalStudentPassword(id: string): Promise<{ email: string; temporaryPassword: string }> {
+    const { email, senhaTemporaria } = await request<{ email: string; senhaTemporaria: string }>(
+      `/boost-alunos-externos/${id}/redefinir-senha`,
+      { method: "POST" },
+    );
+    return { email, temporaryPassword: senhaTemporaria };
+  },
+
+  // ---------- Conversas com alunos (orientador) ----------
+  /** Caixa de entrada: só as conversas dos cursos em que o professor logado é orientador. */
+  async listConversations(): Promise<BoostConversation[]> {
+    return (await request<ConversaBack[]>("/boost-conversas")).map(conversationToFront);
+  },
+  async getConversationMessages(conversationId: string): Promise<BoostMessage[]> {
+    return (await request<MensagemBack[]>(`/boost-conversas/${conversationId}/mensagens`)).map(messageToFront);
+  },
+  async sendConversationMessage(conversationId: string, text: string): Promise<BoostMessage> {
+    return messageToFront(await request<MensagemBack>(`/boost-conversas/${conversationId}/mensagens`, { method: "POST", body: { mensagem: text } }));
+  },
+  async markConversationRead(conversationId: string): Promise<void> {
+    await request(`/boost-conversas/${conversationId}/lida`, { method: "PATCH" });
   },
 };

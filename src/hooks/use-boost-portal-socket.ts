@@ -15,7 +15,7 @@ import { getBoostApiToken } from "@/services/boost-portal/session";
  * Só roda no cliente (dentro de `useEffect`): em SSR (TanStack Start) este
  * hook nunca executa durante a renderização do servidor.
  */
-export function useBoostPortalSocket(cursoId: string, onNovaMensagem: (mensagem: unknown) => void) {
+export function useBoostPortalSocket(conversaId: string, onNovaMensagem: (mensagem: unknown) => void) {
   const [conectado, setConectado] = useState(false);
   const callbackRef = useRef(onNovaMensagem);
   callbackRef.current = onNovaMensagem;
@@ -32,18 +32,21 @@ export function useBoostPortalSocket(cursoId: string, onNovaMensagem: (mensagem:
 
       socket.on("connect", () => {
         setConectado(true);
-        socket?.emit("curso:entrar", { cursoId });
+        if (conversaId) socket?.emit("conversa:entrar", { conversaId });
       });
       socket.on("disconnect", () => setConectado(false));
-      socket.on("mensagem:nova", (mensagem: unknown) => callbackRef.current(mensagem));
+      // O gateway envia { conversaId, mensagem }; só interessa a mensagem.
+      socket.on("mensagem:nova", (payload: { conversaId?: string; mensagem?: unknown }) => {
+        if (payload?.conversaId === conversaId && payload.mensagem) callbackRef.current(payload.mensagem);
+      });
     })();
 
     return () => {
       ativo = false;
-      socket?.emit("curso:sair", { cursoId });
+      if (conversaId) socket?.emit("conversa:sair", { conversaId });
       socket?.disconnect();
     };
-  }, [cursoId]);
+  }, [conversaId]);
 
   return { conectado };
 }

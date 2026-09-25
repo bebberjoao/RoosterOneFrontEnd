@@ -51,6 +51,14 @@ function BoostPortalLayout() {
             >
               Catálogo
             </Link>
+            {/* Visível para todo mundo, logado ou não: quem confere um
+                certificado costuma não ter conta no portal. */}
+            <Link
+              to="/boost-portal/verificar"
+              className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${pathname.startsWith("/boost-portal/verificar") ? "bg-foreground text-background" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
+            >
+              Conferir certificado
+            </Link>
             {!ready ? null : authed ? (
               <>
                 <Link

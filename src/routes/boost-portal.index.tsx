@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Clock, Layers, Search, Users } from "lucide-react";
 import { cursosBoostPortalService, nivelLabel, type CursoCatalogo } from "@/services/boost-portal/cursos.service";
-import { EmptyState, LoadingCards } from "@/components/shared/primitives";
+import { EmptyState, LoadingCards } from "@/components/shared";
 
 export const Route = createFileRoute("/boost-portal/")({ component: CatalogoPage });
 

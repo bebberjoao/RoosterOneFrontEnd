@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { HOME_ITEM, MODULES, ADMIN_ITEMS, modulesForRole, type ModuleItem, type SubItem } from "./module-config";
-import { useRole, ROLE_META } from "./role-context";
+import { useRole, useCurrentPerson, ROLE_META } from "./role-context";
 import { useAuth } from "./auth-context";
 import { usePermissions } from "./hub/permission-context";
 import { ACCESS_ACTION, findScreenByRoute, permissionKey } from "./hub/permission-catalog";
@@ -28,7 +28,9 @@ function useExpandedState(role: string, autoOpen: string | null) {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) setExpanded(JSON.parse(raw));
-    } catch {}
+    } catch {
+      // localStorage indisponível (modo privado, quota) — mantém o estado padrão.
+    }
   }, []);
 
   useEffect(() => {
@@ -40,7 +42,9 @@ function useExpandedState(role: string, autoOpen: string | null) {
   const toggle = (id: string) => {
     setExpanded((s) => {
       const next = { ...s, [id]: !s[id] };
-      try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+      try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {
+        // localStorage indisponível — o estado em memória já foi atualizado, só a persistência falha.
+      }
       return next;
     });
   };
@@ -51,12 +55,9 @@ function useExpandedState(role: string, autoOpen: string | null) {
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { role } = useRole();
-  const person = ROLE_META[role].person;
-  const { usuario } = useAuth();
-  const displayName = usuario?.nome ?? person.name;
-  const displayInitials = usuario
-    ? usuario.nome.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase()
-    : person.initials;
+  const person = useCurrentPerson();
+  const displayName = person.name;
+  const displayInitials = person.initials;
   const [query, setQuery] = useState("");
 
   const { granted, hasCustom } = usePermissions();

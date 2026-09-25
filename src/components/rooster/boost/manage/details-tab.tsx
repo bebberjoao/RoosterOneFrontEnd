@@ -26,7 +26,6 @@ export function CourseDetailsTab({
     workloadHours: course.workloadHours,
     cover: course.cover,
     status: course.status,
-    certificate: course.certificate,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,25 +98,24 @@ export function CourseDetailsTab({
               ]}
             />
           </Field>
-          <Field label="Status">
+          <Field label="Situação">
             <SelectInput
               value={draft.status}
               onChange={(e) => setDraft({ ...draft, status: e.target.value as CourseStatus })}
               options={[
                 { value: "rascunho", label: "Rascunho" },
                 { value: "publicado", label: "Publicado" },
-                { value: "arquivado", label: "Arquivado" },
+                { value: "arquivado", label: "Fora do ar (arquivado)" },
               ]}
             />
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Fora do ar: some do catálogo e ninguém novo se matricula, mas quem já está matriculado continua com acesso.
+            </p>
           </Field>
         </div>
         <Field label="Capa (URL da imagem)">
           <TextInput value={draft.cover} onChange={(e) => setDraft({ ...draft, cover: e.target.value })} placeholder="https://…" />
         </Field>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={draft.certificate} onChange={(e) => setDraft({ ...draft, certificate: e.target.checked })} />
-          Emite certificado ao concluir
-        </label>
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="pt-2">
           <Btn variant="solid" onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar alterações"}</Btn>

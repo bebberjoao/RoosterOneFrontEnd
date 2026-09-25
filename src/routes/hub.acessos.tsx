@@ -10,7 +10,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { PageHeader } from "@/components/rooster/page-header";
-import { Chip, TONE, Btn, EmptyState, ProgressBar, SectionCard } from "@/components/shared/primitives";
+import { Chip, TONE, Btn, EmptyState, ProgressBar, SectionCard } from "@/components/shared";
 import { Checkbox } from "@/components/ui/checkbox";
 import { OfflineBanner } from "@/components/rooster/hub/crud-panel";
 import { useResource } from "@/components/rooster/hub/use-hub";

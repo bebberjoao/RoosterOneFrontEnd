@@ -56,12 +56,24 @@ let statusCache: BackStatus[] | null = null;
 let prioridadeCache: BackPrioridade[] | null = null;
 let categoriaCache: BackCategoria[] | null = null;
 
+// O cache é por usuário: sem isto, quem entra depois de outro na mesma aba herdaria as listas dele.
+let cacheDoUsuario: string | null | undefined;
+session.subscribe(() => {
+  const atual = session.usuario?.id ?? null;
+  if (cacheDoUsuario !== undefined && cacheDoUsuario !== atual) {
+    statusCache = null;
+    prioridadeCache = null;
+    categoriaCache = null;
+  }
+  cacheDoUsuario = atual;
+});
+
 async function loadLookups() {
   if (!statusCache || !prioridadeCache || !categoriaCache) {
     [statusCache, prioridadeCache, categoriaCache] = await Promise.all([
       request<BackStatus[]>("/chamados-status"),
       request<BackPrioridade[]>("/chamados-prioridades"),
-      request<BackCategoria[]>("/chamados-categorias"),
+      request<BackCategoria[]>("/chamados-categorias?escopo=abertura"),
     ]);
   }
   return { status: statusCache!, prioridade: prioridadeCache!, categoria: categoriaCache! };

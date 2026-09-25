@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Clock3, MessageCircle, Send, UserRound, XCircle } from "lucide-react";
 import { Breadcrumbs, Btn, Field, Modal, TextArea, LoadingBlock } from "@/components/shared";
-import { useRole, ROLE_META } from "@/components/rooster/role-context";
+import { useRole, useCurrentPerson } from "@/components/rooster/role-context";
 import { StatusBadge } from "@/components/rooster/rooms/badges";
 import { STATUS_LABEL, formatDate, roomSlots, hourToMinutes } from "@/components/rooster/rooms/labels";
 import { roomService } from "@/services/mock-api";
@@ -30,7 +30,7 @@ function ReservationDetail() {
   const navigate = useNavigate();
   const { role } = useRole();
   const manager = MANAGERS.includes(role);
-  const person = ROLE_META[role].person;
+  const person = useCurrentPerson();
   const [reservation, setReservation] = useState<Reservation>();
   const [room, setRoom] = useState<Room>();
   const [reply, setReply] = useState("");

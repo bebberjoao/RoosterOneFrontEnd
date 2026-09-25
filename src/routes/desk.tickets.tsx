@@ -19,6 +19,7 @@ import {
 } from "@/components/shared";
 import { STATUS_TONE, PRIORITY_LABEL, formatDate } from "@/components/rooster/desk/mock-data";
 import type { TicketStatus } from "@/mock/database/tickets";
+import { useCan } from "@/components/rooster/hub/permission-context";
 import { StatusBadge, PriorityBadge, SlaBar } from "@/components/rooster/desk/badges";
 import { Plus } from "lucide-react";
 
@@ -93,6 +94,7 @@ function TicketsRoute() {
 function TicketsList() {
   const { new: openNewFromUrl } = Route.useSearch();
   const navigate = useNavigate();
+  const canSla = useCan("/desk/tickets", "ver-sla");
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [categories, setCategories] = useState<TicketCategory[]>([]);
@@ -105,7 +107,12 @@ function TicketsList() {
 
   useEffect(() => {
     ticketService.getAll().then(setTickets);
-    ticketService.getCategories().then(setCategories);
+    ticketService
+      .getCategories()
+      .then(setCategories)
+      .catch(() =>
+        toast.error("Não foi possível carregar as categorias de chamado. Recarregue a página ou fale com o suporte."),
+      );
   }, []);
 
   useEffect(() => {
@@ -165,7 +172,7 @@ function TicketsList() {
       cell: (t) => <PriorityBadge priority={t.priority} />,
     },
     { key: "status", header: "Status", sortValue: (t) => t.status, cell: (t) => <StatusBadge status={t.status} /> },
-    { key: "sla", header: "SLA", sortValue: (t) => t.slaPercent, cell: (t) => <SlaBar percent={t.slaPercent} /> },
+    ...(canSla ? [{ key: "sla", header: "SLA", sortValue: (t: Ticket) => t.slaPercent, cell: (t: Ticket) => <SlaBar percent={t.slaPercent} /> }] : []),
     { key: "opened", header: "Aberto", sortValue: (t) => t.openedAt, cell: (t) => <span className="text-xs text-muted-foreground">{formatDate(t.openedAt)}</span> },
     { key: "updated", header: "Atualizado", sortValue: (t) => t.updatedAt, cell: (t) => <span className="text-xs text-muted-foreground">{formatDate(t.updatedAt)}</span> },
   ];

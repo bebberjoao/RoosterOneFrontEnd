@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { KeyRound, Shield, Users as UsersIcon, Building, Bell, Monitor } from "lucide-react";
 import { PageHeader } from "@/components/rooster/page-header";
-import { SectionCard, StatCard, TONE, Chip, Avatar } from "@/components/shared/primitives";
+import { SectionCard, StatCard, TONE, Chip, Avatar } from "@/components/shared";
 import { OfflineBanner } from "@/components/rooster/hub/crud-panel";
 import { useResource } from "@/components/rooster/hub/use-hub";
 import { fmtDateTime, initials } from "@/components/rooster/hub/format";

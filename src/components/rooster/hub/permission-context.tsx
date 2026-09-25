@@ -3,18 +3,12 @@
 // (`session.permissoes`, capturadas de `acesso.permissoes` na resposta de
 // `POST /auth/login` — ver auth-context.tsx e services/hub/session.ts).
 // Isso nunca depende de listar todo mundo do sistema (a maioria dos usuários
-// não tem permissão pra isso) nem de casar o nome da persona de demonstração
-// (RoleSwitcher) com algum usuário real cadastrado — o usuário logado é
-// sempre exatamente quem o JWT diz que é.
+// não tem permissão pra isso): o usuário logado é sempre exatamente quem o JWT diz.
 //
-// O RoleSwitcher (`role-context.tsx`) continua funcionando por cima disso:
-// `MODULES`/`modulesForRole` decide o que a "Visão" escolhida mostraria; esta
-// permissão real é uma restrição ADICIONAL (E lógico, nunca substitui) — um
-// módulo só aparece se a Visão permitir E o usuário logado tiver a permissão
-// de verdade. Para um admin real (que tem todas as permissões), isso não
-// muda nada visualmente — a Visão continua controlando 100% da prévia, como
-// sempre. Para qualquer outro usuário real, a permissão dele vira um teto:
-// nenhuma Visão consegue mostrar mais do que ele realmente pode acessar.
+// O perfil de interface (`role-context.tsx`) é deduzido destas mesmas permissões —
+// não existe mais troca manual de "Visão". `MODULES`/`modulesForRole` usa esse perfil
+// e a permissão real continua sendo um teto adicional (E lógico): um módulo só
+// aparece se o perfil deduzido o inclui E o usuário tem a permissão de acesso.
 import {
   createContext,
   useContext,
@@ -24,7 +18,7 @@ import {
   type ReactNode,
 } from "react";
 import { ShieldAlert } from "lucide-react";
-import { EmptyState } from "@/components/shared/primitives";
+import { EmptyState } from "@/components/shared";
 import { session, type SessionUser } from "@/services/hub/session";
 import { ACCESS_ACTION, findScreenByRoute, permissionKey } from "./permission-catalog";
 

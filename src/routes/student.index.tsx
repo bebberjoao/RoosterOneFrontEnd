@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/rooster/page-header";
 import { StatCard, SectionCard, ProgressBar, Avatar, TONE, Chip, EmptyState } from "@/components/rooster/student/ui";
 import { LoadingCards } from "@/components/shared";
-import { NOTICES, NOTIFICATIONS } from "@/components/rooster/student/mock-data";
+import { NOTICES } from "@/components/rooster/student/mock-data";
+import { useNotificacoes } from "@/components/rooster/notifications/use-notificacoes";
 import { studentService, overallAverage, overallAttendance, MIN_ATTENDANCE, type StudentDiscipline, type ClassGrades } from "@/services/mock-api/student.service";
 import { learnService, formatDate, TYPE_LABEL, type Activity } from "@/services/mock-api/learn.service";
 import { academyService, type CalendarEvent } from "@/services/mock-api/academy.service";
@@ -58,7 +59,7 @@ function StudentDashboard() {
   const recentGrades = grades.flatMap((g) => g.items.filter((i) => i.value !== null).map((i) => ({ ...i, classId: g.classId }))).slice(0, 5);
   const risky = disciplines.filter((d) => d.attendance < MIN_ATTENDANCE + 5);
   const nextEvents = [...events].filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
-  const unread = NOTIFICATIONS.filter((n) => !n.read).length;
+  const { naoLidas: unread } = useNotificacoes();
   const avg = overallAverage(disciplines);
   const attendance = overallAttendance(disciplines);
 

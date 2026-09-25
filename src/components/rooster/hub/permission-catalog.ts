@@ -72,6 +72,7 @@ const SCREENS: Record<string, ScreenDef[]> = {
       a("registrar-solucao", "Registrar solução"),
       a("anexar", "Anexar arquivo"),
       a("nota-interna", "Registrar nota interna"),
+      a("ver-sla", "Visualizar SLA"),
     ]),
     screen("/desk/categories", "Categorias", [...CRUD, a("subcategorias", "Gerenciar subcategorias")]),
     screen("/desk/team", "Atendentes", [...CRUD, a("vincular-categoria", "Vincular a categoria")]),
@@ -111,7 +112,11 @@ const SCREENS: Record<string, ScreenDef[]> = {
   ],
   rooms: [
     screen("/rooms", "Dashboard", []),
-    screen("/rooms/book", "Reservar", [a("solicitar", "Solicitar reserva")]),
+    screen("/rooms/book", "Reservar", [
+      a("solicitar", "Solicitar reserva"),
+      a("solicitar-recorrente", "Solicitar reserva recorrente", "Repetir a mesma reserva diária/semanal/mensalmente por um período."),
+      a("prazo-estendido", "Reservar com prazo estendido", "Sem o limite padrão de 15 dias de antecedência."),
+    ]),
     screen("/rooms/reservations", "Minhas reservas", [
       a("mensagem", "Enviar mensagem"),
       a("alterar-horario", "Solicitar alteração de horário"),
@@ -167,12 +172,22 @@ const SCREENS: Record<string, ScreenDef[]> = {
     ]),
   ],
   boost: [
-    screen("/boost", "Meus cursos", []),
-    screen("/boost/manage", "Gestão do curso", [
-      a("gerenciar-cursos", "Gerenciar cursos"),
-      a("gerenciar-conteudo", "Gerenciar conteúdo"),
+    screen("/boost", "Cursos", []),
+    // Gestão POR PERMISSÃO: quem tem a ação age sobre qualquer curso (não existe "dono").
+    screen("/boost/manage", "Gestão dos cursos", [
+      a("gerenciar-cursos", "Criar, editar, publicar e tirar do ar"),
+      a("gerenciar-conteudo", "Gerenciar conteúdo (módulos, aulas, vídeos)"),
       a("ver-progresso", "Ver progresso dos alunos"),
-      a("mensagem", "Enviar mensagem"),
+      a("certificado", "Configurar certificado"),
+      a("vincular-orientadores", "Vincular orientadores"),
+    ]),
+    // Orientador: professor vinculado a um curso; só conversa com os alunos dele.
+    screen("/boost/conversas", "Conversas com alunos", [a("responder", "Responder alunos")]),
+    // Gestão entre cursos (contas externas do portal público) — fora do
+    // modelo de posse "dono do curso" do resto do Boost, por isso tela própria.
+    screen("/boost/students", "Alunos externos", [
+      a("acessar", "Ver contas externas"),
+      a("gerenciar", "Ativar/desativar e redefinir senha"),
     ]),
   ],
 };

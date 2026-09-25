@@ -1,14 +1,14 @@
-import { Search, Bell, Settings, Command, Moon, Sun, LogOut } from "lucide-react";
+import { Search, Settings, Command, Moon, Sun, LogOut } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useRouterState, Link, useNavigate } from "@tanstack/react-router";
 import { HOME_ITEM, MODULES, ADMIN_ITEMS } from "./module-config";
-import { RoleSwitcher } from "./role-switcher";
-import { useRole, ROLE_META } from "./role-context";
+import { useRole, useCurrentPerson, ROLE_META } from "./role-context";
 import { useTheme } from "./theme-context";
 import { useAuth } from "./auth-context";
 import { useGlobalSearch } from "./global-command-palette";
+import { NotificationBell } from "./notifications/notification-bell";
 
 function useBreadcrumb() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -28,7 +28,7 @@ export function AppTopbar() {
   const { theme, toggle } = useTheme();
   const { logout } = useAuth();
   const { setOpen: setSearchOpen } = useGlobalSearch();
-  const person = ROLE_META[role].person;
+  const person = useCurrentPerson();
 
   const handleLogout = () => {
     logout();
@@ -61,10 +61,7 @@ export function AppTopbar() {
           </kbd>
         </button>
 
-        <Button variant="ghost" size="icon" className="relative h-9 w-9">
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[oklch(0.65_0.2_25)] ring-2 ring-background" />
-        </Button>
+        <NotificationBell />
         <Button
           variant="ghost"
           size="icon"
@@ -81,7 +78,6 @@ export function AppTopbar() {
           </Link>
         </Button>
 
-        <RoleSwitcher />
         <Separator orientation="vertical" className="mx-1 h-6" />
         <div
           className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium text-white"

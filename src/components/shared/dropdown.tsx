@@ -71,7 +71,6 @@ export function PopoverSelect({
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -103,7 +102,7 @@ export function PopoverSelect({
         ? createPortal(
             <div
               ref={popRef}
-              className="z-[60] overflow-hidden rounded-xl border bg-card shadow-lg"
+              className="z-[80] overflow-hidden rounded-xl border bg-card shadow-lg"
               style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width }}
             >
               <div className="max-h-60 overflow-y-auto p-1">

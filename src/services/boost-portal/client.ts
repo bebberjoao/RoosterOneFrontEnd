@@ -10,6 +10,11 @@ import { boostSession } from "./session";
 export const API_URL: string =
   (import.meta.env["VITE_API_URL"] as string | undefined) ?? "http://localhost:3000";
 
+// Mesmo motivo do client do Hub: a API REST só existe sob /v1, mas os gateways
+// WebSocket (`io(`${API_URL}/boost`)`) não são versionados — por isso o prefixo
+// fica separado de `API_URL`.
+export const API_VERSION_PREFIX = "/v1";
+
 export class BoostApiUnavailableError extends Error {
   constructor(cause?: unknown) {
     super("API indisponível");
@@ -43,7 +48,7 @@ async function send(path: string, init: { method?: string; headers?: Record<stri
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, { method: init.method ?? "GET", headers, body: init.body, signal: init.signal });
+    res = await fetch(`${API_URL}${API_VERSION_PREFIX}${path}`, { method: init.method ?? "GET", headers, body: init.body, signal: init.signal });
   } catch (err) {
     throw new BoostApiUnavailableError(err);
   }
