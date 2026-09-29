@@ -50,6 +50,7 @@ import {
   UserCheck,
   NotebookPen,
   Activity,
+  Scale,
 } from "lucide-react";
 import type { Role } from "./role-context";
 
@@ -166,6 +167,7 @@ export const MODULES: ModuleItem[] = [
       { id: "fi-nfe", title: "Notas Fiscais", to: "/finance/nfe", icon: FileCheck2 },
       { id: "fi-rep", title: "Relatórios", to: "/finance/reports", icon: BarChart3 },
       { id: "fi-desc", title: "Descontos", to: "/finance/discounts", icon: Percent },
+      { id: "fi-pol", title: "Políticas de multa/juros", to: "/finance/policies", icon: Scale },
     ],
   },
   {

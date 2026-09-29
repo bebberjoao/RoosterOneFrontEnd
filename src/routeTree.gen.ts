@@ -46,6 +46,7 @@ import { Route as FinanceBoletosRouteImport } from './routes/finance.boletos'
 import { Route as FinanceChargesRouteImport } from './routes/finance.charges'
 import { Route as FinanceDiscountsRouteImport } from './routes/finance.discounts'
 import { Route as FinanceNfeRouteImport } from './routes/finance.nfe'
+import { Route as FinancePoliciesRouteImport } from './routes/finance.policies'
 import { Route as FinanceProductsRouteImport } from './routes/finance.products'
 import { Route as FinanceReportsRouteImport } from './routes/finance.reports'
 import { Route as FinanceServicesRouteImport } from './routes/finance.services'
@@ -268,6 +269,11 @@ const FinanceNfeRoute = FinanceNfeRouteImport.update({
   path: '/nfe',
   getParentRoute: () => FinanceRoute,
 } as any)
+const FinancePoliciesRoute = FinancePoliciesRouteImport.update({
+  id: '/policies',
+  path: '/policies',
+  getParentRoute: () => FinanceRoute,
+} as any)
 const FinanceProductsRoute = FinanceProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -482,6 +488,7 @@ export interface FileRoutesByFullPath {
   '/finance/charges': typeof FinanceChargesRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/nfe': typeof FinanceNfeRoute
+  '/finance/policies': typeof FinancePoliciesRoute
   '/finance/products': typeof FinanceProductsRoute
   '/finance/reports': typeof FinanceReportsRoute
   '/finance/services': typeof FinanceServicesRoute
@@ -546,6 +553,7 @@ export interface FileRoutesByTo {
   '/finance/charges': typeof FinanceChargesRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/nfe': typeof FinanceNfeRoute
+  '/finance/policies': typeof FinancePoliciesRoute
   '/finance/products': typeof FinanceProductsRoute
   '/finance/reports': typeof FinanceReportsRoute
   '/finance/services': typeof FinanceServicesRoute
@@ -622,6 +630,7 @@ export interface FileRoutesById {
   '/finance/charges': typeof FinanceChargesRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/nfe': typeof FinanceNfeRoute
+  '/finance/policies': typeof FinancePoliciesRoute
   '/finance/products': typeof FinanceProductsRoute
   '/finance/reports': typeof FinanceReportsRoute
   '/finance/services': typeof FinanceServicesRoute
@@ -699,6 +708,7 @@ export interface FileRouteTypes {
     | '/finance/charges'
     | '/finance/discounts'
     | '/finance/nfe'
+    | '/finance/policies'
     | '/finance/products'
     | '/finance/reports'
     | '/finance/services'
@@ -763,6 +773,7 @@ export interface FileRouteTypes {
     | '/finance/charges'
     | '/finance/discounts'
     | '/finance/nfe'
+    | '/finance/policies'
     | '/finance/products'
     | '/finance/reports'
     | '/finance/services'
@@ -838,6 +849,7 @@ export interface FileRouteTypes {
     | '/finance/charges'
     | '/finance/discounts'
     | '/finance/nfe'
+    | '/finance/policies'
     | '/finance/products'
     | '/finance/reports'
     | '/finance/services'
@@ -1159,6 +1171,13 @@ declare module '@tanstack/react-router' {
       path: '/nfe'
       fullPath: '/finance/nfe'
       preLoaderRoute: typeof FinanceNfeRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/policies': {
+      id: '/finance/policies'
+      path: '/policies'
+      fullPath: '/finance/policies'
+      preLoaderRoute: typeof FinancePoliciesRouteImport
       parentRoute: typeof FinanceRoute
     }
     '/finance/products': {
@@ -1533,6 +1552,7 @@ interface FinanceRouteChildren {
   FinanceChargesRoute: typeof FinanceChargesRoute
   FinanceDiscountsRoute: typeof FinanceDiscountsRoute
   FinanceNfeRoute: typeof FinanceNfeRoute
+  FinancePoliciesRoute: typeof FinancePoliciesRoute
   FinanceProductsRoute: typeof FinanceProductsRoute
   FinanceReportsRoute: typeof FinanceReportsRoute
   FinanceServicesRoute: typeof FinanceServicesRoute
@@ -1545,6 +1565,7 @@ const FinanceRouteChildren: FinanceRouteChildren = {
   FinanceChargesRoute: FinanceChargesRoute,
   FinanceDiscountsRoute: FinanceDiscountsRoute,
   FinanceNfeRoute: FinanceNfeRoute,
+  FinancePoliciesRoute: FinancePoliciesRoute,
   FinanceProductsRoute: FinanceProductsRoute,
   FinanceReportsRoute: FinanceReportsRoute,
   FinanceServicesRoute: FinanceServicesRoute,

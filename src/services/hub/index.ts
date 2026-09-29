@@ -2,11 +2,17 @@
 // Cada recurso expõe list/get/create/update/remove mapeados 1:1 nos endpoints
 // REST do backend NestJS. Se a API estiver indisponível, a interface mostra
 // erro/vazio (não há mais fallback com dado mockado — ver offlineState).
-import { ApiUnavailableError, request } from "./client";
+import { ApiUnavailableError, request, requestBlob } from "./client";
 import type {
-  LogAuditoria, Modulo, Notificacao, Permissao,
+  LogAuditoria, LogErro, Modulo, Notificacao, Permissao,
   Sessao, Setor, Usuario, UsuarioPermissao, UsuarioSetor,
 } from "./types";
+
+function qs(params: Record<string, string | undefined>) {
+  const entries = Object.entries(params).filter(([, v]) => v);
+  if (!entries.length) return "";
+  return `?${entries.map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`).join("&")}`;
+}
 
 export * from "./types";
 export { API_URL, ApiError, ApiUnavailableError } from "./client";
@@ -104,6 +110,36 @@ export const usuariosPermissoesService = createResource<UsuarioPermissao>("/usua
 export const notificacoesService = createResource<Notificacao>("/notificacoes", "n", []);
 export const sessoesService = createResource<Sessao>("/sessoes", "se", []);
 export const logsAuditoriaService = createResource<LogAuditoria>("/logs-auditoria", "lg", []);
+export const logsErroService = createResource<LogErro>("/logs-erro", "le", []);
+
+export type FiltrosRelatorio = { de?: string; ate?: string; modulo?: string; usuarioId?: string };
+export type RelatorioAuditoria = {
+  total: number;
+  porModulo: { modulo: string; total: number }[];
+  porAcao: { acao: string; total: number }[];
+  porUsuario: { usuarioId: string | null; nome: string; total: number }[];
+  recentes: (LogAuditoria & { usuario?: { id: string; nome: string } | null })[];
+};
+export async function relatorioAuditoria(filtros: FiltrosRelatorio = {}): Promise<RelatorioAuditoria> {
+  return request(`/logs-auditoria/relatorio${qs(filtros)}`);
+}
+export async function exportarAuditoriaCsv(filtros: FiltrosRelatorio = {}): Promise<Blob> {
+  return requestBlob(`/logs-auditoria/exportar${qs(filtros)}`);
+}
+
+export type FiltrosRelatorioErros = { de?: string; ate?: string; statusCode?: string; usuarioId?: string };
+export type RelatorioErros = {
+  total: number;
+  porRota: { rota: string; total: number }[];
+  porStatus: { statusCode: number; total: number }[];
+  recentes: LogErro[];
+};
+export async function relatorioErros(filtros: FiltrosRelatorioErros = {}): Promise<RelatorioErros> {
+  return request(`/logs-erro/relatorio${qs(filtros)}`);
+}
+export async function exportarErrosCsv(filtros: FiltrosRelatorioErros = {}): Promise<Blob> {
+  return requestBlob(`/logs-erro/exportar${qs(filtros)}`);
+}
 
 /** Atalhos de associação, conforme a especificação do backend. */
 export const createUsuarioSetor = (usuarioId: string, setorId: string) =>

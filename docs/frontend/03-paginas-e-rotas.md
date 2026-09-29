@@ -27,9 +27,11 @@ Coluna **Dado**: `Real` = a tela consome API real do backend; `Mock` = consome s
 | `/hub` | `hub.index.tsx` | Dashboard: estatísticas + atividade recente (log de auditoria real) |
 | `/hub/usuarios` | `hub.usuarios.tsx` | CRUD de usuários + redefinir senha (admin) |
 | `/hub/setores` | `hub.setores.tsx` | CRUD de setores |
-| `/hub/acessos` | `hub.acessos.tsx` | Gestão de permissões por usuário |
+| `/hub/acessos` | `hub.acessos.tsx` | Gestão de permissões por usuário + relatório de auditoria e de erros |
 
 Layout: `hub.tsx`.
+
+**Relatórios de auditoria e de erros (`hub.acessos.tsx`, setembro/2026)**: abaixo do painel de permissões, até dois cartões independentes — cada um só aparece se o usuário logado tem a respectiva ação (`useCan("/hub/acessos", "relatorio-auditoria")`/`"relatorio-erros"`), nenhum dos dois exige a outra. Cada cartão mostra o total do período, uma quebra pequena (por módulo/ação na auditoria, por rota/status no de erros), os 10 mais recentes e um botão "Exportar CSV" (`downloadBlob`, mesmo padrão de `finance.reports.tsx`). O de erros lê `GET /logs-erro/relatorio` — a tabela é alimentada só pelo filtro global do backend (`AllExceptionsFilter`), nunca por uma tela; ver `docs/backend/11-tratamento-erros.md` no repo backend.
 
 ## Rooster Desk (`Real`)
 
@@ -68,6 +70,8 @@ Layout: `rooms.tsx`.
 
 **Dias de funcionamento por ambiente (`rooms.structure.tsx`)**: o `RoomModal` (criar/editar ambiente) tem um seletor de dias da semana (seg–dom) ao lado do editor de períodos de horário — antes só existia exibição somente-leitura desse dado (`diasFuncionamento`/`weekdays`), sem forma de editar pela UI. Serve tanto pra instituição que não funciona aos sábados (todas as salas sem "sáb") quanto pra uma sala específica com uma exceção própria (ex.: em manutenção às segundas).
 
+**Vínculo com Turma (`rooms.book.tsx`, setembro/2026)**: quando a finalidade da reserva é "aula", o formulário busca `academyService.getClasses({ minhas: true })` (a mesma rota que já existia pra "minhas turmas" no Academy) e mostra um campo opcional "Turma" com as turmas do usuário logado — some por completo se a lista vier vazia (usuário não é professor, ou a chamada é recusada) e a falha é engolida silenciosamente, não é um erro de tela. `turmaId` vai junto no `POST /reservas`; o backend reforça a posse (`RoomsController.exigirTurmaValida`, ver `docs/security/03-rbac.md` no repo backend) — quem manda uma turma alheia recebe `403` independente do que a UI mostrou. O detalhe da reserva (`rooms.reservations.$id.tsx`) exibe a turma vinculada, se houver.
+
 ## Rooster Assets (`Real`)
 
 | Rota | Arquivo | Função |
@@ -90,6 +94,7 @@ Layout: `assets.tsx`.
 | `/finance/nfe` | `finance.nfe.tsx` | Emitir nota fiscal (documento interno) e baixar PDF/XML |
 | `/finance/reports` | `finance.reports.tsx` | Receita mensal, fluxo de caixa, inadimplência — via `financeService.relatorios`, exportação CSV |
 | `/finance/discounts` | `finance.discounts.tsx` | CRUD de descontos + atribuição a um aluno real do Academy |
+| `/finance/policies` | `finance.policies.tsx` | CRUD de políticas de multa/juros, criadas pelo próprio financeiro (setembro/2026); seletor de política também aparece no formulário de `finance.services.tsx` |
 
 Layout `finance.tsx` (mantém o gate `financeHasAccess(role)` do perfil deduzido das permissões — a permissão real já é aplicada automaticamente por `AppShell`, ver `08-autorizacao.md`). `finance.manage.tsx`/`finance.settings.tsx` (rotas órfãs, nunca ligadas no menu, a primeira quebrava ao abrir por depender de um `FinanceProvider` que nunca era montado) foram removidas nesta migração, assim como todo `src/mock/database/{tuitions,boletos,charges,payments,financeStudents,products,services,discounts,nfes}.ts` e `finance/store.tsx`. **Boleto/PIX e nota fiscal são simulados 100% internamente** (sem gateway de pagamento nem transmissão à SEFAZ) — decisão de produto, ver `docs/system/02-escopo.md` no backend.
 

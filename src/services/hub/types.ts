@@ -53,6 +53,8 @@ export interface Notificacao {
   usuarioId?: string | null;
   titulo?: string | null;
   mensagem?: string | null;
+  /** Rota do frontend para onde clicar na notificação leva (ex.: "/desk/tickets/:id"). Ausente em notificações antigas. */
+  rota?: string | null;
   lida?: boolean;
   criadoEm?: string | null;
 }
@@ -78,6 +80,19 @@ export interface LogAuditoria {
   ip?: string | null;
   navegador?: string | null;
   criadoEm?: string | null;
+}
+
+/** Só leitura — criado exclusivamente pelo AllExceptionsFilter a cada erro inesperado (status >= 500). */
+export interface LogErro {
+  id: string;
+  usuarioId?: string | null;
+  metodo?: string | null;
+  rota?: string | null;
+  statusCode: number;
+  mensagem: string;
+  stack?: string | null;
+  criadoEm?: string | null;
+  usuario?: { id: string; nome: string } | null;
 }
 /** Permissão concedida diretamente a um usuário (RBAC por tela/ação). */
 export interface UsuarioPermissao {

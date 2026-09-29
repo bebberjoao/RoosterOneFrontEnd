@@ -1,13 +1,21 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Bell, Check, Search } from "lucide-react";
 import { PageHeader } from "@/components/rooster/page-header";
 import { SectionCard, Btn, EmptyState, FilterInput } from "@/components/rooster/student/ui";
 import { tempoRelativo, useNotificacoes } from "./use-notificacoes";
+import type { Notificacao } from "@/services/hub/types";
 
 export function NotificationsList({ eyebrow = "Rooster One" }: { eyebrow?: string }) {
   const { itens, naoLidas, carregando, erro, marcarLida, marcarTodasLidas } = useNotificacoes();
+  const navigate = useNavigate();
   const [filtro, setFiltro] = useState<"todas" | "nao-lidas">("todas");
   const [busca, setBusca] = useState("");
+
+  function abrir(n: Notificacao) {
+    void marcarLida(n.id);
+    if (n.rota) navigate({ to: n.rota });
+  }
 
   const linhas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -62,7 +70,11 @@ export function NotificationsList({ eyebrow = "Rooster One" }: { eyebrow?: strin
         <SectionCard title="Notificações" description={`${linhas.length} registro(s)`}>
           <ul className="space-y-2">
             {linhas.map((n) => (
-              <li key={n.id} className={`flex items-start gap-3 rounded-xl border p-3 ${n.lida ? "bg-background/30" : "bg-card"}`}>
+              <li
+                key={n.id}
+                className={`flex items-start gap-3 rounded-xl border p-3 ${n.lida ? "bg-background/30" : "bg-card"} ${n.rota ? "cursor-pointer hover:bg-accent/40" : ""}`}
+                onClick={n.rota ? () => abrir(n) : undefined}
+              >
                 <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.lida ? "bg-transparent" : "bg-primary"}`} aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className={`text-sm ${n.lida ? "" : "font-semibold"}`}>{n.titulo}</p>
@@ -70,7 +82,14 @@ export function NotificationsList({ eyebrow = "Rooster One" }: { eyebrow?: strin
                   <p className="mt-1 text-[11px] text-muted-foreground">{tempoRelativo(n.criadoEm)}</p>
                 </div>
                 {!n.lida ? (
-                  <button type="button" onClick={() => void marcarLida(n.id)} className="rounded-lg border px-2.5 py-1.5 text-[11px] hover:bg-accent">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void marcarLida(n.id);
+                    }}
+                    className="rounded-lg border px-2.5 py-1.5 text-[11px] hover:bg-accent"
+                  >
                     Marcar lida
                   </button>
                 ) : null}

@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ChevronDown,
+  Download,
   Loader2,
   RotateCcw,
   Save,
   Search,
+  ShieldAlert,
   ShieldCheck,
   UserCog,
 } from "lucide-react";
@@ -24,11 +26,14 @@ import {
   type ModuleDef,
   type ScreenDef,
 } from "@/components/rooster/hub/permission-catalog";
-import { usePermissions } from "@/components/rooster/hub/permission-context";
+import { usePermissions, useCan } from "@/components/rooster/hub/permission-context";
 import {
   permissoesService, usuariosPermissoesService, usuariosService,
+  relatorioAuditoria, exportarAuditoriaCsv, relatorioErros, exportarErrosCsv,
   type Permissao, type Usuario, type UsuarioPermissao,
+  type RelatorioAuditoria, type RelatorioErros,
 } from "@/services/hub";
+import { downloadBlob } from "@/components/rooster/finance/format";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/hub/acessos")({
@@ -57,7 +62,144 @@ function AcessosPage() {
       />
       <OfflineBanner />
       <UserPermissionsPanel usuarios={usuarios.rows} loadingUsuarios={usuarios.loading} />
+      <ReportsPanel />
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Relatórios de auditoria e de erros                                  */
+/* ------------------------------------------------------------------ */
+
+function ReportsPanel() {
+  const podeAuditoria = useCan("/hub/acessos", "relatorio-auditoria");
+  const podeErros = useCan("/hub/acessos", "relatorio-erros");
+  if (!podeAuditoria && !podeErros) return null;
+
+  return (
+    <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      {podeAuditoria && <AuditReportCard />}
+      {podeErros && <ErrorReportCard />}
+    </div>
+  );
+}
+
+function AuditReportCard() {
+  const [dados, setDados] = useState<RelatorioAuditoria | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    relatorioAuditoria().then(setDados).catch((err) => setError(err instanceof Error ? err.message : "Falha ao carregar relatório de auditoria"));
+  }, []);
+
+  async function doExportar() {
+    try {
+      downloadBlob(await exportarAuditoriaCsv(), "relatorio-auditoria.csv");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao exportar relatório de auditoria");
+    }
+  }
+
+  return (
+    <SectionCard
+      title="Relatório de auditoria"
+      description="Ações administrativas, financeiras e acadêmicas registradas — quem fez o quê, quando."
+      action={<Btn onClick={doExportar}><Download className="h-3.5 w-3.5" /> Exportar CSV</Btn>}
+    >
+      {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
+      {!dados ? (
+        <p className="text-xs text-muted-foreground">Carregando…</p>
+      ) : (
+        <>
+          <p className="mb-3 text-sm"><span className="text-lg font-semibold">{dados.total}</span> <span className="text-xs text-muted-foreground">evento(s) registrados</span></p>
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <p className="mb-1 font-medium text-muted-foreground">Por módulo</p>
+              <ul className="space-y-0.5">
+                {dados.porModulo.slice(0, 5).map((m) => <li key={m.modulo} className="flex justify-between"><span>{m.modulo}</span><span className="tabular-nums text-muted-foreground">{m.total}</span></li>)}
+              </ul>
+            </div>
+            <div>
+              <p className="mb-1 font-medium text-muted-foreground">Por ação</p>
+              <ul className="space-y-0.5">
+                {dados.porAcao.slice(0, 5).map((a) => <li key={a.acao} className="flex justify-between"><span>{a.acao}</span><span className="tabular-nums text-muted-foreground">{a.total}</span></li>)}
+              </ul>
+            </div>
+          </div>
+          <p className="mb-1 mt-4 text-xs font-medium text-muted-foreground">Mais recentes</p>
+          <ul className="max-h-48 space-y-1 overflow-y-auto text-xs">
+            {dados.recentes.slice(0, 10).map((l) => (
+              <li key={l.id} className="flex items-center justify-between gap-2 border-b py-1 last:border-0">
+                <span className="truncate">{l.acao ?? "—"} · {l.modulo ?? "—"}</span>
+                <span className="shrink-0 text-muted-foreground">{l.usuario?.nome ?? "—"}</span>
+              </li>
+            ))}
+            {dados.recentes.length === 0 && <li className="py-2 text-center text-muted-foreground">Nenhum evento registrado.</li>}
+          </ul>
+        </>
+      )}
+    </SectionCard>
+  );
+}
+
+function ErrorReportCard() {
+  const [dados, setDados] = useState<RelatorioErros | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    relatorioErros().then(setDados).catch((err) => setError(err instanceof Error ? err.message : "Falha ao carregar relatório de erros"));
+  }, []);
+
+  async function doExportar() {
+    try {
+      downloadBlob(await exportarErrosCsv(), "relatorio-erros.csv");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao exportar relatório de erros");
+    }
+  }
+
+  return (
+    <SectionCard
+      title="Rastreamento de erros"
+      description="Toda exceção inesperada (status 500+) capturada automaticamente pela API — nunca recusas esperadas como 400/403/404."
+      action={<Btn onClick={doExportar}><Download className="h-3.5 w-3.5" /> Exportar CSV</Btn>}
+    >
+      {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
+      {!dados ? (
+        <p className="text-xs text-muted-foreground">Carregando…</p>
+      ) : (
+        <>
+          <p className="mb-3 text-sm"><span className="text-lg font-semibold">{dados.total}</span> <span className="text-xs text-muted-foreground">erro(s) registrados</span></p>
+          {dados.total === 0 ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" /> Nenhum erro inesperado registrado até agora.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div>
+                <p className="mb-1 font-medium text-muted-foreground">Por rota</p>
+                <ul className="space-y-0.5">
+                  {dados.porRota.slice(0, 5).map((r) => <li key={r.rota} className="flex justify-between gap-2"><span className="truncate">{r.rota}</span><span className="shrink-0 tabular-nums text-muted-foreground">{r.total}</span></li>)}
+                </ul>
+              </div>
+              <div>
+                <p className="mb-1 font-medium text-muted-foreground">Por status</p>
+                <ul className="space-y-0.5">
+                  {dados.porStatus.map((s) => <li key={s.statusCode} className="flex items-center justify-between gap-1"><span className="flex items-center gap-1"><ShieldAlert className="h-3 w-3 text-destructive" /> {s.statusCode}</span><span className="tabular-nums text-muted-foreground">{s.total}</span></li>)}
+                </ul>
+              </div>
+            </div>
+          )}
+          <p className="mb-1 mt-4 text-xs font-medium text-muted-foreground">Mais recentes</p>
+          <ul className="max-h-48 space-y-1 overflow-y-auto text-xs">
+            {dados.recentes.slice(0, 10).map((l) => (
+              <li key={l.id} className="flex items-center justify-between gap-2 border-b py-1 last:border-0">
+                <span className="truncate">{l.metodo} {l.rota}</span>
+                <span className="shrink-0 text-destructive">{l.statusCode}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </SectionCard>
   );
 }
 

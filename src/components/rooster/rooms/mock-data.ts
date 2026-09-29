@@ -112,4 +112,7 @@ export type Reservation = {
   events: ReservationEvent[];
   cancellationReason?: string;
   decidedBy?: string;
+  /** Turma vinculada (só faz sentido quando purpose === "aula") — o professor dono da turma escolhe ao criar a reserva. */
+  turmaId?: string;
+  turma?: { id: string; code: string; disciplineName?: string };
 };

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CrudHeader, SectionCard, EmptyState, Btn, Field, TextInput, TextArea, SelectInput, LoadingCards } from "@/components/shared";
 import { roomService } from "@/services/mock-api";
+import { academyService, type SchoolClass } from "@/services/mock-api/academy.service";
 import { ApiError } from "@/services/hub/client";
 import type { Room } from "@/mock/database/rooms";
 import type { Reservation } from "@/mock/database/reservations";
@@ -90,7 +91,23 @@ function BookRoomPage() {
     extras: [] as string[],
     recurrence: "unica" as "unica" | "diaria" | "semanal" | "mensal",
     repeatUntil: "",
+    turmaId: "",
   });
+
+  // Vínculo com Turma (Rooster Academy): só faz sentido quando a finalidade é "aula", e só
+  // aparece pra quem de fato é professor de alguma turma — quem não é, a API de "minhas turmas"
+  // simplesmente recusa (403), então o erro é engolido e a lista fica vazia.
+  const [minhasTurmas, setMinhasTurmas] = useState<SchoolClass[]>([]);
+  useEffect(() => {
+    if (form.purpose !== "aula") return;
+    let cancelado = false;
+    academyService.getClasses({ minhas: true }).then((turmas) => {
+      if (!cancelado) setMinhasTurmas(turmas);
+    }).catch(() => {
+      if (!cancelado) setMinhasTurmas([]);
+    });
+    return () => { cancelado = true; };
+  }, [form.purpose]);
 
   // Garante que o default de sala/data (abaixo) só é aplicado uma vez, no carregamento inicial —
   // recargas seguintes (ex.: depois de enviar uma nova solicitação) não devem "puxar o tapete"
@@ -201,6 +218,7 @@ function BookRoomPage() {
       participants: Number(form.participants) || 1,
       status: "analise" as const,
       notes,
+      turmaId: form.purpose === "aula" && form.turmaId ? form.turmaId : undefined,
       events: [{ id: `message-${Date.now()}`, kind: "message" as const, author: currentPersonName, role: "solicitante" as const, at: new Date().toISOString(), body: notes || "Solicitação enviada para análise da equipe de reservas." }],
     };
     try {
@@ -216,7 +234,7 @@ function BookRoomPage() {
         code = created.code;
       }
       setSent(code);
-      setForm((f) => ({ ...f, event: "", message: "", extras: [], recurrence: "unica", repeatUntil: "" }));
+      setForm((f) => ({ ...f, event: "", message: "", extras: [], recurrence: "unica", repeatUntil: "", turmaId: "" }));
       reload();
       toast.success("Solicitação de reserva enviada com sucesso");
     } catch (err) {
@@ -376,6 +394,20 @@ function BookRoomPage() {
                     ]}
                   />
                 </Field>
+                {form.purpose === "aula" && minhasTurmas.length > 0 && (
+                  <Field
+                    label="Turma (opcional)"
+                    className="sm:col-span-2"
+                    hint="Vincula esta reserva a uma das suas turmas — quem acompanha a turma vê o horário da aula automaticamente."
+                  >
+                    <SelectInput
+                      value={form.turmaId}
+                      onChange={(e) => setForm({ ...form, turmaId: e.target.value })}
+                      placeholder="Nenhuma turma vinculada"
+                      options={minhasTurmas.map((t) => ({ value: t.id, label: `${t.code} — ${t.disciplineName ?? "Sem disciplina"}` }))}
+                    />
+                  </Field>
+                )}
                 <Field
                   label="Horário"
                   className="sm:col-span-2"

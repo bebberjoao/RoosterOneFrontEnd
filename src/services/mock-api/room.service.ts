@@ -91,6 +91,7 @@ type ReservaBack = {
   horarioInicio: string; horarioFim: string; participantes: number; status: string; recorrencia: string;
   observacoes?: string | null; decididoPor?: string | null; decididoEm?: string | null;
   motivoCancelamento?: string | null; historico?: BackHistorico[];
+  turmaId?: string | null; turma?: { id: string; codigo: string; disciplina?: { nome?: string | null } | null } | null;
 };
 
 function historicoToEvent(h: BackHistorico): ReservationEvent | null {
@@ -112,6 +113,8 @@ function reservaToFront(b: ReservaBack): Reservation {
     end: b.horarioFim, participants: b.participantes, status: b.status as ReservationStatus,
     recurrence: b.recorrencia as Reservation["recurrence"], notes: b.observacoes ?? undefined,
     events: historicoEvents, cancellationReason: b.motivoCancelamento ?? undefined, decidedBy: ultimoStatus?.usuario?.nome,
+    turmaId: b.turmaId ?? undefined,
+    turma: b.turma ? { id: b.turma.id, code: b.turma.codigo, disciplineName: b.turma.disciplina?.nome ?? undefined } : undefined,
   };
 }
 
@@ -172,7 +175,7 @@ export const roomService = {
       codigo: dto.code, ambienteId: dto.roomId ?? dto.spaceId, responsavelId: session.usuario?.id, responsavel: dto.responsible,
       setor: dto.sector, evento: dto.event, finalidade: dto.purpose, data: dto.date, horarioInicio: dto.start,
       horarioFim: dto.end, participantes: dto.participants, status: dto.status, recorrencia: dto.recurrence ?? "unica",
-      observacoes: dto.notes,
+      observacoes: dto.notes, turmaId: dto.turmaId,
     } as Partial<ReservaBack>);
     return reservaToFront(created);
   },
@@ -187,7 +190,7 @@ export const roomService = {
         codigo: dto.code, ambienteId: dto.roomId ?? dto.spaceId, responsavelId: session.usuario?.id, responsavel: dto.responsible,
         setor: dto.sector, evento: dto.event, finalidade: dto.purpose, data: dto.date, horarioInicio: dto.start,
         horarioFim: dto.end, participantes: dto.participants, status: dto.status, recorrencia: dto.recurrence,
-        observacoes: dto.notes, repetirAte,
+        observacoes: dto.notes, turmaId: dto.turmaId, repetirAte,
       },
     });
     return { serieId: res.serieId, reservas: res.reservas.map(reservaToFront) };

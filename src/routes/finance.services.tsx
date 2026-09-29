@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2, Wrench } from "lucide-react";
-import { financeService, type Servico, type FrequenciaServico } from "@/services/mock-api/finance.service";
+import { financeService, type Servico, type FrequenciaServico, type PoliticaMultaJuros } from "@/services/mock-api/finance.service";
 import {
   CrudToolbar, Drawer, Modal, ConfirmDialog,
   Field, TextInput, TextArea, SelectInput, Btn, SectionCard,
@@ -17,13 +17,14 @@ export const Route = createFileRoute("/finance/services")({ component: Services 
 const FREQ_LABEL: Record<FrequenciaServico, string> = { unico: "Único", mensal: "Mensal", anual: "Anual", semestral: "Semestral" };
 const FREQ_OPTIONS = (Object.keys(FREQ_LABEL) as FrequenciaServico[]).map((v) => ({ value: v, label: FREQ_LABEL[v] }));
 
-type Draft = { nome: string; descricao: string; preco: number; categoria: string; frequencia: FrequenciaServico; ativo: boolean };
-const EMPTY: Draft = { nome: "", descricao: "", preco: 0, categoria: "", frequencia: "mensal", ativo: true };
+type Draft = { nome: string; descricao: string; preco: number; categoria: string; frequencia: FrequenciaServico; ativo: boolean; politicaMultaJurosId: string };
+const EMPTY: Draft = { nome: "", descricao: "", preco: 0, categoria: "", frequencia: "mensal", ativo: true, politicaMultaJurosId: "" };
 
 function Services() {
   const { role } = useRole();
   const canManage = financeCan(role, "manageServices");
   const [rows, setRows] = useState<Servico[]>([]);
+  const [politicas, setPoliticas] = useState<PoliticaMultaJuros[]>([]);
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Servico | null>(null);
   const [editing, setEditing] = useState(false);
@@ -35,7 +36,10 @@ function Services() {
 
   useEffect(() => {
     financeService.servicos.getAll().then(setRows).catch((err) => setError(err instanceof Error ? err.message : "Falha ao carregar serviços"));
+    financeService.politicas.getAll().then(setPoliticas).catch(() => {});
   }, [refresh]);
+
+  const politicaNome = (id?: string) => politicas.find((p) => p.id === id)?.nome ?? "—";
 
   const items = rows.filter((s) => !q || s.nome.toLowerCase().includes(q.toLowerCase()));
 
@@ -61,7 +65,7 @@ function Services() {
   }
 
   function startEdit(s: Servico) {
-    setDraft({ nome: s.nome, descricao: s.descricao, preco: s.preco, categoria: s.categoria, frequencia: s.frequencia, ativo: s.ativo });
+    setDraft({ nome: s.nome, descricao: s.descricao, preco: s.preco, categoria: s.categoria, frequencia: s.frequencia, ativo: s.ativo, politicaMultaJurosId: s.politicaMultaJurosId ?? "" });
     setError(null);
     setEditing(true);
   }
@@ -164,14 +168,15 @@ function Services() {
               <div><dt className="text-[11px] text-muted-foreground">Frequência</dt><dd>{FREQ_LABEL[selected.frequencia]}</dd></div>
               <div className="col-span-2"><dt className="text-[11px] text-muted-foreground">Descrição</dt><dd className="text-muted-foreground">{selected.descricao || "—"}</dd></div>
               <div><dt className="text-[11px] text-muted-foreground">Status</dt><dd>{selected.ativo ? "Ativo" : "Inativo"}</dd></div>
+              <div><dt className="text-[11px] text-muted-foreground">Política de multa/juros</dt><dd>{politicaNome(selected.politicaMultaJurosId)}</dd></div>
             </dl>
           </SectionCard>
         )}
-        {selected && editing && <ServiceForm draft={draft} setDraft={setDraft} error={error} />}
+        {selected && editing && <ServiceForm draft={draft} setDraft={setDraft} error={error} politicas={politicas} />}
       </Drawer>
 
       <Modal open={modalNew} onClose={() => setModalNew(false)} title="Novo serviço" description="Cadastre um serviço financeiro." footer={<><Btn onClick={() => setModalNew(false)}>Cancelar</Btn><Btn variant="solid" onClick={saveNew}>Salvar</Btn></>}>
-        <ServiceForm draft={draft} setDraft={setDraft} error={error} />
+        <ServiceForm draft={draft} setDraft={setDraft} error={error} politicas={politicas} />
       </Modal>
 
       <ConfirmDialog open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={doDelete} title="Excluir serviço" description="Esta ação removerá o serviço do catálogo." />
@@ -179,7 +184,7 @@ function Services() {
   );
 }
 
-function ServiceForm({ draft, setDraft, error }: { draft: Draft; setDraft: (d: Draft) => void; error?: string | null }) {
+function ServiceForm({ draft, setDraft, error, politicas }: { draft: Draft; setDraft: (d: Draft) => void; error?: string | null; politicas: PoliticaMultaJuros[] }) {
   return (
     <div className="space-y-3">
       <Field label="Nome"><TextInput value={draft.nome} onChange={(e) => setDraft({ ...draft, nome: e.target.value })} placeholder="Ex. Mensalidade — Graduação" /></Field>
@@ -189,6 +194,14 @@ function ServiceForm({ draft, setDraft, error }: { draft: Draft; setDraft: (d: D
         <Field label="Preço (R$)"><TextInput type="number" min={0} step="0.01" value={draft.preco} onChange={(e) => setDraft({ ...draft, preco: Number(e.target.value) })} /></Field>
       </div>
       <Field label="Frequência"><SelectInput value={draft.frequencia} onChange={(e) => setDraft({ ...draft, frequencia: e.target.value as FrequenciaServico })} options={FREQ_OPTIONS} /></Field>
+      <Field label="Política de multa/juros" hint="Aplicada automaticamente às cobranças geradas por este serviço, salvo quando a cobrança define multa/juros manualmente.">
+        <SelectInput
+          value={draft.politicaMultaJurosId}
+          onChange={(e) => setDraft({ ...draft, politicaMultaJurosId: e.target.value })}
+          placeholder="Nenhuma"
+          options={politicas.filter((p) => p.ativo).map((p) => ({ value: p.id, label: p.nome }))}
+        />
+      </Field>
       <Field label="Status">
         <SelectInput value={draft.ativo ? "ativo" : "inativo"} onChange={(e) => setDraft({ ...draft, ativo: e.target.value === "ativo" })} options={[{ value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }]} />
       </Field>

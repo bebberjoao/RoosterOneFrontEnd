@@ -7,13 +7,14 @@ export type FinancePerm =
   | "manageServices"
   | "manageNfe"
   | "manageDiscounts"
+  | "managePolicies"
   | "viewReports"
   | "manageSettings"
   | "viewOwnFinance";
 
 const MATRIX: Record<Role, FinancePerm[]> = {
-  admin: ["viewDashboard", "manageCharges", "manageProducts", "manageServices", "manageNfe", "manageDiscounts", "viewReports", "manageSettings", "viewOwnFinance"],
-  financeiro: ["viewDashboard", "manageCharges", "manageProducts", "manageServices", "manageNfe", "manageDiscounts", "viewReports", "manageSettings"],
+  admin: ["viewDashboard", "manageCharges", "manageProducts", "manageServices", "manageNfe", "manageDiscounts", "managePolicies", "viewReports", "manageSettings", "viewOwnFinance"],
+  financeiro: ["viewDashboard", "manageCharges", "manageProducts", "manageServices", "manageNfe", "manageDiscounts", "managePolicies", "viewReports", "manageSettings"],
   coordenador: ["viewDashboard", "viewReports"],
   aluno: ["viewOwnFinance"],
   institucional: ["viewOwnFinance"],

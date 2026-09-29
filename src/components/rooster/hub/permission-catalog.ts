@@ -59,7 +59,13 @@ const SCREENS: Record<string, ScreenDef[]> = {
       a("gerenciar-permissoes", "Gerenciar permissões"),
       a("conceder", "Conceder permissões a usuário"),
       a("revogar", "Revogar permissões de usuário"),
+      a("relatorio-auditoria", "Ver relatório de auditoria"),
+      a("relatorio-erros", "Ver relatório de erros"),
     ]),
+    // Sem rota própria de propósito: o conteúdo vive dentro de /settings (seção
+    // "E-mail"), não numa tela nova — só usado aqui para dar um nome de
+    // permissão gerenciável em "Acessos e permissões".
+    screen("/hub/configuracoes", "Configurações do sistema", []),
   ],
   desk: [
     screen("/desk", "Dashboard", []),
@@ -154,6 +160,7 @@ const SCREENS: Record<string, ScreenDef[]> = {
     screen("/finance/nfe", "Notas Fiscais", [a("emitir", "Emitir nota"), a("exportar-xml", "Exportar XML")]),
     screen("/finance/reports", "Relatórios", [a("exportar", "Exportar relatório")]),
     screen("/finance/discounts", "Descontos", CRUD),
+    screen("/finance/policies", "Políticas de multa/juros", CRUD),
   ],
   learn: [
     screen("/learn", "Dashboard", []),

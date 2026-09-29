@@ -1,13 +1,20 @@
 import { Bell, CheckCheck } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { tempoRelativo, useNotificacoes } from "./use-notificacoes";
+import type { Notificacao } from "@/services/hub/types";
 
 export function NotificationBell() {
   const { itens, naoLidas, carregando, erro, marcarLida, marcarTodasLidas } = useNotificacoes();
+  const navigate = useNavigate();
   const rotulo = naoLidas > 0 ? `Notificações (${naoLidas} não lidas)` : "Notificações";
+
+  function abrir(n: Notificacao) {
+    void marcarLida(n.id);
+    if (n.rota) navigate({ to: n.rota });
+  }
 
   return (
     <Popover>
@@ -51,7 +58,7 @@ export function NotificationBell() {
                 <li key={n.id}>
                   <button
                     type="button"
-                    onClick={() => void marcarLida(n.id)}
+                    onClick={() => abrir(n)}
                     className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent ${n.lida ? "" : "bg-primary/5"}`}
                   >
                     <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.lida ? "bg-transparent" : "bg-primary"}`} aria-hidden />

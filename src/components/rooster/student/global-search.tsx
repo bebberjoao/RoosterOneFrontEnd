@@ -70,7 +70,7 @@ export function StudentGlobalSearch() {
         className="w-full rounded-lg border bg-card py-2 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/40"
       />
       {open && q.trim() ? (
-        <div className="absolute z-40 mt-2 w-full overflow-hidden rounded-xl border bg-popover shadow-lg">
+        <div className="absolute z-[80] mt-2 w-full overflow-hidden rounded-xl border bg-popover shadow-lg">
           {results.length === 0 ? (
             <p className="px-3 py-4 text-xs text-muted-foreground">Nenhum resultado para “{q}”.</p>
           ) : (

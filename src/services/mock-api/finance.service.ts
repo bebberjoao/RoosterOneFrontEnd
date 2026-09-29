@@ -41,6 +41,12 @@ export type Produto = {
 export type Servico = {
   id: string; nome: string; descricao: string; preco: number; categoria: string;
   frequencia: FrequenciaServico; ativo: boolean; criadoEm: string; atualizadoEm: string;
+  politicaMultaJurosId?: string;
+};
+
+export type PoliticaMultaJuros = {
+  id: string; nome: string; descricao: string; percentualMulta: number; percentualJurosDia: number;
+  diasCarencia: number; ativo: boolean;
 };
 
 export type Desconto = {
@@ -126,20 +132,44 @@ function produtoToDto(f: Partial<Produto>) {
 type ServicoBack = {
   id: string; nome: string; descricao?: string | null; preco: number | string; categoria?: string | null;
   frequencia: FrequenciaServico; ativo: boolean; criadoEm?: string | null; atualizadoEm?: string | null;
+  politicaMultaJurosId?: string | null;
 };
 function servicoToFront(b: ServicoBack): Servico {
   return {
     id: b.id, nome: b.nome, descricao: b.descricao ?? "", preco: num(b.preco), categoria: b.categoria ?? "",
     frequencia: b.frequencia, ativo: b.ativo, criadoEm: b.criadoEm ?? "", atualizadoEm: b.atualizadoEm ?? "",
+    politicaMultaJurosId: b.politicaMultaJurosId ?? undefined,
   };
 }
 function servicoToDto(f: Partial<Servico>) {
   return {
     ...(f.nome !== undefined && { nome: f.nome }),
     ...(f.descricao !== undefined && { descricao: f.descricao }),
+    ...(f.politicaMultaJurosId !== undefined && { politicaMultaJurosId: f.politicaMultaJurosId || null }),
     ...(f.preco !== undefined && { preco: f.preco }),
     ...(f.categoria !== undefined && { categoria: f.categoria }),
     ...(f.frequencia !== undefined && { frequencia: f.frequencia }),
+    ...(f.ativo !== undefined && { ativo: f.ativo }),
+  };
+}
+
+type PoliticaMultaJurosBack = {
+  id: string; nome: string; descricao?: string | null; percentualMulta: number | string; percentualJurosDia: number | string;
+  diasCarencia: number; ativo: boolean;
+};
+function politicaToFront(b: PoliticaMultaJurosBack): PoliticaMultaJuros {
+  return {
+    id: b.id, nome: b.nome, descricao: b.descricao ?? "", percentualMulta: num(b.percentualMulta),
+    percentualJurosDia: num(b.percentualJurosDia), diasCarencia: b.diasCarencia, ativo: b.ativo,
+  };
+}
+function politicaToDto(f: Partial<PoliticaMultaJuros>) {
+  return {
+    ...(f.nome !== undefined && { nome: f.nome }),
+    ...(f.descricao !== undefined && { descricao: f.descricao }),
+    ...(f.percentualMulta !== undefined && { percentualMulta: f.percentualMulta }),
+    ...(f.percentualJurosDia !== undefined && { percentualJurosDia: f.percentualJurosDia }),
+    ...(f.diasCarencia !== undefined && { diasCarencia: f.diasCarencia }),
     ...(f.ativo !== undefined && { ativo: f.ativo }),
   };
 }
@@ -279,6 +309,31 @@ export const financeService = {
     },
     async remove(id: string): Promise<boolean> {
       await request<void>(`/servicos-financeiros/${id}`, { method: "DELETE" });
+      return true;
+    },
+  },
+
+  // ---------- Políticas de multa/juros ----------
+  politicas: {
+    async getAll(): Promise<PoliticaMultaJuros[]> {
+      const rows = await request<PoliticaMultaJurosBack[]>("/politicas-multa-juros");
+      return rows.map(politicaToFront);
+    },
+    async getById(id: string): Promise<PoliticaMultaJuros | undefined> {
+      try {
+        return politicaToFront(await request<PoliticaMultaJurosBack>(`/politicas-multa-juros/${id}`));
+      } catch {
+        return undefined;
+      }
+    },
+    async create(dto: Omit<PoliticaMultaJuros, "id">): Promise<PoliticaMultaJuros> {
+      return politicaToFront(await request<PoliticaMultaJurosBack>("/politicas-multa-juros", { method: "POST", body: politicaToDto(dto) }));
+    },
+    async update(id: string, dto: Partial<PoliticaMultaJuros>): Promise<PoliticaMultaJuros> {
+      return politicaToFront(await request<PoliticaMultaJurosBack>(`/politicas-multa-juros/${id}`, { method: "PATCH", body: politicaToDto(dto) }));
+    },
+    async remove(id: string): Promise<boolean> {
+      await request<void>(`/politicas-multa-juros/${id}`, { method: "DELETE" });
       return true;
     },
   },
