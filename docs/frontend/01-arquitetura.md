@@ -1,71 +1,100 @@
 # Arquitetura
 
-## Stack confirmada (`package.json`)
+## Tecnologias (`package.json`)
 
 | Camada | Tecnologia | Versão |
 | --- | --- | --- |
-| Framework | TanStack Start | `^1.168.26` |
-| Roteamento | TanStack Router (file-based) | `^1.170.16` |
-| UI | React | `^19.2.0` |
+| Framework | TanStack Start (renderização no servidor) | `^1.168.26` |
+| Roteamento | TanStack Router (rotas por arquivo) | `^1.170.16` |
+| Interface | React | `^19.2.0` |
 | Build | Vite | `^8.0.16` |
 | CSS | Tailwind CSS | `^4.2.1` |
-| Componentes | Radix UI (primitivos em `src/components/ui`, estilo shadcn) | várias |
-| Data layer instalado | `@tanstack/react-query` | `^5.101.1` |
-| Realtime | `socket.io-client` | `^4.8.3` |
+| Componentes | Radix UI (primitivos em `src/components/ui`, no padrão shadcn) | diversas |
+| Camada de dados instalada | `@tanstack/react-query` | `^5.101.1` |
+| Tempo real | `socket.io-client` | `^4.8.3` |
+| Testes | Vitest e Testing Library | ver `package.json` |
 
-Status: **Implementado.**
+Situação: **implementado**.
 
 ## Inicialização da aplicação
 
-Três arquivos de bootstrap na raiz de `src/`:
+Três arquivos de inicialização na raiz de `src/`:
 
-1. **`src/start.ts`** — cria a instância do TanStack Start (`createStart`) com um `errorMiddleware` de servidor que captura exceções não tratadas e devolve uma página HTML estática de erro (`renderErrorPage()`, de `src/lib/error-page.ts`) em vez de deixar o request quebrar sem resposta.
-2. **`src/server.ts`** — o entrypoint de fetch usado pelo runtime de servidor (Nitro/Cloudflare, via o preset `@lovable.dev/vite-tanstack-config`). Chama o handler gerado por `@tanstack/react-start/server-entry` e faz uma normalização extra: quando o `h3` (servidor interno do TanStack Start) engole um throw e devolve um JSON genérico `{"unhandled":true,"message":"HTTPError"}` com status >= 500, esse arquivo detecta o padrão e troca a resposta pela página de erro estática, recuperando o erro original registrado por `src/lib/error-capture.ts` (que faz monkey-patch de `console.error` para guardar o último erro real).
-3. **`src/router.tsx`** — `createRouter({ routeTree, context: { queryClient }, scrollRestoration: true, defaultPreloadStaleTime: 0 })`. Cria um `QueryClient` do TanStack Query e o injeta no contexto do router.
+1. **`src/start.ts`**: cria a instância do TanStack Start (`createStart`) com um `errorMiddleware` de servidor, que
+   captura exceções não tratadas e devolve página HTML estática de erro (`renderErrorPage()`, de
+   `src/lib/error-page.ts`), em vez de encerrar a requisição sem resposta.
+2. **`src/server.ts`**: ponto de entrada de requisições do servidor (Nitro, por meio do preset
+   `@lovable.dev/vite-tanstack-config`). Invoca o handler gerado por `@tanstack/react-start/server-entry` e realiza uma
+   normalização adicional: quando o `h3` (servidor interno do TanStack Start) intercepta uma exceção e devolve o JSON
+   genérico `{"unhandled":true,"message":"HTTPError"}` com status igual ou superior a 500, o arquivo identifica o
+   padrão e substitui a resposta pela página de erro estática, recuperando o erro original registrado por
+   `src/lib/error-capture.ts` (que intercepta `console.error` para guardar o último erro).
+3. **`src/router.tsx`**: `createRouter({ routeTree, context: { queryClient }, scrollRestoration: true,
+   defaultPreloadStaleTime: 0 })`, que cria um `QueryClient` do TanStack Query e o injeta no contexto do roteador.
 
-`src/routeTree.gen.ts` é gerado automaticamente pelo plugin de roteamento do TanStack a partir dos arquivos em `src/routes/`. **Não deve ser editado manualmente** (ver `src/routes/README.md`).
+`src/routeTree.gen.ts` é gerado automaticamente pelo plugin de roteamento do TanStack a partir dos arquivos de
+`src/routes/` e **não deve ser editado manualmente** (ver `src/routes/README.md`).
 
-## Root route (`src/routes/__root.tsx`)
+## Rota raiz (`src/routes/__root.tsx`)
 
 `createRootRouteWithContext<{ queryClient: QueryClient }>()` define:
 
-- `shellComponent: RootShell` — o `<html><head><HeadContent/></head><body>{children}<Scripts/></body></html>` renderizado no SSR (documento HTML completo).
-- `component: RootComponent` — a árvore de providers globais, montada uma única vez para toda a aplicação:
+- `shellComponent: RootShell`: o documento HTML completo (`<html><head><HeadContent/></head><body>{children}<Scripts/></body></html>`),
+  renderizado no servidor;
+- `component: RootComponent`: a árvore de providers globais, montada uma única vez para toda a aplicação:
 
 ```
-QueryClientProvider (queryClient do router)
+QueryClientProvider (queryClient do roteador)
   -> ThemeProvider
        -> AuthProvider
             -> RoleProvider
                  -> <Outlet /> (rotas filhas)
 ```
 
-- `notFoundComponent` / `errorComponent` — páginas de fallback para rota inexistente (404) e para erro não capturado por nenhum error boundary mais específico. `errorComponent` também dispara `reportLovableError` (telemetria do editor Lovable, ver `src/lib/lovable-error-reporting.ts`) em `useEffect`.
+- `notFoundComponent` e `errorComponent`: páginas de contingência para rota inexistente (404) e para erro não
+  capturado por error boundary mais específico. O `errorComponent` também aciona `reportLovableError` (telemetria do
+  editor Lovable, `src/lib/lovable-error-reporting.ts`) em `useEffect`.
 
-Status: **Implementado** (lido diretamente de `src/routes/__root.tsx`).
+Situação: **implementado**.
 
 ### Providers montados fora da raiz
 
-Nem todos os providers ficam no root — alguns só existem dentro de layouts específicos:
+Parte dos providers é montada apenas em layouts específicos:
 
-- **`PermissionProvider`** (`src/components/rooster/hub/permission-context.tsx`) é montado dentro de `AppShell` (`src/components/rooster/app-shell.tsx`), ou seja, uma vez por navegação autenticada, não no root. Ver `08-autorizacao.md` para o funcionamento e o acoplamento com `RoleProvider`.
-- **`AssetsProvider`** (`src/components/rooster/assets/store.tsx`) só envolve as rotas dentro de `/assets` (montado em `src/routes/assets.tsx`).
-- **`SidebarProvider`** (Radix/shadcn, `src/components/ui/sidebar.tsx`) também é montado dentro de `AppShell`.
+- **`PermissionProvider`** (`src/components/rooster/hub/permission-context.tsx`) é montado no `AppShell`
+  (`src/components/rooster/app-shell.tsx`), uma vez por navegação autenticada. Ver `08-autorizacao.md`.
+- **`AssetsProvider`** (`src/components/rooster/assets/store.tsx`) envolve apenas as rotas de `/assets` (montado em
+  `src/routes/assets.tsx`).
+- **`SidebarProvider`** (Radix/shadcn, `src/components/ui/sidebar.tsx`) também é montado no `AppShell`.
 
-## `AppShell` — o layout autenticado
+## `AppShell`: layout autenticado
 
-`src/components/rooster/app-shell.tsx` é o componente que todo layout de módulo (`hub.tsx`, `desk.tsx`, `rooms.tsx`, `assets.tsx`, `finance.tsx`, `student.tsx`, `academy.tsx`, `learn.tsx`, `boost.tsx`, `settings.tsx`, e também `index.tsx`) usa para envolver seu `<Outlet />`. Ele:
+`src/components/rooster/app-shell.tsx` é utilizado por todos os layouts de módulo (`hub.tsx`, `desk.tsx`,
+`rooms.tsx`, `assets.tsx`, `finance.tsx`, `student.tsx`, `academy.tsx`, `learn.tsx`, `boost.tsx`, `settings.tsx` e
+`index.tsx`) para envolver o respectivo `<Outlet />`. O componente:
 
-1. Lê `authed`/`ready` de `useAuth()`. Se `ready && !authed`, redireciona para `/login` via `navigate({ to: "/login", replace: true })`.
-2. Enquanto `!ready || !authed`, renderiza um esqueleto de carregamento (`Skeleton` de cabeçalho, cartões e bloco de conteúdo) — evita "flash" de conteúdo protegido sem deixar a tela vazia.
-3. Envolve o conteúdo em `PermissionProvider` -> `GlobalSearchProvider` (command palette Ctrl/Cmd+K) -> `SidebarProvider` -> `AppSidebar` + `AppTopbar` + `<main>` com `RequireAccess route={pathname}` (bloqueia a tela se o usuário ativo não tiver a permissão de acesso — ver `08-autorizacao.md`).
+1. lê `authed` e `ready` de `useAuth()` e, se `ready && !authed`, redireciona para `/login` por
+   `navigate({ to: "/login", replace: true })`;
+2. enquanto `!ready || !authed`, exibe esqueleto de carregamento (`Skeleton` de cabeçalho, cartões e bloco de
+   conteúdo), o que evita a exibição momentânea de conteúdo protegido sem deixar a tela vazia;
+3. envolve o conteúdo em `PermissionProvider` → `GlobalSearchProvider` (paleta de comandos Ctrl/Cmd+K) →
+   `SidebarProvider` → `AppSidebar`, `AppTopbar` e `<main>` com `RequireAccess route={pathname}`, que bloqueia a
+   tela quando o usuário não possui a permissão de acesso (ver `08-autorizacao.md`).
 
-`login.tsx` e `redefinir-senha.tsx` **não** usam `AppShell` — são as únicas rotas públicas.
+As rotas `login.tsx` e `redefinir-senha.tsx` **não** utilizam o `AppShell`, por serem públicas, assim como as rotas
+do portal do Boost (`/boost-portal/*`), que possuem layout e sessão próprios.
 
-## Build/dev
+## Build e execução
 
-- `vite.config.ts` usa o preset `@lovable.dev/vite-tanstack-config`, que já inclui TanStack devtools, `tanstackStart`, `viteReact`, `tailwindcss`, `tsConfigPaths`, Nitro (alvo padrão Cloudflare) e injeção de `VITE_*`. O próprio comentário do arquivo avisa para não duplicar esses plugins manualmente.
-- Alias de import `@/*` -> `./src/*` (`tsconfig.json`).
-- Scripts (`package.json`): `dev` (`vite dev`), `build`, `build:dev`, `preview`, `lint`, `format`.
+- `vite.config.ts` utiliza o preset `@lovable.dev/vite-tanstack-config`, que inclui as ferramentas de
+  desenvolvimento do TanStack, `tanstackStart`, `viteReact`, `tailwindcss`, `tsConfigPaths`, Nitro (destino padrão
+  Cloudflare) e injeção das variáveis `VITE_*`. O comentário do próprio arquivo orienta a não duplicar esses plugins.
+- Para execução como servidor Node.js (por exemplo, em Windows Server), o build deve ser gerado com
+  `NITRO_PRESET=node-server`; o servidor resultante é iniciado por `node .output/server/index.mjs`. A aplicação
+  depende de renderização no servidor e não é distribuída como conjunto de arquivos estáticos. Ver
+  `docs/operations/04-deploy.md` no repositório do backend.
+- Alias de importação `@/*` → `./src/*` (`tsconfig.json`).
+- Scripts (`package.json`): `dev` (`vite dev`), `build`, `build:dev`, `preview`, `lint`, `format`, `test`
+  (`vitest run`) e `audit`.
 
-Status: **Implementado.**
+Situação: **implementado**.

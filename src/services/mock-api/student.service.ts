@@ -19,7 +19,7 @@ export type StudentProfile = {
 
 export type StudentDiscipline = {
   id: string; // matricula id
-  classId: string; code: string; name: string; term: string; shift: string;
+  classId: string; disciplineId: string; code: string; name: string; term: string; shift: string;
   teacher: string; teacherInitials: string; workload: number; schedule: string; room: string;
   attendance: number; absences: number; classesGiven: number; average: number | null;
   situation: Situation; accent: string; matriculaStatus: string;
@@ -113,7 +113,7 @@ export const studentService = {
       const average = mediaByClass.get(m.turmaId) ?? null;
       const teacherName = t.professor?.usuario?.nome ?? "—";
       return {
-        id: m.id, classId: m.turmaId, code: t.disciplina?.codigo ?? t.codigo, name: t.disciplina?.nome ?? t.codigo,
+        id: m.id, classId: m.turmaId, disciplineId: t.disciplinaId, code: t.disciplina?.codigo ?? t.codigo, name: t.disciplina?.nome ?? t.codigo,
         term: t.periodoLetivo?.nome ?? "—", shift: t.turno,
         teacher: teacherName, teacherInitials: initialsOf(teacherName),
         workload: t.disciplina?.cargaHoraria ?? 0, schedule: t.horario ?? "", room: t.sala ?? "",

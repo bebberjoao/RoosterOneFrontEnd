@@ -1,80 +1,88 @@
-# Estrutura de diretorios
+# Estrutura de diretórios
 
-Arvore de `src/` (confirmada via listagem direta do repositorio):
+Árvore de `src/`, extraída da listagem do repositório (revisão de 01/10/2026):
 
 ```
 src/
-  assets/              Ativos estaticos (ex.: rooster-logo.png.asset.json)
+  assets/              Recursos estáticos (por exemplo, rooster-logo.png.asset.json)
   components/
-    rooster/           Componentes de dominio do Rooster One (nao genericos)
-      hub/              CRUD generico do Hub, catalogo/contexto de permissoes
-      desk/             Store e widgets especificos do Desk
-      rooms/            badges.tsx, labels.ts (rotulos/tons/helpers canonicos) e mock-data.ts (hoje so TIPOS)
-      assets/           Store, formulario e permissions.ts do Assets
+    rooster/           Componentes de domínio do Rooster One (não genéricos)
+      hub/              CRUD genérico do Hub; catálogo e contexto de permissões
+      desk/             Estado e componentes específicos do Desk
+      rooms/            badges.tsx, labels.ts (rótulos, tons e funções auxiliares) e mock-data.ts (apenas tipos)
+      assets/           Estado, formulário e permissions.ts do Assets
       finance/          badges.tsx, format.ts e permissions.ts do Finance
-      student/          Busca global (student/global-search.tsx), ui.tsx e mock-data.ts (avisos/documentos de exemplo do portal)
-      academy/          manage/ = abas de gestao academica (disciplines/classes/teachers/students/calendar-tab.tsx + user-picker.tsx); badges.tsx, permissions.ts e event-labels.ts (EVENT_TONE/EVENT_LABEL)
-      learn/            badges.tsx; forms-store.ts = construtor de formularios local (sem endpoint), semeado por forms-seed.ts
-      boost/            manage/ = abas de gestao do curso (badges, conteudo, detalhes, alunos/chat)
-      auth-context.tsx        Sessao real (login/logout)
-      role-context.tsx        Perfil de interface DEDUZIDO das permissoes reais (deriveRole) + useCurrentPerson() (nome do usuario logado)
-      notifications/          Notificacoes reais: use-notificacoes.ts (estado compartilhado + polling), notification-bell.tsx (sino da barra superior), notifications-list.tsx (pagina completa)
-      theme-context.tsx       Tema claro/escuro (localStorage)
-      module-config.ts        Catalogo de modulos/menus e roles permitidas
-      app-shell.tsx            Layout autenticado (ver 01-arquitetura.md)
-      app-sidebar.tsx          Menu lateral
-      app-topbar.tsx           Barra superior (busca, sino de notificacoes, tema, logout)
-      page-header.tsx          Cabecalho padrao de pagina
-      global-command-palette.tsx  Command palette global (Ctrl/Cmd+K): GlobalSearchProvider + GlobalCommandPalette, montados no app-shell
-    shared/            Componentes de UI genericos reutilizaveis entre modulos
-      primitives.tsx    Chip, StatusChip, StatCard, SectionCard, Avatar, EmptyState, Btn, Table, Pagination
-      data-table.tsx    DataTable generica (sort, paginacao, empty state)
-      crud-page.tsx     CrudHeader, CrudToolbar, Breadcrumbs
-      overlays.tsx      Modal, Drawer, ConfirmDialog
-      form.tsx          Field, TextInput, TextArea, SelectInput, FileUpload
-      dropdown.tsx      PopoverSelect (base do SelectInput/Select)
+      student/          Busca global (student/global-search.tsx), ui.tsx e mock-data.ts (avisos e documentos de exemplo do portal)
+      academy/          manage/ (abas de gestão acadêmica: disciplinas, turmas, professores, alunos, calendário e user-picker.tsx);
+                        badges.tsx, permissions.ts e event-labels.ts (EVENT_TONE e EVENT_LABEL)
+      learn/            badges.tsx; forms-store.ts (construtor local de formulários, sem endpoint), inicializado por forms-seed.ts
+      boost/            manage/ (abas de gestão do curso: identificação, conteúdo, detalhes, alunos e conversas)
+      auth-context.tsx        Sessão (login e logout)
+      role-context.tsx        Perfil de interface deduzido das permissões efetivas (deriveRole) e useCurrentPerson() (nome do usuário)
+      notifications/          Notificações: use-notificacoes.ts (estado compartilhado e consulta periódica),
+                              notification-bell.tsx (ícone da barra superior) e notifications-list.tsx (página completa)
+      theme-context.tsx       Tema claro e escuro (localStorage)
+      module-config.ts        Catálogo de módulos e menus e perfis permitidos
+      app-shell.tsx           Layout autenticado (ver 01-arquitetura.md)
+      app-sidebar.tsx         Menu lateral
+      app-topbar.tsx          Barra superior (busca, notificações, tema e saída)
+      page-header.tsx         Cabeçalho padrão de página
+      global-command-palette.tsx  Paleta de comandos global (Ctrl/Cmd+K): GlobalSearchProvider e GlobalCommandPalette, montados no app-shell
+    shared/            Componentes genéricos de interface, reutilizados entre módulos
+      primitives.tsx    Chip, StatusChip, StatCard, SectionCard, Avatar, EmptyState, Btn, Table e Pagination
+      data-table.tsx    DataTable genérica (ordenação, paginação e estado vazio)
+      crud-page.tsx     CrudHeader, CrudToolbar e Breadcrumbs
+      overlays.tsx      Modal, Drawer e ConfirmDialog
+      form.tsx          Field, TextInput, TextArea, SelectInput e FileUpload
+      dropdown.tsx      PopoverSelect (base de SelectInput e Select)
       tabs.tsx, tree-view.tsx
-      index.ts          Reexporta tudo (import unico via "@/components/shared")
-    ui/                Primitivos Radix/shadcn (button, dialog, table, sidebar, command, etc.) - form.tsx foi removido
+      index.ts          Reexportação (importação única por "@/components/shared")
+    ui/                Primitivos Radix/shadcn (button, dialog, table, sidebar, command etc.)
   hooks/
-    use-mobile.tsx              Hook de breakpoint (usado pela sidebar responsiva)
-    use-ticket-socket.ts        WebSocket do chat do Desk - ver 06-integracao-api.md
-    use-boost-conversas-socket.ts  WebSocket das conversas do Boost (lado orientador): sala da conversa aberta + aviso da caixa de entrada
+    use-mobile.tsx                 Detecção de largura de tela (menu lateral responsivo)
+    use-ticket-socket.ts           WebSocket da conversa do Desk (ver 06-integracao-api.md)
+    use-boost-conversas-socket.ts  WebSocket das conversas do Boost (orientador): sala da conversa aberta e aviso da caixa de entrada
     use-boost-portal-socket.ts     WebSocket da conversa do aluno externo com o orientador
   lib/
-    utils.ts             cn() (clsx + tailwind-merge)
-    error-capture.ts      Captura de erro fora de banda para o SSR
-    error-page.ts         HTML estatico de fallback de erro
-    lovable-error-reporting.ts  Ponte de telemetria com o editor Lovable
+    utils.ts                    cn() (clsx e tailwind-merge)
+    error-capture.ts            Captura de erro para a renderização no servidor
+    error-page.ts               Página HTML estática de erro
+    lovable-error-reporting.ts  Integração de telemetria com o editor Lovable
   mock/
-    database/           Nome historico. Hoje sao 10 arquivos, e nenhum alimenta a aplicacao em runtime:
-                        4 deles (rooms, blocks, campuses, reservations) sao SO reexport de tipo;
-                        os demais (assets*, tickets, deskCategories) guardam tipos e dados de exemplo
-                        que nao sao lidos pelas telas reais. Ver docs/engineering/08-divida-tecnica.md
-                        (limpeza de codigo morto) no repo do backend.
-  routes/              Rotas por arquivo (TanStack Router) - ver 03-paginas-e-rotas.md
-    README.md            Convencao oficial de nomes de arquivo de rota
-    __root.tsx            Root route / shell HTML / providers globais
+    database/          Denominação histórica. Contém dez arquivos, nenhum utilizado pela aplicação em execução:
+                       quatro (rooms, blocks, campuses e reservations) apenas reexportam tipos; os demais
+                       (assets*, tickets e deskCategories) contêm tipos e dados de exemplo não consumidos pelas telas.
+                       Ver docs/engineering/08-divida-tecnica.md, no repositório do backend.
+  routes/              Rotas por arquivo (TanStack Router); ver 03-paginas-e-rotas.md
+    README.md            Convenção de nomes dos arquivos de rota
+    __root.tsx           Rota raiz, documento HTML e providers globais
   services/
-    hub/                Cliente HTTP central e servicos do Rooster Hub (backend real)
-      client.ts           request/uploadFile/requestBlob, ApiError/ApiUnavailableError
-      session.ts           Sessao JWT (localStorage)
-      mapped-resource.ts    mapResource(): traducao de campos PT (backend) / EN (tela)
-      types.ts              Tipos espelhando os DTOs/schema Prisma do backend
-      validation.ts          Helpers de validacao client-side
-      index.ts               createResource(), HubResource, offlineState, servicos do Hub
-    boost-portal/       Sessao e cliente HTTP SEPARADOS do portal publico do Boost
-      auth-context.tsx    Sessao do aluno externo (BoostUsuario), independente do Hub
-      client.ts           Cliente HTTP proprio (token com claim tipo='boost')
+    hub/                Cliente HTTP central e serviços do Rooster Hub
+      client.ts           request, uploadFile, requestBlob e uploadFileWithProgress; ApiError e ApiUnavailableError; renovação de sessão
+      session.ts          Sessão (access token e refresh token, em localStorage)
+      mapped-resource.ts  mapResource(): conversão de campos entre a nomenclatura do backend e a das telas
+      types.ts            Tipos correspondentes aos DTOs e ao schema Prisma do backend
+      validation.ts       Funções auxiliares de validação no cliente
+      notificacoes.ts     Serviço da caixa de notificações
+      configuracoes.ts    Serviço de configurações (e-mail)
+      index.ts            createResource(), HubResource, offlineState e serviços do Hub
+    boost-portal/       Sessão e cliente HTTP próprios do portal público do Boost
+      auth-context.tsx    Sessão do aluno externo (BoostUsuario), independente do Hub
+      client.ts           Cliente HTTP próprio (token com tipo='boost')
       session.ts          Chaves de localStorage distintas das do Hub
-      cursos.service.ts   Catalogo/matricula/progresso do portal publico
-    mock-api/           Um "*.service.ts" por modulo. Nome historico: TODOS os 9 falam com a API
-                        real via services/hub/client.ts - nenhum le dado mockado em runtime.
-  router.tsx           createRouter() + QueryClient
-  server.ts            Entrypoint de fetch do servidor (Nitro/Cloudflare)
-  start.ts             createStart() + middleware de erro
+      cursos.service.ts   Catálogo, matrícula, progresso, conversa e verificação de certificado
+    mock-api/           Um "*.service.ts" por módulo. Denominação histórica: os nove serviços comunicam-se com a API
+                        por services/hub/client.ts, e nenhum utiliza dados simulados em execução.
+  test/
+    setup.ts            Configuração dos testes (Vitest e Testing Library)
+  router.tsx           createRouter() e QueryClient
+  server.ts            Ponto de entrada do servidor (Nitro)
+  start.ts             createStart() e middleware de erro
   styles.css           Entrada do Tailwind
-  routeTree.gen.ts     Gerado - nao editar
+  routeTree.gen.ts     Arquivo gerado; não deve ser editado
 ```
 
-Status: Implementado (arvore extraida da listagem real do repositorio).
+Os testes automatizados residem junto ao código testado, em arquivos `*.test.ts` e `*.test.tsx` (por exemplo,
+`src/services/hub/client.test.ts` e `src/components/shared/acessibilidade.test.tsx`).
+
+Situação: implementado (árvore extraída da listagem do repositório).

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Search } from "lucide-react";
-import { DOCUMENTS } from "./mock-data";
 import { studentService } from "@/services/mock-api/student.service";
 import { learnService } from "@/services/mock-api/learn.service";
 import { financeService } from "@/services/mock-api/finance.service";
@@ -15,6 +14,7 @@ const STATIC_HITS: Hit[] = [
   { id: "p-cal", label: "Calendário acadêmico", group: "Portal", to: "/student/calendar" },
   { id: "p-prof", label: "Perfil acadêmico", group: "Portal", to: "/student/profile" },
   { id: "p-not", label: "Notificações", group: "Portal", to: "/student/notifications" },
+  { id: "p-docs", label: "Central de documentos", group: "Portal", to: "/student/documents" },
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -22,10 +22,7 @@ const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,
 export function StudentGlobalSearch() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  const [index, setIndex] = useState<Hit[]>([
-    ...DOCUMENTS.map((d) => ({ id: `doc-${d.id}`, label: d.name, group: "Documentos", to: "/student/documents" })),
-    ...STATIC_HITS,
-  ]);
+  const [index, setIndex] = useState<Hit[]>(STATIC_HITS);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
