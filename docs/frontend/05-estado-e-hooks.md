@@ -1,44 +1,74 @@
 # Estado e Hooks
 
-## Contexts globais (montados no `__root.tsx`)
+## Contextos globais (montados em `__root.tsx`)
 
-`QueryClientProvider → ThemeProvider → AuthProvider → RoleProvider` — ver `01-arquitetura.md`.
+`QueryClientProvider → ThemeProvider → AuthProvider → RoleProvider`; ver `01-arquitetura.md`.
 
-- **`auth-context.tsx` (`useAuth`)** — sessão real: `authed`, `ready`, `usuario`, `login`, `logout`, `requestPasswordReset`, `resetPassword`.
-- **`role-context.tsx` (`useRole`, `useCurrentPerson`)** — o perfil de interface (admin, professor, aluno…) é **deduzido das permissões reais da sessão** (`deriveRole`), sem troca manual; `useCurrentPerson()` devolve nome e iniciais do usuário realmente logado. Ver `08-autorizacao.md`.
-- **`notifications/use-notificacoes.ts` (`useNotificacoes`)** — caixa de entrada real, com **um único estado compartilhado** entre o sino da barra superior, a página `/notifications` e o painel do aluno (assim os três mostram sempre o mesmo número de não lidas). Consulta `GET /notificacoes/minhas` ao montar, a cada 30 s e ao voltar o foco à aba; marcar como lida é otimista (atualiza a tela na hora e recarrega se a API falhar); limpa a caixa ao trocar de usuário.
-- **`theme-context.tsx`** — tema claro/escuro, persistido em `localStorage`.
+- **`auth-context.tsx` (`useAuth`)**: sessão: `authed`, `ready`, `usuario`, `login`, `logout`,
+  `requestPasswordReset` e `resetPassword`.
+- **`role-context.tsx` (`useRole` e `useCurrentPerson`)**: o perfil de interface (administrador, professor, aluno
+  etc.) é **deduzido das permissões efetivas da sessão** (`deriveRole`), sem troca manual; `useCurrentPerson()`
+  devolve o nome e as iniciais do usuário autenticado. Ver `08-autorizacao.md`.
+- **`notifications/use-notificacoes.ts` (`useNotificacoes`)**: caixa de entrada, com **um único estado
+  compartilhado** entre o ícone da barra superior, a página `/notifications` e o painel do aluno, que exibem sempre a
+  mesma quantidade de não lidas. Consulta `GET /notificacoes/minhas` na montagem, a cada 30 segundos e no retorno do
+  foco à aba; a marcação como lida é otimista (atualiza a tela de imediato e recarrega em caso de falha da API); a
+  caixa é limpa na troca de usuário.
+- **`theme-context.tsx`**: tema claro ou escuro, persistido em `localStorage`.
 
-## Contexts montados dentro de `AppShell` (só em rota autenticada)
+O portal do Boost possui contexto de autenticação próprio (`src/services/boost-portal/auth-context.tsx`), montado no
+layout `boost-portal.tsx`; ver `07-autenticacao.md`.
 
-- **`PermissionProvider`** (`hub/permission-context.tsx`) — permissões efetivas para controle de UI (esconder/mostrar menu e ação). Ver `08-autorizacao.md`.
-- **`AssetsProvider`** (`assets/store.tsx`) — só dentro de `/assets`: estado de patrimônio, categorias, setores, movimentações, com métodos que já chamam a API real (`registerMovement`, `returnLoan`, etc.).
-- **`SidebarProvider`** — estado de colapso do menu lateral (Radix/shadcn).
+## Contextos montados no `AppShell` (apenas em rota autenticada)
 
-## `@tanstack/react-query` — instalado, não usado para data fetching
+- **`PermissionProvider`** (`hub/permission-context.tsx`): permissões efetivas para o controle da interface
+  (exibição de menus e ações). Ver `08-autorizacao.md`.
+- **`AssetsProvider`** (`assets/store.tsx`): apenas em `/assets`; estado de patrimônio, categorias, setores e
+  movimentações, com métodos que acionam a API (`registerMovement`, `returnLoan` etc.).
+- **`SidebarProvider`**: estado de recolhimento do menu lateral (Radix/shadcn).
 
-`QueryClient` é criado em `router.tsx` e o `QueryClientProvider` envolve toda a aplicação, mas **nenhuma tela usa `useQuery`/`useMutation`** — confirmado por busca em todo `src/`. Toda a busca de dado real segue o padrão manual `useEffect` + `useState` chamando um método de `src/services/mock-api/*.service.ts` diretamente. O TanStack Query está com a infraestrutura pronta (client + provider) mas não é, hoje, o mecanismo de data fetching do app.
+## `@tanstack/react-query`: instalado, sem uso na busca de dados
 
-## Padrão predominante de busca de dado em tela
+O `QueryClient` é criado em `router.tsx`, e o `QueryClientProvider` envolve toda a aplicação, mas **nenhuma tela
+utiliza `useQuery` ou `useMutation`**, conforme verificado por busca em `src/`. A busca de dados segue o padrão manual
+`useEffect` e `useState`, com chamada direta a método de `src/services/mock-api/*.service.ts`. A infraestrutura do
+TanStack Query está disponível, mas não constitui, atualmente, o mecanismo de busca de dados da aplicação.
+
+## Padrão predominante de busca de dados
 
 ```tsx
 const [dados, setDados] = useState<T[]>([]);
 useEffect(() => { algumService.getAll().then(setDados); }, []);
 ```
 
-Repetido em praticamente toda tela que lista dado real — não há um hook customizado tipo `useResource` reaproveitado entre módulos (cada tela declara seu próprio `useState`/`useEffect`).
+O padrão repete-se nas telas que relacionam dados; não há hook personalizado reutilizado entre módulos (por exemplo,
+`useResource`), e cada tela declara os próprios `useState` e `useEffect`.
 
-As telas de Academy (gestão), Learn e Student seguem o mesmo padrão desde que passaram a consumir API real:
+As telas de Academy (gestão), Learn e Student seguem o mesmo padrão:
 
-- **Recarga após mutação**: as abas de `academy.manage.tsx` usam um contador `const [refresh, setRefresh] = useState(0)` como dependência do `useEffect` de busca; toda ação de criar/editar/excluir/ativar chama `setRefresh((r) => r + 1)` no final para forçar um novo `getAll()` em vez de atualizar o estado local otimisticamente.
-- **Estado "sem vínculo" em telas de aluno**: as rotas `/student/*` e `/learn/student` chamam `studentService.getMyEnrollments()`/`learnService.getMyActivities()` no `useEffect` e capturam o erro num `catch(() => setNoLink(true))` — quando o usuário logado não tem `Aluno` vinculado, a tela renderiza um `EmptyState` ("Sem vínculo de aluno") em vez de propagar o erro. Ver o padrão completo (por que isso não é um `ApiError`) em `10-tratamento-erros.md`.
-- Nenhuma dessas telas passou a usar `react-query` — o padrão manual `useEffect` + `useState` permanece o único mecanismo de data fetching também em Academy/Learn/Student.
+- **Recarga após alteração**: as abas de `academy.manage.tsx` utilizam o contador
+  `const [refresh, setRefresh] = useState(0)` como dependência do `useEffect` de busca; toda ação de criação,
+  edição, exclusão ou ativação executa `setRefresh((r) => r + 1)` ao final, forçando nova consulta, em vez de
+  atualizar o estado local de forma otimista.
+- **Estado "sem vínculo" nas telas do aluno**: as rotas `/student/*` e `/learn/student` chamam
+  `studentService.getMyEnrollments()` ou `learnService.getMyActivities()` no `useEffect` e tratam o erro em
+  `catch(() => setNoLink(true))`; quando o usuário não possui `Aluno` vinculado, a tela exibe `EmptyState` ("Sem
+  vínculo de aluno"), sem propagar o erro. Ver `10-tratamento-erros.md`.
+- Nenhuma dessas telas utiliza `react-query`; o padrão manual permanece o único mecanismo de busca de dados.
 
-## Hooks customizados (`src/hooks/`)
+## Hooks personalizados (`src/hooks/`)
 
-- **`use-mobile.tsx`** — hook de breakpoint, usado pela sidebar responsiva.
-- **`use-ticket-socket.ts`** — conecta ao WebSocket do backend (`namespace /desk`, ver `docs/engineering/05-fluxos-tecnicos.md` no backend) para receber push de mensagem nova em um chamado aberto; usa `getApiToken()` de `services/hub/session.ts` para autenticar o socket.
+- **`use-mobile.tsx`**: detecção de largura de tela, utilizada pelo menu lateral responsivo.
+- **`use-ticket-socket.ts`**: conexão ao WebSocket do backend (namespace `/desk`; ver
+  `docs/engineering/05-fluxos-tecnicos.md` no repositório do backend) para o recebimento de novas mensagens no chamado
+  aberto, autenticada por `getApiToken()` (`services/hub/session.ts`).
+- **`use-boost-conversas-socket.ts`**: WebSocket das conversas do Boost para o orientador (namespace `/boost`), com a
+  sala da conversa aberta e os avisos da caixa de entrada.
+- **`use-boost-portal-socket.ts`**: WebSocket da conversa do aluno externo com os orientadores, autenticado pelo
+  token do portal do Boost.
 
 ## Estado local de formulário
 
-Sem `react-hook-form` (removido do `package.json` na limpeza de código morto de setembro/2026 — não tinha uso real) — formulários usam `useState` por campo e uma função de validação síncrona por campo (ex.: `HubField.validate` em `HubCrud`). Ver `09-validacoes.md`.
+Não há `react-hook-form` (removido em setembro de 2026, por falta de uso): os formulários utilizam `useState` por
+campo e função de validação síncrona por campo (por exemplo, `HubField.validate` no `HubCrud`). Ver
+`09-validacoes.md`.

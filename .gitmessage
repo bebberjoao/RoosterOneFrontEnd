@@ -1,7 +1,7 @@
-# <tipo>(<escopo>): <assunto no imperativo, minusculo, sem acento, ate 72 caracteres>
+# <tipo>(<escopo>): <assunto no imperativo, em minusculas, sem acento, ate 72 caracteres>
 #
-# <corpo: explique o PORQUE da mudanca. O diff ja mostra o que mudou.
-#  Se for correcao, diga qual era o sintoma. Acento pode, aqui no corpo.>
+# <corpo: motivacao da mudanca; o diff ja mostra o que foi alterado.
+#  Em correcao, descrever o sintoma. O corpo admite acentuacao.>
 #
 # <rodape: BREAKING CHANGE: ... / Refs: ...>
 #
@@ -9,10 +9,10 @@
 # TIPOS
 #   feat     funcionalidade nova visivel para algum usuario
 #   fix      correcao de defeito em comportamento existente
-#   docs     so documentacao (docs/, README, comentario explicativo)
-#   refactor mudanca de estrutura sem alterar comportamento observavel
-#   test     acrescimo ou correcao de teste
-#   perf     mudanca cujo objetivo e desempenho
+#   docs     exclusivamente documentacao (docs/, README, comentarios)
+#   refactor alteracao de estrutura sem mudanca de comportamento observavel
+#   test     inclusao ou correcao de teste
+#   perf     alteracao com objetivo de desempenho
 #   chore    manutencao (dependencia, script, configuracao)
 #   build    processo de build ou dependencia de build
 #   ci       pipeline
@@ -21,14 +21,14 @@
 #   hub  desk  rooms  assets  academy  learn  student  finance  boost
 #   auth  ui  deps  docs
 #
-# LEMBRETES ANTES DE COMMITAR
-#   [ ] documentacao impactada foi atualizada NESTE commit
-#   [ ] a Visao (useRole) nao decide o que buscar da API, so o que mostrar
-#   [ ] regra de negocio nao foi replicada aqui (o backend revalida)
+# VERIFICACOES ANTES DO COMMIT
+#   [ ] documentacao impactada atualizada NESTE commit, em registro formal
+#   [ ] o perfil (useRole) nao determina o que buscar na API, apenas o que exibir
+#   [ ] regra de negocio nao replicada no frontend (o backend revalida)
 #   [ ] estado de carregamento usa esqueleto; lista vazia usa EmptyState
-#   [ ] import de componente compartilhado usa o barril @/components/shared
-#   [ ] tsc --noEmit limpo
-#   [ ] npm run build concluindo
+#   [ ] componentes compartilhados importados por @/components/shared
+#   [ ] tsc --noEmit sem erros e npm test aprovado
+#   [ ] npm run build concluido
 #
 # Processo completo: docs/engineering/12-processo-de-desenvolvimento.md (repo do backend)
 # ----------------------------------------------------------------------

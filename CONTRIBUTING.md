@@ -1,78 +1,104 @@
-# Contribuindo — Rooster One (frontend)
+# Contribuição — Rooster One (frontend)
 
-Porta de entrada prática. O processo completo é comum aos dois repositórios e está em [`docs/engineering/12-processo-de-desenvolvimento.md`](../RoosterOneBackend-main/docs/engineering/12-processo-de-desenvolvimento.md), no repositório do backend.
+Orientações práticas de contribuição. O processo completo é comum aos dois repositórios e está descrito em
+[`docs/engineering/12-processo-de-desenvolvimento.md`](../RoosterOneBackend-main/docs/engineering/12-processo-de-desenvolvimento.md),
+no repositório do backend.
 
-## Preparar o ambiente
+## Preparação do ambiente
 
 ```bash
 npm install
-npm run dev                   # Vite escolhe a porta a partir de 8080
+cp .env.example .env          # VITE_API_URL apontando para o backend
+npm run dev                   # o Vite seleciona porta a partir de 8080
 git config commit.template .gitmessage
 ```
 
-Crie um `.env` apontando para o backend:
+Conteúdo mínimo do `.env`:
 
 ```
 VITE_API_URL=http://localhost:3000
 ```
 
-Sem a variável, o cliente assume `http://localhost:3000`. Com o backend fora do ar, a interface cai num **modo offline** com dado em memória e exibe um aviso — isso é comportamento deliberado do cliente HTTP, não falha de configuração.
+Na ausência da variável, o cliente adota `http://localhost:3000`. O valor deve conter apenas o endereço do servidor,
+sem o prefixo `/v1`, aplicado automaticamente. Com o backend indisponível, a interface exibe aviso de ausência de
+conexão, comportamento deliberado do cliente HTTP, e não falha de configuração. Toda variável iniciada por `VITE_` é
+incorporada ao pacote distribuído e, portanto, pública.
 
-## Ciclo de uma mudança
+## Ciclo de uma alteração
 
-1. **Entender antes de mudar.** `docs/frontend/` descreve a aplicação como ela é de fato.
-2. **Mudar o código.**
-3. **Atualizar a documentação impactada no mesmo commit.** Não é opcional.
-4. **Verificar:**
+1. **Compreensão prévia.** `docs/frontend/` descreve a aplicação vigente.
+2. **Alteração do código.**
+3. **Atualização da documentação impactada no mesmo commit**, em registro técnico-formal, inclusive do Manual do
+   Usuário quando a alteração afetar telas. A etapa é obrigatória.
+4. **Verificação:**
    ```bash
    npx tsc --noEmit
+   npm test
    npm run build
    ```
-5. **Commitar** no padrão Conventional Commits.
+5. **Commit** no padrão Conventional Commits.
 
 ## Commit
 
 ```
-<tipo>(<escopo>): <assunto no imperativo, minusculo, sem acento, ate 72 caracteres>
+<tipo>(<escopo>): <assunto no imperativo, em minusculas, sem acento, ate 72 caracteres>
 
-<corpo: o porque da mudanca>
+<corpo: a motivacao da mudanca>
 ```
 
-Tipos: `feat`, `fix`, `docs`, `refactor`, `test`, `perf`, `chore`, `build`, `ci`.
-Escopos: `hub`, `desk`, `rooms`, `assets`, `academy`, `learn`, `student`, `finance`, `boost`, `auth`, `ui`, `deps`.
+Tipos: `feat`, `fix`, `docs`, `refactor`, `test`, `perf`, `chore`, `build` e `ci`.
+Escopos: `hub`, `desk`, `rooms`, `assets`, `academy`, `learn`, `student`, `finance`, `boost`, `auth`, `ui` e `deps`.
 
-Assunto **sem acento** (convenção do histórico); corpo pode ter acento normalmente.
+O assunto é redigido **sem acentuação** (convenção do histórico); o corpo admite acentuação.
 
-## Armadilhas conhecidas deste código
+## Falhas recorrentes do projeto
 
-Cada item abaixo já causou um defeito real aqui.
+Cada item abaixo já originou defeito no projeto.
 
-- **O perfil (`useRole`) nunca decide o que buscar da API.** Existem três camadas: a permissão real da sessão (`useCan`/`useCanAccess`, única com valor de segurança), o perfil de interface deduzido dessas permissões (`useRole`, só agrupa menu e botões — não há mais seletor manual de "Visão") e os `permissions.ts` por módulo. Cinco telas já usaram o perfil para decidir o que buscar — resultado: 403 do backend quando o perfil não refletia a permissão real.
-- **A interface nunca é fronteira de segurança.** Esconder botão é experiência de uso; o backend revalida tudo.
-- **Antes de apagar algo por "não ter importador", busque também o import relativo** (`./mock-data`), não só o caminho absoluto. Duas remoções quase quebraram o build por causa disso.
-- **Regra de negócio não se replica aqui.** Conflito de horário, capacidade, permissão — envie e trate o erro que a API retornar. Duplicar a regra cria duas fontes de verdade.
-- **`services/mock-api/` é nome histórico.** Todos os 9 serviços falam com a API real; nenhum lê dado mockado em runtime.
-- Sua mudança invalidou alguma afirmação de ausência na documentação ("ainda é mock", "não tem backend")? É o erro de documentação mais frequente do projeto.
+- **O perfil (`useRole`) não determina quais dados buscar na API.** Há três camadas: a permissão efetiva da sessão
+  (`useCan` e `useCanAccess`, a única com valor de segurança na interface), o perfil deduzido dessas permissões
+  (`useRole`, que apenas organiza menus e botões) e os arquivos `permissions.ts` por módulo. Cinco telas já utilizaram
+  o perfil para decidir a busca de dados, com resposta `403` do backend quando o perfil não correspondia à permissão.
+- **A interface não constitui fronteira de segurança.** A ocultação de botões atende à experiência de uso; o backend
+  revalida todas as operações.
+- **Antes de remover artefato considerado sem importador, deve-se buscar também a importação relativa**
+  (`./mock-data`), e não apenas o caminho absoluto. Duas remoções quase comprometeram o build por essa razão.
+- **Regras de negócio não são replicadas no frontend.** Conflito de horário, capacidade e permissões são verificados
+  pelo backend; a requisição é enviada, e o erro devolvido é tratado. A duplicação criaria duas fontes de verdade.
+- **Promessas devem tratar a rejeição.** `.then()` sem `.catch()` produz falha silenciosa (ver
+  `docs/frontend/10-tratamento-erros.md`).
+- **`services/mock-api/` é denominação histórica.** Os nove serviços comunicam-se com a API, e nenhum utiliza dados
+  simulados em execução.
+- A alteração pode invalidar afirmação de ausência na documentação ("ainda é simulado", "não tem backend"), que é o
+  erro de documentação mais frequente do projeto.
 
 ## Padrões de interface
 
-- Estado de carregamento usa esqueleto (`LoadingBlock`/`LoadingCards`), nunca texto "Carregando…".
-- Lista vazia usa `EmptyState`, nunca tabela vazia sem explicação.
-- Operação de escrita emite toast (`sonner`) de sucesso ou erro.
-- Importe componentes compartilhados pelo barril `@/components/shared`, não pelo caminho completo.
-- Diálogo e gaveta precisam de rótulo associado e armadilha de foco (já resolvido pelos componentes de `shared/overlays.tsx`).
+- O estado de carregamento utiliza esqueleto (`LoadingBlock` ou `LoadingCards`), e nunca o texto "Carregando…".
+- A lista vazia utiliza `EmptyState`, e nunca tabela vazia sem explicação.
+- Operações de escrita emitem aviso (`sonner`) de sucesso ou de erro.
+- Os componentes compartilhados são importados por `@/components/shared`, e não pelo caminho completo.
+- Diálogos e painéis laterais exigem rótulo associado e retenção de foco (atendidos pelos componentes de
+  `shared/overlays.tsx`).
 
 ## Testes
 
-**Não há framework de teste instalado neste repositório** — é a maior lacuna de qualidade do projeto (risco R-06). A rede de segurança atual é `tsc --noEmit` mais o build de produção, que pegam erro de tipo e de importação, mas não erro de comportamento. Toda verificação de interface é manual.
+```bash
+npm test     # Vitest e Testing Library: 70 testes em 6 arquivos
+```
 
-## Onde fica o quê
+A suíte cobre lógica pura, o cliente HTTP, componentes compartilhados e acessibilidade, e é executada pelo pipeline de
+integração contínua. Não há teste de jornada completa em navegador (Playwright ou Cypress); a verificação das telas
+permanece manual, com o backend em execução (risco R-06 em `docs/engineering/13-governanca.md`, no repositório do
+backend).
+
+## Localização dos assuntos
 
 | Assunto | Documento |
 |---|---|
 | Arquitetura do frontend | `docs/frontend/01-arquitetura.md` |
-| Estrutura de pastas | `docs/frontend/02-estrutura.md` |
+| Estrutura de diretórios | `docs/frontend/02-estrutura.md` |
 | Rotas e telas | `docs/frontend/03-paginas-e-rotas.md` |
-| As três camadas de autorização | `docs/frontend/08-autorizacao.md` |
+| Camadas de autorização | `docs/frontend/08-autorizacao.md` |
 | Integração com a API | `docs/frontend/06-integracao-api.md` |
-| Processo, governança e riscos | `docs/engineering/` no repositório do backend |
+| Processo, governança e riscos | `docs/engineering/`, no repositório do backend |

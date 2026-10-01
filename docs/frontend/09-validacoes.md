@@ -1,30 +1,51 @@
-# Validações (Frontend)
+# Validações (frontend)
 
-## Sem `react-hook-form`/`zod`
+## Ausência de `react-hook-form` e `zod`
 
-Nenhuma tela do projeto usa essas bibliotecas — a única referência a `react-hook-form`/`zodResolver` em todo `src/` era `components/ui/form.tsx`, um componente base (padrão shadcn) que nenhuma tela instanciava. Removidos na limpeza de código morto de setembro/2026 (`react-hook-form`, `zod`, `@hookform/resolvers`, `date-fns` do `package.json`, e o arquivo `components/ui/form.tsx`). Toda validação de formulário real é manual.
+Nenhuma tela utiliza essas bibliotecas; a única referência a `react-hook-form` e `zodResolver` em `src/` era
+`components/ui/form.tsx`, componente base (padrão shadcn) não instanciado por nenhuma tela. Foram removidos em
+setembro de 2026 (`react-hook-form`, `zod`, `@hookform/resolvers` e `date-fns` do `package.json`, além de
+`components/ui/form.tsx`). Toda validação de formulário é manual.
 
-## Padrão de validação manual — `HubCrud`
+## Padrão de validação manual: `HubCrud`
 
-`src/components/rooster/hub/crud-panel.tsx`. Cada tela de CRUD declara um array de `HubField<T>`:
+`src/components/rooster/hub/crud-panel.tsx`. Cada tela de CRUD declara uma lista de `HubField<T>`:
 
 ```ts
 { name: "email", label: "E-mail", type: "email", required: true, validate: isEmail }
 ```
 
-`validate` é uma função síncrona `(value: string) => string | undefined` — retorna a mensagem de erro ou `undefined` se válido. Helpers reutilizáveis em `services/hub/validation.ts` (`isEmail`, `isCpf`, `len(min, max, label)`). A validação roda no submit do formulário (não em tempo real por tecla), campo a campo, antes de chamar `create`/`update` do service.
+`validate` é função síncrona `(value: string) => string | undefined`, que devolve a mensagem de erro ou `undefined`
+quando o valor é válido. As funções reutilizáveis estão em `services/hub/validation.ts` (`isEmail`, `isCpf` e
+`len(min, max, label)`). A validação é executada no envio do formulário (e não a cada tecla), campo a campo, antes da
+chamada a `create` ou `update` do serviço.
 
-## Validação de negócio feita no backend, não replicada no frontend
+## Regras de negócio validadas no backend
 
-Regras como conflito de horário de reserva, capacidade do ambiente, ou permissão sobre um recurso **não são checadas antes do envio** — o frontend manda a requisição e trata o erro que a API retornar (`ApiError` com a mensagem do backend). Não há duplicação de regra de negócio no cliente.
+Regras como conflito de horário de reserva, capacidade do ambiente e permissão sobre recurso **não são verificadas
+antes do envio**: o frontend envia a requisição e trata o erro devolvido pela API (`ApiError` com a mensagem do
+backend). Não há duplicação de regra de negócio no cliente.
 
 ## Formulários fora do `HubCrud`
 
-Telas mais específicas (ex.: `rooms.book.tsx`, o formulário de reserva) fazem validação própria com `useState` por campo e checagem condicional direta no componente (ex.: `invalidTime`, `overCapacity`, `invalidRepeatUntil` calculados a cada render a partir do estado do formulário), sem um helper compartilhado.
+Telas específicas (por exemplo, `rooms.book.tsx`, formulário de reserva) realizam validação própria com `useState` por
+campo e verificações condicionais no componente (`invalidTime`, `overCapacity` e `invalidRepeatUntil`, calculados a
+cada renderização a partir do estado do formulário), sem função compartilhada.
 
-As telas de Academy (gestão), Learn e Student seguem o mesmo padrão manual — checagem só no clique de salvar, sem `HubCrud`:
+As telas de Academy (gestão), Learn e Student seguem o mesmo padrão manual, com verificação apenas no momento de
+salvar e sem `HubCrud`:
 
-- **Alunos e Professores (`academy.manage.tsx`)** — `students-tab.tsx`/`teachers-tab.tsx` exigem, no cadastro: `usuarioId` preenchido (ou seja, um usuário do Hub escolhido no `UserPicker` — ver `04-componentes.md`), e para Alunos também RA (`ra.trim()`) e curso (`courseId`) não vazios. A checagem é um `if` único antes de chamar `academyService.createStudent`/`createTeacher`, que seta uma mensagem de erro genérica ("Selecione um usuário, informe o RA e o curso.") em vez de erro por campo.
-- **Cadastro de atividade (`learn.classes.tsx`, `learn.activities.$id.tsx`)** — exige apenas título não vazio (`title.trim()`); os demais campos (peso, nota máxima, prazo) têm valor padrão e não bloqueiam o salvamento.
-- **Entrega de atividade pelo aluno (`learn.student.tsx`, `AnswerModal`)** — não há validação client-side de "texto ou anexo obrigatório": a tela permite enviar com texto vazio e nenhum anexo (o backend não expõe um DTO que exija um dos dois — `CreateAtividadeDto`/`EnviarEntregaDto` aceitam `texto` opcional; anexos são enviados em requisições separadas após criar a entrega). Não identificado no código analisado: uma regra de "pelo menos um dos dois" — nem no frontend, nem confirmada no backend a partir daqui.
-- **Correção de entrega (`GradePanel`/`GradeForm` em Learn)** — exige só que `nota` seja um número válido (`Number.isNaN` check); não há checagem client-side contra `maxGrade` (o campo mostra "máx. X" como dica visual, mas não impede enviar um valor maior).
+- **Alunos e professores (`academy.manage.tsx`)**: `students-tab.tsx` e `teachers-tab.tsx` exigem, no cadastro,
+  `usuarioId` preenchido (usuário do Hub selecionado no `UserPicker`; ver `04-componentes.md`) e, para alunos, RA
+  (`ra.trim()`) e curso (`courseId`). A verificação consiste em uma única condição antes da chamada a
+  `academyService.createStudent` ou `createTeacher`, com mensagem de erro geral ("Selecione um usuário, informe o RA e
+  o curso."), e não por campo.
+- **Cadastro de atividade (`learn.classes.tsx` e `learn.activities.$id.tsx`)**: exige apenas título não vazio
+  (`title.trim()`); os demais campos (peso, nota máxima e prazo) possuem valor padrão.
+- **Entrega de atividade pelo aluno (`learn.student.tsx`, `AnswerModal`)**: não há validação no cliente que exija
+  texto ou anexo; a tela permite o envio com texto vazio e sem anexo. O backend aceita `texto` opcional
+  (`EnviarEntregaDto`), e os anexos são enviados em requisições separadas após a criação da entrega; não há regra que
+  exija ao menos um dos dois.
+- **Correção de entrega (`GradePanel` e `GradeForm`, no Learn)**: exige apenas que `nota` seja número válido
+  (verificação `Number.isNaN`); a nota máxima é exibida como indicação ("máx. X"), mas o limite é aplicado pelo
+  backend, que recusa valor superior com `400`.

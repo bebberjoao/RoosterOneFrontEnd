@@ -1,6 +1,8 @@
 # Documentação — Rooster One (Frontend)
 
-Este repositório contém só a documentação específica do **frontend**. O índice central do sistema — visão geral, regras de negócio, backend, API, banco de dados, segurança, engenharia, operações e guias — fica no repositório do backend: [`RoosterOneBackend-main/docs/README.md`](../../RoosterOneBackend-main/docs/README.md).
+Este repositório contém apenas a documentação específica do **frontend**. O índice central do sistema (visão geral,
+regras de negócio, backend, API, banco de dados, segurança, engenharia, operações e guias) encontra-se no repositório
+do backend: [`RoosterOneBackend-main/docs/README.md`](../../RoosterOneBackend-main/docs/README.md).
 
 ## Frontend
 

@@ -1,53 +1,56 @@
-# O que muda e por quê
+# Alteração e motivação
 
-<!-- Qual problema isso resolve? Descreva o problema, não só a solução. -->
+<!-- Descrever o problema tratado, e não apenas a solução adotada. -->
 
-## Como foi verificado
+## Verificação realizada
 
-<!-- Não basta "testei". Diga o quê. Não há teste automatizado neste repositório. -->
+<!-- Indicar o que foi verificado; a menção genérica a "testado" não é suficiente. -->
 
-- [ ] `npx tsc --noEmit` limpo
-- [ ] `npm run build` concluindo
-- [ ] Testado manualmente no navegador: <!-- quais telas, qual perfil de permissão -->
-- [ ] Testado com um usuário **sem** a permissão relevante (o caso negativo)
-- [ ] Verificado em largura de tela reduzida, se mexeu em layout
+- [ ] `npx tsc --noEmit` sem erros
+- [ ] `npm test` aprovado
+- [ ] `npm run build` concluído
+- [ ] Verificação manual no navegador: <!-- telas e perfil de permissão utilizados -->
+- [ ] Verificação com usuário **sem** a permissão pertinente (caso negativo)
+- [ ] Verificação em largura de tela reduzida, em caso de alteração de leiaute
 
 ## Impacto na documentação
 
-**Nenhuma mudança de comportamento entra sem a documentação correspondente.**
+**Nenhuma alteração de comportamento é integrada sem a documentação correspondente, em registro técnico-formal.**
 
-- [ ] Não há impacto na documentação (justifique: ____)
-- [ ] Documentação atualizada neste mesmo PR
+- [ ] Sem impacto na documentação (justificativa: ____)
+- [ ] Documentação atualizada neste pull request
 
-Marque o que foi revisado:
+Itens revisados:
 
-- [ ] `docs/frontend/03-paginas-e-rotas.md` — se criou, removeu ou mudou tela
-- [ ] `docs/frontend/02-estrutura.md` — se criou ou removeu arquivo/pasta
-- [ ] `docs/frontend/08-autorizacao.md` — se mexeu em permissão ou gating
-- [ ] `docs/frontend/06-integracao-api.md` — se mexeu em serviço de API
-- [ ] `permission-catalog.ts` — se criou tela ou ação nova (precisa casar com o seed do backend)
-- [ ] **Alguma afirmação de ausência ("ainda é mock", "não tem backend") ficou desatualizada?**
+- [ ] `docs/frontend/03-paginas-e-rotas.md`, em caso de criação, remoção ou alteração de tela
+- [ ] `docs/frontend/02-estrutura.md`, em caso de criação ou remoção de arquivo ou diretório
+- [ ] `docs/frontend/08-autorizacao.md`, em caso de alteração de permissão ou de controle de exibição
+- [ ] `docs/frontend/06-integracao-api.md`, em caso de alteração de serviço de API
+- [ ] `permission-catalog.ts`, em caso de tela ou ação nova (com correspondência ao seed do backend)
+- [ ] Manual do Usuário, em caso de alteração visível ao usuário
+- [ ] **Alguma afirmação de ausência ("ainda é simulado", "não tem backend") tornou-se incorreta?**
 
-## Checklist de autorização e dados
+## Lista de verificação de autorização e dados
 
-- [ ] A **Visão de demonstração** (`useRole`) não decide *o que buscar* da API — só *o que mostrar*
-- [ ] A permissão real (`useCan`/`useCanAccess`) é quem decide acesso a rota e ação
-- [ ] Nenhuma regra de negócio do backend foi replicada aqui
-- [ ] Tela nova está sob o `AppShell` (herda `RequireAccess` automaticamente)
+- [ ] O perfil de interface (`useRole`) não determina *quais dados buscar*, apenas *o que exibir*
+- [ ] A permissão efetiva (`useCan` e `useCanAccess`) determina o acesso a rotas e ações
+- [ ] Nenhuma regra de negócio do backend foi replicada
+- [ ] A tela nova está no `AppShell` (com `RequireAccess` automático)
+- [ ] Toda promessa possui tratamento de rejeição
 
 ## Padrões de interface
 
-- [ ] Estado de carregamento usa esqueleto (`LoadingBlock`/`LoadingCards`)
-- [ ] Lista vazia usa `EmptyState`
-- [ ] Operação de escrita emite toast de sucesso/erro
-- [ ] Componentes compartilhados importados pelo barril `@/components/shared`
+- [ ] O estado de carregamento utiliza esqueleto (`LoadingBlock` ou `LoadingCards`)
+- [ ] A lista vazia utiliza `EmptyState`
+- [ ] Operações de escrita emitem aviso de sucesso ou de erro
+- [ ] Componentes compartilhados importados por `@/components/shared`
 
 ## Riscos e pontos de atenção
 
-<!-- O que o revisor deve olhar com mais cuidado? -->
+<!-- Aspectos que exigem análise mais cuidadosa do revisor. -->
 
-## Classe de risco da mudança
+## Classe de risco da alteração
 
 - [ ] Baixo (texto, documentação, ajuste visual)
-- [ ] Médio (tela nova, serviço novo, dependência acrescentada)
+- [ ] Médio (tela nova, serviço novo, dependência incluída)
 - [ ] **Alto** (autorização, sessão, cliente HTTP, remoção de dependência)

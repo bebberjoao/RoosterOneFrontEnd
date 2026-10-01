@@ -1,41 +1,87 @@
-# Autorização (Frontend)
+# Autorização (frontend)
 
-## Três sistemas, não um — e eles não fazem a mesma coisa
+## Três mecanismos com finalidades distintas
 
-1. **Permissão real** (`hub/permission-context.tsx`, `PermissionProvider`/`usePermissions()`/`useCanAccess()`/`useCan()`/`RequireAccess`) — a fonte de verdade. Sempre derivada da sessão realmente autenticada (`session.permissoes`, capturada de `acesso.permissoes` na resposta de `POST /auth/login`), nunca de uma persona de demonstração.
-2. **Perfil de interface** (`role-context.tsx`, `useRole()`) — deduzido das permissões reais por `deriveRole` (quem tem `hub.acessos.gerenciar-permissoes` é `admin`; `finance.dashboard.acessar` → `financeiro`; `student.dashboard.acessar` → `aluno`; `academy.manage.acessar` → `coordenador`; `academy.dashboard.acessar` → `professor`; `desk.tickets.encerrar` ou `assets.inventory.movimentar` → `tecnico`; o resto → `institucional`, o perfil menos privilegiado). **O antigo seletor manual de "Visão" (RoleSwitcher) foi removido**: ele deixava qualquer usuário fingir outro perfil e exibia nomes fictícios (Marina Ribeiro etc.) no lugar do usuário logado. O perfil só agrupa a interface (menu, botões); a permissão real continua sendo o teto.
-3. **Catálogo por módulo** (`*/permissions.ts`, ex. `academy/permissions.ts`, `finance/permissions.ts`) — matrizes `Role → ação[]` usadas só pra habilitar/desabilitar **botão** dentro de uma tela já liberada (ex. "Professor não vê o botão 'Nova turma' porque `academyProfessorKeys` não inclui essa ação no backend"). Continuam indexadas pelo perfil deduzido (`useRole()`), não pela permissão real — decisão intencional: são **3 arquivos** pequenos (`academy/permissions.ts`, `assets/permissions.ts`, `finance/permissions.ts`), cobrindo só gating de botão dentro de uma tela à qual o usuário já teve acesso liberado pela camada 1. Os demais módulos resolvem o gating diretamente com `useCan()`. Nunca decidem *o que buscar* da API, só *o que mostrar*.
+1. **Permissão efetiva** (`hub/permission-context.tsx`: `PermissionProvider`, `usePermissions()`, `useCanAccess()`,
+   `useCan()` e `RequireAccess`): fonte de verdade da interface, sempre derivada da sessão autenticada
+   (`session.permissoes`, obtida de `acesso.permissoes` na resposta de `POST /auth/login`).
+2. **Perfil de interface** (`role-context.tsx`, `useRole()`): deduzido das permissões efetivas por `deriveRole` (quem
+   possui `hub.acessos.gerenciar-permissoes` é `admin`; `finance.dashboard.acessar` → `financeiro`;
+   `student.dashboard.acessar` → `aluno`; `academy.manage.acessar` → `coordenador`; `academy.dashboard.acessar` →
+   `professor`; `desk.tickets.encerrar` ou `assets.inventory.movimentar` → `tecnico`; os demais → `institucional`, o
+   perfil de menor privilégio). **O antigo seletor manual de perfil (RoleSwitcher) foi removido**, pois permitia a
+   qualquer usuário simular outro perfil e exibia nomes fictícios no lugar do usuário autenticado. O perfil apenas
+   organiza a interface (menus e botões); a permissão efetiva permanece o limite.
+3. **Catálogo por módulo** (`*/permissions.ts`: `academy/permissions.ts`, `assets/permissions.ts` e
+   `finance/permissions.ts`): matrizes `Perfil → ação[]` utilizadas apenas para habilitar ou desabilitar **botões** em
+   tela já autorizada pela camada 1 (por exemplo, o professor não visualiza o botão "Nova turma", ação ausente de
+   `academyProfessorKeys` no backend). São indexadas pelo perfil deduzido (`useRole()`), por decisão de projeto: são
+   três arquivos pequenos, restritos ao controle de botões. Os demais módulos realizam esse controle diretamente com
+   `useCan()`. Esses arquivos nunca determinam *quais dados buscar* na API, apenas *o que exibir*.
 
-## Camada 1 — Permissão real (`hub/permission-context.tsx`)
+## Camada 1: permissão efetiva (`hub/permission-context.tsx`)
 
-`PermissionProvider` lê `session.usuario`/`session.permissoes` diretamente (via `session.subscribe()`) — nunca compara nome de persona contra usuário real, nunca chama `usuariosService.list()`. `granted` é o `Set<string>` de chaves `modulo.tela.acao` (mesmo formato de `Permissao.nome`) do usuário logado; `hasCustom` é só `usuario !== null` (sessão real ativa).
+`PermissionProvider` lê `session.usuario` e `session.permissoes` diretamente (por `session.subscribe()`), sem
+comparar nomes de perfil e sem consultar `usuariosService.list()`. `granted` é o `Set<string>` das chaves
+`modulo.tela.acao` (mesmo formato de `Permissao.nome`) do usuário autenticado; `hasCustom` corresponde a
+`usuario !== null` (sessão ativa).
 
 ```ts
-const { granted, hasCustom } = usePermissions(); // vem da sessão real, ponto.
+const { granted, hasCustom } = usePermissions(); // obtido exclusivamente da sessão
 ```
 
-`useCanAccess(route)` e `useCan(route, acao)` resolvem a tela pela rota (`findScreenByRoute`, `permission-catalog.ts`) e checam `granted.has(permissionKey(...))`. Enquanto a sessão ainda não foi restaurada (`!hasCustom`), o acesso é liberado por padrão — evita bloquear a tela antes do primeiro `session.restore()` completar; `RequireAccess` espera `ready` antes de decidir, pra não piscar "sem acesso" nesse intervalo.
+`useCanAccess(route)` e `useCan(route, acao)` identificam a tela pela rota (`findScreenByRoute`,
+`permission-catalog.ts`) e verificam `granted.has(permissionKey(...))`. Enquanto a sessão não foi restaurada
+(`!hasCustom`), o acesso é liberado por padrão, para não bloquear a tela antes da conclusão de `session.restore()`; o
+`RequireAccess` aguarda `ready` antes de decidir, evitando a exibição momentânea de "sem acesso".
 
-**Efeito prático**: cada usuário vê o menu do perfil que as próprias permissões indicam, e a permissão real vira um **teto**: nada aparece além do que ele realmente pode acessar. Limitação conhecida: a dedução é por convenção de chaves (as listadas acima); um usuário com combinação atípica de permissões cai no perfil mais próximo pela ordem de verificação, e o backend continua sendo a barreira definitiva.
+**Efeito**: cada usuário visualiza o menu do perfil indicado por suas permissões, e a permissão efetiva constitui um
+**limite**: nada é exibido além do que o usuário pode acessar. Limitação conhecida: a dedução segue a convenção das
+chaves listadas; usuário com combinação atípica de permissões é enquadrado no perfil mais próximo pela ordem de
+verificação, e o backend permanece a barreira definitiva.
 
 ## Catálogo de permissões (`hub/permission-catalog.ts`)
 
-Fonte única do vocabulário `módulo/tela(recurso)/ação` usado tanto pra exibir/esconder elemento de UI quanto pra bater com o `@RequirePermission` do backend. `permissionKey(moduloId, telaId, acaoId)` é sempre o **último segmento da rota** da tela (ou `"dashboard"` quando a tela é a raiz do módulo) — mesma convenção do `prisma/seed-dev.ts` no backend. Uma permissão nova precisa existir nos dois lados com a mesma grafia; não há geração automática de um catálogo a partir do outro nem verificação cruzada automatizada (uma divergência entre os dois só aparece manualmente, via `grep`, ou em produção como 403 inesperado).
+Fonte única do vocabulário `módulo/tela (recurso)/ação`, utilizado tanto para exibir ou ocultar elementos da interface
+quanto para corresponder ao `@RequirePermission` do backend. `permissionKey(moduloId, telaId, acaoId)` utiliza o
+**último segmento da rota** da tela (ou `"dashboard"`, quando a tela é a raiz do módulo), mesma convenção de
+`prisma/seed-dev.ts` no backend. Toda nova permissão deve existir nos dois lados com grafia idêntica; não há geração
+automática de um catálogo a partir do outro nem verificação cruzada automatizada, de modo que divergências são
+identificadas apenas por busca manual ou, em uso, como `403` inesperado.
 
 ## `RequireAccess`
 
-Montado dentro de `AppShell` (`app-shell.tsx`), envolvendo `children` com `<RequireAccess route={pathname}>` — **toda** rota renderizada dentro do `AppShell` já passa por essa checagem automaticamente, sem precisar que o layout de cada módulo (`academy.tsx`, `finance.tsx`, etc.) adicione nada próprio. Bloqueia o conteúdo (tela "Acesso negado") se a ação `acessar` da rota atual não estiver no `granted` resolvido pela Camada 1.
+Montado no `AppShell` (`app-shell.tsx`), envolvendo o conteúdo com `<RequireAccess route={pathname}>`: **toda** rota
+renderizada no `AppShell` é submetida automaticamente à verificação, sem necessidade de tratamento no layout de cada
+módulo. O conteúdo é bloqueado (tela "Acesso negado") quando a ação `acessar` da rota atual não consta de `granted`.
 
-## Combinação no menu (`app-sidebar.tsx`)
+## Composição no menu (`app-sidebar.tsx`)
 
-O menu lateral aplica as camadas 1 e 2 em **E lógico**: `modulesForRole(role)` (perfil deduzido, decide o que aquele papel *veria*) filtrado por `allowsRoute(to)` (permissão real, decide o que o usuário *pode* de verdade) — um item só aparece se as duas condições valerem. Um módulo cuja permissão real falte desaparece do menu mesmo que a Visão ativa devesse mostrá-lo.
+O menu lateral combina as camadas 1 e 2 por **conjunção lógica**: `modulesForRole(role)` (perfil deduzido, que define
+o que o perfil exibiria) filtrado por `allowsRoute(to)` (permissão efetiva, que define o que o usuário pode acessar);
+o item é exibido somente quando as duas condições são satisfeitas.
 
-## Camada 3 — `*/permissions.ts` por módulo
+## Camada 3: `*/permissions.ts` por módulo
 
-Cada módulo com tela de gestão tem seu próprio arquivo (`academy/permissions.ts`, `assets/permissions.ts`, `finance/permissions.ts`, etc.) exportando um tipo de ação específico do módulo (ex. `FinancePerm = "viewDashboard" | "manageCharges" | ...`) e uma `MATRIX: Record<Role, Perm[]>` indexada pelo perfil deduzido das permissões. Usado dentro de componentes de tela pra decidir se um botão específico aparece habilitado (`academyCan(role, "manageClasses")`), nunca pra decidir se a tela inteira é acessível (isso é sempre a Camada 1, via `AppShell`/`RequireAccess`) nem pra decidir qual dado buscar da API.
+Cada módulo com tela de gestão possui arquivo próprio, que exporta tipo de ação específico (por exemplo,
+`FinancePerm = "viewDashboard" | "manageCharges" | ...`) e uma `MATRIX: Record<Role, Perm[]>`, indexada pelo perfil
+deduzido. É utilizado nos componentes de tela para determinar se um botão é exibido habilitado
+(`academyCan(role, "manageClasses")`), e nunca para determinar o acesso à tela (sempre decidido pela camada 1, no
+`AppShell`) nem os dados a buscar na API.
 
-**Risco desse padrão, achado em auditoria e corrigido parcialmente**: como esses arquivos são indexados pelo perfil (não pela permissão real), usar o valor deles pra decidir *o que buscar* — não só *o que mostrar* — reintroduz o mesmo problema que a Camada 1 resolve. Isso foi encontrado em `academy.attendance.tsx`, `academy.grades.tsx`, `academy.index.tsx`, `learn.classes.tsx` e `learn.index.tsx`: todas usavam `role === "professor"` (na época, uma "Visão" escolhida manualmente) pra decidir se passavam `{minhas:true}` numa chamada de API, em vez de usar a permissão real (`useCan("/academy/manage", "acessar")`) — um professor de verdade cuja Visão ainda estivesse em "admin" (valor padrão) recebia 403 do backend, porque a tela buscava turmas de todo mundo sem `{minhas:true}}` mesmo ele não tendo essa permissão real. Corrigido nessas cinco telas: a decisão de *o que buscar* agora usa sempre `useCan()`/`useCanAccess()` (Camada 1); o perfil deduzido (`*/permissions.ts`, `useRole()`) continua controlando só habilitar/desabilitar botão dentro da tela, seu uso original e seguro.
+**Risco do padrão, identificado em auditoria e corrigido**: por serem indexados pelo perfil, e não pela permissão
+efetiva, esses arquivos, se utilizados para decidir *o que buscar*, reintroduziriam o problema resolvido pela camada
+1. A situação foi encontrada em `academy.attendance.tsx`, `academy.grades.tsx`, `academy.index.tsx`,
+`learn.classes.tsx` e `learn.index.tsx`, que utilizavam `role === "professor"` (à época, perfil escolhido
+manualmente) para decidir o envio de `{minhas:true}` na chamada à API, em lugar da permissão efetiva
+(`useCan("/academy/manage", "acessar")`); o professor cujo perfil selecionado permanecia "admin" (valor padrão)
+recebia `403`, pois a tela buscava as turmas de todos sem possuir essa permissão. Nas cinco telas, a decisão sobre os
+dados passou a utilizar `useCan()` e `useCanAccess()` (camada 1); o perfil deduzido continua a controlar apenas a
+habilitação de botões.
 
-## Autorização real (o que de fato importa)
+## Autorização efetiva
 
-A UI decidir mostrar ou esconder algo **não substitui** a checagem do backend — toda operação passa pelo `PermissionGuard` do lado servidor de qualquer forma. A checagem de UI aqui documentada é só para experiência (não mostrar botão que vai dar 403 ou buscar dado que o usuário não pode ver), nunca a fonte de verdade de segurança.
+A exibição ou ocultação de elementos na interface **não substitui** a verificação do backend: toda operação é
+submetida ao `PermissionGuard` no servidor. As verificações descritas neste documento destinam-se à experiência de uso
+(não exibir botão que resultaria em `403` nem buscar dado inacessível) e não constituem a fonte de verdade da
+segurança.

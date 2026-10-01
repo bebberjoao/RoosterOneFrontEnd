@@ -1,44 +1,67 @@
-# Autenticação (Frontend)
+# Autenticação (frontend)
 
 ## `auth-context.tsx` (`useAuth()`)
 
-Provider real de sessão, montado no root (`__root.tsx`). Expõe:
+Provider de sessão, montado na rota raiz (`__root.tsx`). Expõe:
 
-- `authed: boolean`, `ready: boolean` (evita "flash" de conteúdo antes da sessão carregar do `localStorage`), `usuario: SessionUser | null`.
-- `login(email, senha)` → `POST /auth/login`; em sucesso, `session.set(accessToken, usuario)`.
-- `logout()` → `session.clear()`.
-- `requestPasswordReset(email)` → `POST /auth/esqueci-senha`.
-- `resetPassword(token, novaSenha)` → `POST /auth/redefinir-senha`.
+- `authed: boolean`, `ready: boolean` (evita a exibição momentânea de conteúdo antes da restauração da sessão a
+  partir do `localStorage`) e `usuario: SessionUser | null`;
+- `login(email, senha)`: `POST /auth/login`; em caso de sucesso, grava na sessão o access token, o refresh token, o
+  usuário e as permissões efetivas;
+- `logout()`: comunica o servidor (`POST /auth/logout`, com o refresh token, sem aguardar a resposta) e executa
+  `session.clear()`;
+- `requestPasswordReset(email)`: `POST /auth/esqueci-senha`;
+- `resetPassword(token, novaSenha)`: `POST /auth/redefinir-senha`.
 
 ## Sessão (`services/hub/session.ts`)
 
-Token e usuário persistidos em `localStorage`. Restaurados na montagem do provider (`session.restore()`). Não há renovação automática — quando o JWT expira (8h, definido no backend), a próxima chamada à API retorna 401, o `client.ts` limpa a sessão, e a UI reage (rota protegida redireciona para `/login`).
+Access token, refresh token, usuário e permissões são persistidos em `localStorage` (chaves `rooster.session.token`,
+`rooster.session.refresh`, `rooster.session.usuario` e `rooster.session.permissoes`) e restaurados na montagem do
+provider (`session.restore()`).
+
+A sessão é **renovada automaticamente**: quando o access token expira (8 horas, definido no backend), a requisição
+seguinte recebe `401`, e o cliente HTTP utiliza o refresh token (`POST /auth/refresh`) para obter novo par de tokens e
+repetir a requisição; a sessão é descartada apenas quando a renovação é recusada (refresh token revogado ou expirado,
+inclusive após troca de senha ou desativação do usuário), e a interface redireciona então para `/login`. O
+funcionamento detalhado está em `06-integracao-api.md`.
 
 ## Proteção de rota
 
-Feita em `AppShell` (`app-shell.tsx`), não por rota individual: se `ready && !authed`, redireciona para `/login`. Toda rota que usa `AppShell` fica protegida por igual — não há guard rota a rota como no backend. As únicas rotas fora desse guard são `login.tsx` e `redefinir-senha.tsx`.
+Realizada no `AppShell` (`app-shell.tsx`), e não em cada rota: se `ready && !authed`, há redirecionamento para
+`/login`. Todas as rotas que utilizam o `AppShell` são protegidas da mesma forma; não há guard por rota, como no
+backend. Ficam fora dessa proteção `login.tsx`, `redefinir-senha.tsx` e as rotas do portal do Boost, que possuem
+sessão própria.
 
 ## Tela de login (`login.tsx`)
 
-Formulário de e-mail/senha chamando `login()`; distingue erro de credencial (`ApiError` com `status === 401`) de backend fora do ar (`ApiUnavailableError`), com mensagem diferente para cada caso. A mesma tela tem um segundo formulário (alternado por estado local, não é outra rota) para solicitar redefinição de senha.
+Formulário de e-mail e senha que invoca `login()`; distingue erro de credencial (`ApiError` com `status === 401`) de
+backend indisponível (`ApiUnavailableError`), com mensagem específica para cada caso. A mesma tela possui um segundo
+formulário (alternado por estado local, sem rota própria) para a solicitação de redefinição de senha.
 
 ## Tela de redefinição de senha (`redefinir-senha.tsx`)
 
-Rota pública, lê o `token` da query string (`?token=...`), formulário de nova senha + confirmação, chama `resetPassword(token, novaSenha)`. Trata `ApiError` (token inválido/expirado) mostrando a mensagem vinda do backend.
+Rota pública que lê o `token` da query string (`?token=...`) e apresenta formulário de nova senha e confirmação,
+invocando `resetPassword(token, novaSenha)`. Trata `ApiError` (token inválido ou expirado) com a exibição da mensagem
+do backend.
 
-## Segunda sessão, paralela e independente: Rooster Boost Portal
+## Segunda sessão, paralela e independente: portal do Rooster Boost
 
-Tudo acima é a sessão do **Hub**. O portal público do Boost (`/boost-portal/*`, alunos externos sem conta no Hub) tem uma sessão **completamente separada**, que nunca importa nada do Hub e nunca é vista pelo `AppShell`/`RequireAccess` do Hub:
+Todo o conteúdo acima refere-se à sessão do **Hub**. O portal público do Boost (`/boost-portal/*`, para alunos externos
+sem conta no Hub) possui sessão **completamente separada**, que não importa nenhum elemento do Hub e não é considerada
+pelo `AppShell` nem pelo `RequireAccess`:
 
-| | Hub | Boost Portal |
+| | Hub | Portal do Boost |
 |---|---|---|
 | Provider | `auth-context.tsx` (`useAuth()`) | `services/boost-portal/auth-context.tsx` (`useBoostAuth()`) |
-| Sessão/storage | `services/hub/session.ts` | `services/boost-portal/session.ts` |
-| Chaves de `localStorage` | próprias do Hub | `rooster.boost.session.token` / `rooster.boost.session.usuario` — deliberadamente diferentes, pra nunca colidir com as do Hub mesmo com as duas sessões abertas na mesma aba |
+| Sessão e armazenamento | `services/hub/session.ts` | `services/boost-portal/session.ts` |
+| Chaves de `localStorage` | `rooster.session.*` | `rooster.boost.session.token` e `rooster.boost.session.usuario`, distintas por decisão de projeto, para que não haja colisão com as do Hub mesmo com as duas sessões abertas |
 | Login | `POST /auth/login` | `POST /boost/login` |
-| Cadastro | não existe (usuário é criado pelo Hub) | `POST /boost/cadastro`, público |
-| Claim do JWT | sem `tipo` (ou implícito Hub) | `tipo: 'boost'` — o backend rejeita esse token em qualquer rota do Hub, e vice-versa (ver `docs/security/03-rbac.md` no backend) |
-| Cliente HTTP | `services/hub/client.ts` (`request`/`ApiError`/`ApiUnavailableError`) | `services/boost-portal/client.ts` (`request`/`BoostApiError`/`BoostApiUnavailableError`) — implementação espelhada, mas um cliente nunca chama o outro |
-| Proteção de rota | `AppShell` redireciona pra `/login` | Layout próprio (`boost-portal.tsx`), fora do `AppShell` — cada rota que exige login decide localmente com `useBoostAuth().authed` |
+| Cadastro | inexistente (o usuário é criado no Hub) | `POST /boost/cadastro`, público |
+| Declaração do JWT | sem `tipo` | `tipo: 'boost'`; o backend recusa esse token nas rotas do Hub, e vice-versa (ver `docs/security/03-rbac.md` no repositório do backend) |
+| Cliente HTTP | `services/hub/client.ts` (`request`, `ApiError` e `ApiUnavailableError`) | `services/boost-portal/client.ts` (`request`, `BoostApiError` e `BoostApiUnavailableError`), com implementação análoga, sem chamada recíproca |
+| Proteção de rota | o `AppShell` redireciona para `/login` | layout próprio (`boost-portal.tsx`), fora do `AppShell`; cada rota que exige login decide localmente com `useBoostAuth().authed` |
 
-Não existe nenhum ponto de acoplamento entre as duas sessões no frontend — um usuário pode estar logado no Hub e no Boost Portal ao mesmo tempo, no mesmo navegador, sem um afetar o outro. O único lugar do sistema onde os dois tipos de token se encontram é o WebSocket do chat de curso (`BoostChatGateway`, backend), que aceita ambos no handshake.
+Não há ponto de acoplamento entre as duas sessões no frontend: o usuário pode estar autenticado no Hub e no portal do
+Boost simultaneamente, no mesmo navegador, sem interferência entre elas. O único ponto do sistema em que os dois tipos
+de token se encontram é o WebSocket das conversas do Boost (`BoostChatGateway`, no backend), que aceita ambos no
+handshake.
