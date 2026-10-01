@@ -6,6 +6,7 @@ import { LoadingBlock } from "@/components/shared";
 import { learnService, TYPE_LABEL, formatDate as formatDateTime, type Activity, type Submission } from "@/services/mock-api/learn.service";
 import { toneFor } from "@/services/mock-api/academy.service";
 import { Search, ClipboardList, Upload, FileText, MessageSquare, Paperclip, X, CheckCircle2, UserX } from "lucide-react";
+import { fmtNumero } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/student/activities")({ component: StudentActivities });
 
@@ -47,7 +48,7 @@ function StudentActivities() {
 
   const disciplineOptions = useMemo(() => {
     const map = new Map<string, string>();
-    rows.forEach((r) => map.set(r.activity.classId, r.activity.disciplineName ?? r.activity.className ?? r.activity.classId));
+    rows.forEach((r) => map.set(r.activity.classId, r.activity.disciplineName ?? r.activity.className ?? "Turma"));
     return Array.from(map.entries());
   }, [rows]);
 
@@ -92,7 +93,7 @@ function StudentActivities() {
         <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Pendentes</p><p className="mt-1 text-2xl font-semibold">{counts.pendentes}</p></div>
         <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Entregues</p><p className="mt-1 text-2xl font-semibold">{counts.entregues}</p></div>
         <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Corrigidas</p><p className="mt-1 text-2xl font-semibold">{counts.corrigidas}</p></div>
-        <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Média das entregas</p><p className="mt-1 text-2xl font-semibold">{avg !== null ? avg.toFixed(1) : "—"}</p></div>
+        <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Média das entregas</p><p className="mt-1 text-2xl font-semibold">{avg !== null ? fmtNumero(avg, 1) : "—"}</p></div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3">
@@ -131,7 +132,7 @@ function StudentActivities() {
                     <StatusChip status={r.display} />
                     <span className={`text-[11px] ${r.display === "atrasada" ? "text-destructive" : "text-muted-foreground"}`}>Prazo {formatDateTime(a.dueAt)}</span>
                     {r.submission?.grade !== null && r.submission?.grade !== undefined ? (
-                      <Chip tone={r.submission.grade >= 7 ? TONE.ok : r.submission.grade >= 5 ? TONE.warn : TONE.danger}>Nota {r.submission.grade.toFixed(1)} / {a.maxGrade}</Chip>
+                      <Chip tone={r.submission.grade >= 7 ? TONE.ok : r.submission.grade >= 5 ? TONE.warn : TONE.danger}>Nota {fmtNumero(r.submission.grade, 1)} / {a.maxGrade}</Chip>
                     ) : null}
                   </div>
                 </div>

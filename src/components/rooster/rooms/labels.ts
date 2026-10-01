@@ -2,6 +2,7 @@
 // Domain data itself is only read through `@/services/mock-api`.
 import type { Room } from "@/mock/database/rooms";
 import type { Reservation } from "@/mock/database/reservations";
+import { fmtData, soData } from "@/lib/formatacao";
 
 export type SpaceType = Room["type"];
 export type SpaceStatus = Room["status"];
@@ -111,14 +112,11 @@ export function hourToMinutes(hm: string) {
 }
 
 export function formatDate(iso: string) {
-  if (!iso) return "—";
-  const d = new Date(iso + "T00:00:00");
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  return fmtData(iso);
 }
 
 export function formatWeekday(iso: string) {
-  const d = new Date(iso + "T00:00:00");
+  const d = new Date(soData(iso) + "T00:00:00");
   return d.toLocaleDateString("pt-BR", { weekday: "long" });
 }
 

@@ -16,6 +16,7 @@ import { useRole, learnCan } from "@/components/rooster/role-context";
 import {
   ArrowLeft, Save, Send, ChevronRight, CheckCircle2, MessageSquare, FileText, History, Paperclip,
 } from "lucide-react";
+import { fmtNumero } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/learn/activities/$id")({
   component: ActivityDetail,
@@ -84,7 +85,7 @@ function ActivityDetail() {
       <PageHeader
         eyebrow="Rooster Learn"
         title={activity.title}
-        description={`${activity.code ?? "sem código"} · ${activity.disciplineName ?? ""} ${activity.className ?? activity.classId}`}
+        description={`${activity.code ?? "sem código"} · ${activity.disciplineName ?? ""} ${activity.className ?? ""}`}
         actions={
           <>
             <ActivityStatusBadge status={activity.status} />
@@ -210,7 +211,7 @@ function EntregasTab({ activityId }: { activityId: string }) {
               <td className="px-3 py-2.5 text-xs text-muted-foreground">{s.submittedAt ? formatDate(s.submittedAt) : "Não enviou"}</td>
               <td className="px-3 py-2.5"><SubmissionBadge status={s.status} /></td>
               <td className="px-3 py-2.5 text-xs text-muted-foreground">{s.attachments.length}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{s.grade !== null ? s.grade.toFixed(1) : "—"}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{s.grade !== null ? fmtNumero(s.grade, 1) : "—"}</td>
             </tr>
           ))}
           {rows.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">Nenhuma entrega ainda.</td></tr>}
@@ -243,7 +244,7 @@ function CorrecaoTab({ activity }: { activity: Activity }) {
                     <div className="truncate text-sm font-medium">{s.studentName}</div>
                     <div className="text-[11px] text-muted-foreground">{s.submittedAt ? formatDate(s.submittedAt) : "Não enviou"}</div>
                   </div>
-                  {s.grade !== null ? <span className="text-sm font-semibold tabular-nums">{s.grade.toFixed(1)}</span> : null}
+                  {s.grade !== null ? <span className="text-sm font-semibold tabular-nums">{fmtNumero(s.grade, 1)}</span> : null}
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </button>
               </li>
@@ -344,7 +345,7 @@ function NotasTab({ activityId, maxGrade }: { activityId: string; maxGrade: numb
           {rows.map((s) => (
             <tr key={s.id} className="hover:bg-muted/30">
               <td className="px-4 py-2.5">{s.studentName}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{s.grade !== null ? `${s.grade.toFixed(1)} / ${maxGrade}` : "—"}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{s.grade !== null ? `${fmtNumero(s.grade, 1)} / ${maxGrade}` : "—"}</td>
             </tr>
           ))}
           {rows.length === 0 && <tr><td colSpan={2} className="px-4 py-8 text-center text-sm text-muted-foreground">Nenhuma entrega ainda.</td></tr>}

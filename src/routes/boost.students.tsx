@@ -9,6 +9,7 @@ import { Ban, CheckCircle2, Copy, KeyRound, Users } from "lucide-react";
 import { PageHeader } from "@/components/rooster/page-header";
 import { Btn, Chip, CrudToolbar, DataTable, EmptyState, LoadingCards, Modal, TONE, type Column } from "@/components/shared";
 import { boostService, type ExternalStudent } from "@/services/mock-api/boost.service";
+import { fmtData as fmtDataBr } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/boost/students")({
   head: () => ({ meta: [{ title: "Alunos externos — Rooster Boost" }] }),
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/boost/students")({
 });
 
 function fmtData(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  return fmtDataBr(iso);
 }
 
 function ExternalStudentsPage() {

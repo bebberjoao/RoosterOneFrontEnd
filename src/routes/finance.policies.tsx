@@ -10,6 +10,7 @@ import {
 import { financeCan } from "@/components/rooster/finance/permissions";
 import { useRole } from "@/components/rooster/role-context";
 import { PageHeader } from "@/components/rooster/page-header";
+import { fmtPercentual } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/finance/policies")({ component: Policies });
 
@@ -118,8 +119,8 @@ function Policies() {
             <h3 className="mt-3 text-sm font-semibold">{p.nome}</h3>
             <p className="mt-1 text-xs text-muted-foreground">{p.descricao || "—"}</p>
             <div className="mt-4 flex items-end justify-between border-t pt-3 text-xs text-muted-foreground">
-              <div><div>Multa</div><div className="text-lg font-semibold text-foreground">{p.percentualMulta}%</div></div>
-              <div><div>Juros/dia</div><div className="text-lg font-semibold text-foreground">{p.percentualJurosDia}%</div></div>
+              <div><div>Multa</div><div className="text-lg font-semibold text-foreground">{fmtPercentual(p.percentualMulta, 3)}</div></div>
+              <div><div>Juros/dia</div><div className="text-lg font-semibold text-foreground">{fmtPercentual(p.percentualJurosDia, 3)}</div></div>
               <div><div>Carência</div><div className="text-lg font-semibold text-foreground">{p.diasCarencia}d</div></div>
             </div>
           </button>
@@ -148,8 +149,8 @@ function Policies() {
         {selected && !editing && (
           <SectionCard title="Detalhes">
             <dl className="grid grid-cols-2 gap-3 text-sm">
-              <div><dt className="text-[11px] text-muted-foreground">Multa</dt><dd>{selected.percentualMulta}%</dd></div>
-              <div><dt className="text-[11px] text-muted-foreground">Juros ao dia</dt><dd>{selected.percentualJurosDia}%</dd></div>
+              <div><dt className="text-[11px] text-muted-foreground">Multa</dt><dd>{fmtPercentual(selected.percentualMulta, 3)}</dd></div>
+              <div><dt className="text-[11px] text-muted-foreground">Juros ao dia</dt><dd>{fmtPercentual(selected.percentualJurosDia, 3)}</dd></div>
               <div><dt className="text-[11px] text-muted-foreground">Carência</dt><dd>{selected.diasCarencia} dia(s)</dd></div>
               <div><dt className="text-[11px] text-muted-foreground">Status</dt><dd>{selected.ativo ? "Ativa" : "Inativa"}</dd></div>
               <div className="col-span-2"><dt className="text-[11px] text-muted-foreground">Descrição</dt><dd className="text-muted-foreground">{selected.descricao || "—"}</dd></div>

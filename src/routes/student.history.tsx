@@ -6,6 +6,7 @@ import { LoadingCards } from "@/components/shared";
 import { studentService, computeCR, totalHoursDone, type HistoryRow } from "@/services/mock-api/student.service";
 import { Search, GraduationCap, Award, Clock, UserX } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { fmtNumero } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/student/history")({ component: StudentHistory });
 
@@ -66,7 +67,7 @@ function StudentHistory() {
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Coeficiente de rendimento" value={cr !== null ? cr.toFixed(2) : "—"} hint="ponderado por carga horária" icon={GraduationCap} tone={TONE.ok} />
+        <StatCard label="Coeficiente de rendimento" value={cr !== null ? fmtNumero(cr, 2) : "—"} hint="ponderado por carga horária" icon={GraduationCap} tone={TONE.ok} />
         <StatCard label="Disciplinas aprovadas" value={approved.toString()} hint={`${failed} reprovação(ões)`} icon={Award} tone={TONE.info} />
         <StatCard label="Horas integralizadas" value={`${hours}h`} hint="carga horária das disciplinas aprovadas" icon={Clock} tone={TONE.cyan} />
         <StatCard label="Cursando" value={history.filter((h) => h.situation === "cursando").length.toString()} hint="disciplinas no período atual" icon={GraduationCap} tone={TONE.purple} />
@@ -117,7 +118,7 @@ function StudentHistory() {
               <td className="px-3 py-2.5 text-muted-foreground">{h.code}</td>
               <td className="px-3 py-2.5 font-medium">{h.name}</td>
               <td className="px-3 py-2.5 text-muted-foreground">{h.workload}h</td>
-              <td className="px-3 py-2.5">{h.grade !== null ? h.grade.toFixed(1) : "—"}</td>
+              <td className="px-3 py-2.5">{h.grade !== null ? fmtNumero(h.grade, 1) : "—"}</td>
               <td className="px-3 py-2.5 text-muted-foreground">{h.attendance}%</td>
               <td className="px-3 py-2.5"><StatusChip status={h.situation} /></td>
             </tr>

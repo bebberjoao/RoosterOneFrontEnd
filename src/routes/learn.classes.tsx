@@ -17,6 +17,7 @@ import {
   Users, ClipboardList, Plus, Pencil, Trash2, ChevronRight, Search,
   CheckCircle2, Lock, ArrowLeft, Send, Paperclip, SquarePen,
 } from "lucide-react";
+import { fmtNumero, fmtNumeroLivre } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/learn/classes")({
   head: () => ({
@@ -131,7 +132,7 @@ function TeacherClassesPage() {
                       <ActivityStatusBadge status={a.status} />
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      peso {a.weight} · nota máx. {a.maxGrade} · prazo {formatDate(a.dueAt)} · {a.submissionsCount} entrega(s)
+                      peso {fmtNumeroLivre(a.weight)} · nota máx. {a.maxGrade} · prazo {formatDate(a.dueAt)} · {a.submissionsCount} entrega(s)
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -319,7 +320,7 @@ function GradingScreen({ activity, onBack }: { activity: Activity; onBack: () =>
                         <div className="truncate text-sm font-medium">{s.studentName}</div>
                         <div className="text-[11px] text-muted-foreground">{s.submittedAt ? formatDate(s.submittedAt) : "Não enviou"} · {s.status}</div>
                       </div>
-                      {s.grade !== null ? <span className="text-sm font-semibold tabular-nums">{s.grade.toFixed(1)}</span> : null}
+                      {s.grade !== null ? <span className="text-sm font-semibold tabular-nums">{fmtNumero(s.grade, 1)}</span> : null}
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </li>

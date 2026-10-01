@@ -9,8 +9,10 @@ import {
 import { EventTypeBadge } from "@/components/rooster/academy/badges";
 import { academyCan } from "@/components/rooster/academy/permissions";
 import { useRole } from "@/components/rooster/role-context";
+import { dataLocalIso } from "@/lib/formatacao";
+import { fmtMesAno } from "@/lib/formatacao";
 
-const today = new Date().toISOString().slice(0, 10);
+const today = dataLocalIso();
 
 type DraftEvent = { title: string; date: string; end: string; time: string; type: CalendarEvent["type"]; audience: string; location: string };
 const EMPTY_EVENT: DraftEvent = { title: "", date: today, end: "", time: "", type: "reuniao", audience: "Todos", location: "" };
@@ -49,7 +51,7 @@ export function CalendarTab() {
   }, [refresh]);
 
   const move = (delta: number) => { const d = new Date(cursor); d.setMonth(d.getMonth() + delta); setCursor(d); };
-  const title = useMemo(() => cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }), [cursor]);
+  const title = useMemo(() => fmtMesAno(cursor), [cursor]);
 
   function eventsOn(day: string) {
     return events.filter((e) => (e.end ? day >= e.date && day <= e.end : e.date === day));
@@ -127,7 +129,7 @@ export function CalendarTab() {
                 <button onClick={() => move(-1)} className="rounded-l-lg p-1.5 hover:bg-accent"><ChevronLeft className="h-4 w-4" /></button>
                 <button onClick={() => move(1)} className="rounded-r-lg p-1.5 hover:bg-accent"><ChevronRight className="h-4 w-4" /></button>
               </div>
-              <div className="ml-1 text-sm font-medium capitalize">{title}</div>
+              <div className="ml-1 text-sm font-medium">{title}</div>
             </div>
             {canManage && <Btn variant="solid" onClick={() => setModalEvent(true)}><Plus className="h-4 w-4" /> Novo evento</Btn>}
           </div>

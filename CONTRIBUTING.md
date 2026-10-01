@@ -80,11 +80,14 @@ Cada item abaixo já originou defeito no projeto.
 - Os componentes compartilhados são importados por `@/components/shared`, e não pelo caminho completo.
 - Diálogos e painéis laterais exigem rótulo associado e retenção de foco (atendidos pelos componentes de
   `shared/overlays.tsx`).
+- Datas, horários, números, percentuais e valores monetários são exibidos pelas funções de `src/lib/formatacao.ts`
+  (datas em dd/mm/aaaa e vírgula decimal), e nunca por `toLocaleString`, `toFixed` ou `toISOString` diretamente
+  (ver `docs/frontend/11-guia-desenvolvedor.md`).
 
 ## Testes
 
 ```bash
-npm test     # Vitest e Testing Library: 70 testes em 6 arquivos
+npm test     # Vitest e Testing Library: 81 testes em 7 arquivos
 ```
 
 A suíte cobre lógica pura, o cliente HTTP, componentes compartilhados e acessibilidade, e é executada pelo pipeline de

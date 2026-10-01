@@ -12,6 +12,7 @@ export { CATEGORIES, tickets as TICKETS } from "@/mock/database/tickets";
 
 import { CATEGORIES } from "@/mock/database/tickets";
 import type { TicketStatus, TicketPriority } from "@/mock/database/tickets";
+import { fmtDataHora } from "@/lib/formatacao";
 
 export const PRIORITY_LABEL: Record<TicketPriority, string> = {
   baixa: "Baixa",
@@ -52,9 +53,7 @@ export function categoryColor(id: string) {
 }
 
 export function formatDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }) +
-    " · " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return fmtDataHora(iso);
 }
 
 export function relative(iso: string) {

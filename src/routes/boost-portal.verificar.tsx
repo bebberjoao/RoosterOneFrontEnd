@@ -7,6 +7,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { BadgeCheck, Search, ShieldAlert, ShieldX } from "lucide-react";
 import { cursosBoostPortalService, type CertificadoVerificado } from "@/services/boost-portal/cursos.service";
+import { fmtData } from "@/lib/formatacao";
 
 type Resultado =
   | { tipo: "valido"; dados: CertificadoVerificado }
@@ -120,7 +121,7 @@ function VerificarCertificadoPage() {
                 <dt className="text-xs text-muted-foreground">Emitido em</dt>
                 <dd className="text-sm font-medium">
                   {resultado.dados.emitidoEm
-                    ? new Date(resultado.dados.emitidoEm).toLocaleDateString("pt-BR")
+                    ? fmtData(resultado.dados.emitidoEm)
                     : "—"}
                 </dd>
               </div>

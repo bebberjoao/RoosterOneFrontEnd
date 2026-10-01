@@ -12,6 +12,7 @@ import {
   ClipboardList, CheckCircle2, TrendingUp, Clock, Search, BookOpen, Send, AlertTriangle, ArrowLeft,
   Eye, X, MessageSquare, Paperclip, FileText, UserX,
 } from "lucide-react";
+import { fmtNumero } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/learn/student")({
   head: () => ({
@@ -63,7 +64,7 @@ function StudentActivitiesPage() {
       const graded = done.map((a) => subOf(a.id)).filter((s): s is Submission => !!s && s.grade !== null);
       const avg = graded.length ? graded.reduce((acc, s) => acc + (s.grade as number), 0) / graded.length : 0;
       const pct = list.length ? (done.length / list.length) * 100 : 0;
-      const name = list[0]?.disciplineName ?? list[0]?.className ?? classId;
+      const name = list[0]?.disciplineName ?? list[0]?.className ?? "Turma";
       return { classId, name, list, done, available, avg, pct };
     });
   }, [activities, submissions]);
@@ -131,7 +132,7 @@ function StudentActivitiesPage() {
                   </div>
                   <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><ClipboardList className="h-3.5 w-3.5" /> {s.available.length} a fazer</span>
-                    <span className="inline-flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> média {s.avg ? s.avg.toFixed(1) : "—"}</span>
+                    <span className="inline-flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> média {s.avg ? fmtNumero(s.avg, 1) : "—"}</span>
                   </div>
                 </button>
               ))}
@@ -150,7 +151,7 @@ function StudentActivitiesPage() {
               { label: "Conclusão", value: `${Math.round(current.pct)}%`, icon: CheckCircle2, tone: "oklch(0.62 0.18 155)" },
               { label: "A fazer", value: String(current.available.length), icon: ClipboardList, tone: "oklch(0.72 0.14 90)" },
               { label: "Realizadas", value: String(current.done.length), icon: CheckCircle2, tone: "oklch(0.55 0.19 265)" },
-              { label: "Média das notas", value: current.avg ? current.avg.toFixed(1) : "—", icon: TrendingUp, tone: "oklch(0.6 0.2 305)" },
+              { label: "Média das notas", value: current.avg ? fmtNumero(current.avg, 1) : "—", icon: TrendingUp, tone: "oklch(0.6 0.2 305)" },
             ].map((s) => (
               <div key={s.label} className="rounded-xl border border-border/60 bg-card p-4">
                 <div className="flex items-center justify-between">
@@ -211,7 +212,7 @@ function StudentActivitiesPage() {
                           <div className="w-40">
                             <div className="flex items-baseline justify-between text-xs text-muted-foreground">
                               <span>Nota</span>
-                              <span className="text-base font-semibold tabular-nums text-foreground">{sub?.grade !== null && sub?.grade !== undefined ? sub.grade.toFixed(1) : "—"}</span>
+                              <span className="text-base font-semibold tabular-nums text-foreground">{sub?.grade !== null && sub?.grade !== undefined ? fmtNumero(sub.grade, 1) : "—"}</span>
                             </div>
                             <div className="mt-1.5"><ProgressBar value={sub?.grade ? (sub.grade / a.maxGrade) * 100 : 0} /></div>
                             <p className="mt-1 text-[11px] text-muted-foreground">{sub?.grade !== null && sub?.grade !== undefined ? `de ${a.maxGrade}` : "aguardando correção"}</p>
@@ -323,7 +324,7 @@ function ReviewModal({ activity, submission, onClose }: { activity: Activity; su
       onClose={onClose}
       size="lg"
       title={activity.title}
-      description={`Sua entrega · ${submission?.grade !== null && submission?.grade !== undefined ? `nota ${submission.grade.toFixed(1)} de ${activity.maxGrade}` : "aguardando correção"}`}
+      description={`Sua entrega · ${submission?.grade !== null && submission?.grade !== undefined ? `nota ${fmtNumero(submission.grade, 1)} de ${activity.maxGrade}` : "aguardando correção"}`}
       footer={<Btn onClick={onClose}>Fechar</Btn>}
     >
       <div className="space-y-4">

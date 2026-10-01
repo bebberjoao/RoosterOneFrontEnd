@@ -7,6 +7,8 @@
 // {titulo, tipo, descricao, peso, notaMaxima, prazo...} e a entrega do aluno
 // é só um texto livre (`texto`) + anexos de arquivo.
 import { request, uploadFile, requestBlob } from "@/services/hub/client";
+import { fmtDataHora, fmtTamanho } from "@/lib/formatacao";
+import { fmtNumeroLivre } from "@/lib/formatacao";
 
 export type ActivityType = "prova" | "lista" | "trabalho" | "questionario" | "material";
 export type ActivityStatus = "rascunho" | "agendada" | "publicada" | "encerrada" | "arquivada";
@@ -231,10 +233,7 @@ export const SUB_TONE: Record<SubmissionStatus, string> = {
 };
 
 export function formatDate(iso?: string | null) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }) +
-    " · " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return fmtDataHora(iso);
 }
 export function relativeDue(iso?: string | null) {
   if (!iso) return "sem prazo";
@@ -246,6 +245,6 @@ export function relativeDue(iso?: string | null) {
 export function fmtSize(bytes?: number | null) {
   if (!bytes) return "—";
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${fmtNumeroLivre(bytes / 1024, 0)} KB`;
+  return `${fmtNumeroLivre(bytes / 1024 / 1024, 1)} MB`;
 }

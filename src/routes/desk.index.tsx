@@ -25,6 +25,7 @@ import {
   ClipboardList,
   Timer,
 } from "lucide-react";
+import { fmtNumero } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/desk/")({
   component: DeskDashboard,
@@ -54,7 +55,7 @@ function DeskDashboard() {
     ? closedTickets.reduce((s, t) => s + (new Date(t.closedAt!).getTime() - new Date(t.openedAt).getTime()) / 3_600_000, 0) / closedTickets.length
     : null;
   const avgResolutionLabel =
-    avgResolutionHours === null ? "—" : avgResolutionHours < 24 ? `${Math.round(avgResolutionHours)}h` : `${(avgResolutionHours / 24).toFixed(1)}d`;
+    avgResolutionHours === null ? "—" : avgResolutionHours < 24 ? `${Math.round(avgResolutionHours)}h` : `${fmtNumero(avgResolutionHours / 24, 1)}d`;
 
   const latest = useMemo(() => [...tickets].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6), [tickets]);
   const critical = useMemo(

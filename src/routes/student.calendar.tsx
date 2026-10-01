@@ -8,6 +8,8 @@ import { learnService, type Activity } from "@/services/mock-api/learn.service";
 import { academyService, type CalendarEvent } from "@/services/mock-api/academy.service";
 import { financeService, type Cobranca } from "@/services/mock-api/finance.service";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { fmtData } from "@/lib/formatacao";
+import { fmtMesAno } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/student/calendar")({ component: StudentCalendar });
 
@@ -16,8 +18,7 @@ type Item = { id: string; title: string; date: string; time?: string; source: "a
 function pad(n: number) { return n.toString().padStart(2, "0"); }
 function iso(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 function formatDate(dateIso: string) {
-  const d = new Date(`${dateIso}T00:00:00`);
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  return fmtData(dateIso);
 }
 
 const SOURCE_LABEL: Record<Item["source"], string> = {
@@ -75,7 +76,7 @@ function StudentCalendar() {
             <button onClick={() => { const d = new Date(cursor); d.setMonth(d.getMonth() - 1); setCursor(d); }} className="rounded-l-lg p-1.5 hover:bg-accent"><ChevronLeft className="h-4 w-4" /></button>
             <button onClick={() => { const d = new Date(cursor); d.setMonth(d.getMonth() + 1); setCursor(d); }} className="rounded-r-lg p-1.5 hover:bg-accent"><ChevronRight className="h-4 w-4" /></button>
           </div>
-          <span className="ml-1 text-sm font-medium capitalize">{cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</span>
+          <span className="ml-1 text-sm font-medium">{fmtMesAno(cursor)}</span>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {(Object.keys(SOURCE_LABEL) as Item["source"][]).filter((s) => s !== "aula").map((s) => (

@@ -45,6 +45,8 @@ src/
     use-boost-portal-socket.ts     WebSocket da conversa do aluno externo com o orientador
   lib/
     utils.ts                    cn() (clsx e tailwind-merge)
+    formatacao.ts               Formatação de exibição no padrão brasileiro: datas (dd/mm/aaaa), horários, números,
+                                percentuais, moeda e tamanho de arquivo (ver 11-guia-desenvolvedor.md)
     error-capture.ts            Captura de erro para a renderização no servidor
     error-page.ts               Página HTML estática de erro
     lovable-error-reporting.ts  Integração de telemetria com o editor Lovable

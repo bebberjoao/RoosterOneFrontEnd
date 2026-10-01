@@ -8,6 +8,7 @@ import { useCan } from "@/components/rooster/hub/permission-context";
 import { boostService, messageToFront, type BoostConversation, type BoostMessage } from "@/services/mock-api/boost.service";
 import { useBoostConversasSocket } from "@/hooks/use-boost-conversas-socket";
 import { toneFor, initialsOf } from "@/services/mock-api/academy.service";
+import { fmtDataHora } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/boost/conversas")({
   head: () => ({
@@ -23,7 +24,7 @@ function formatDateTime(iso: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
-  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return fmtDataHora(d);
 }
 
 function BoostConversas() {

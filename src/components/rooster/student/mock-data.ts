@@ -1,8 +1,8 @@
+import { fmtData, dataLocalIso } from "@/lib/formatacao";
 // Mock data for Rooster Student (portal do aluno)
-export const isoOf = (d: Date) => d.toISOString().slice(0, 10);
+export const isoOf = (d: Date) => dataLocalIso(d);
 export const today = isoOf(new Date());
-export const formatDate = (iso: string) =>
-  new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+export const formatDate = (iso: string) => fmtData(iso);
 
 export const shiftDate = (n: number) => {
   const d = new Date();

@@ -6,6 +6,7 @@
 import { mapResource } from "@/services/hub/mapped-resource";
 import { createResource as createRawResource } from "@/services/hub/index";
 import { request, uploadFile, requestBlob } from "@/services/hub/client";
+import { fmtNumeroLivre } from "@/lib/formatacao";
 
 // ---------- Cosmetic helpers (backend não guarda cor/iniciais) ----------
 const PALETTE = [
@@ -275,8 +276,8 @@ const TIPO_TO_KIND: Record<DocumentoBack["tipo"], AcademyDoc["kind"]> = {
 function fmtSize(bytes?: number) {
   if (!bytes) return "—";
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${fmtNumeroLivre(bytes / 1024, 0)} KB`;
+  return `${fmtNumeroLivre(bytes / 1024 / 1024, 1)} MB`;
 }
 function docToFront(b: DocumentoBack): AcademyDoc {
   return { id: b.id, name: b.nome, kind: TIPO_TO_KIND[b.tipo], disciplineId: b.disciplinaId ?? undefined, updatedAt: dateOnly(b.criadoEm), size: fmtSize(b.tamanho), author: "—" };

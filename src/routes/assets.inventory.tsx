@@ -19,6 +19,7 @@ import { useCurrentPerson, useRole } from "@/components/rooster/role-context";
 import {
   Boxes, Plus, Pencil, Trash2, Image as ImageIcon, Building2, Tags, ChevronRight, User, Link2,
 } from "lucide-react";
+import { dataLocalIso } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/assets/inventory")({
   head: () => ({
@@ -508,7 +509,7 @@ function InventoryPage() {
             ) : (
               <ol className="relative space-y-4 border-l pl-5">
                 {history.map((m) => {
-                  const overdue = m.type === "emprestimo" && !m.returnedAt && m.dueDate && m.dueDate < new Date().toISOString().slice(0, 10);
+                  const overdue = m.type === "emprestimo" && !m.returnedAt && m.dueDate && m.dueDate < dataLocalIso().slice(0, 10);
                   return (
                     <li key={m.id} className="relative">
                       <span className="absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-background" style={{ background: overdue ? "oklch(0.6 0.2 25)" : "var(--foreground)" }} />

@@ -10,6 +10,8 @@ import { roomService } from "@/services/mock-api";
 import type { Reservation } from "@/mock/database/reservations";
 import type { ReservationEvent } from "@/components/rooster/rooms/mock-data";
 import type { Room } from "@/mock/database/rooms";
+import { fmtDataHora } from "@/lib/formatacao";
+import { fmtMesAno } from "@/lib/formatacao";
 
 
 export const Route = createFileRoute("/rooms/reservations/$id")({
@@ -158,7 +160,7 @@ function MiniCalendar({ cursor, setCursor, value, onSelect }: { cursor: Date; se
     <div className="rounded-2xl border bg-card p-3">
       <div className="mb-2 flex items-center justify-between">
         <button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="rounded-full p-1.5 hover:bg-accent"><ChevronLeft className="h-4 w-4" /></button>
-        <span className="text-sm font-medium capitalize">{cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</span>
+        <span className="text-sm font-medium">{fmtMesAno(cursor)}</span>
         <button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="rounded-full p-1.5 hover:bg-accent"><ChevronRight className="h-4 w-4" /></button>
       </div>
       <div className="grid grid-cols-7 text-center text-[10px] font-medium uppercase text-muted-foreground">{WEEKDAYS.map((d, i) => <span key={i} className="py-1">{d}</span>)}</div>
@@ -179,7 +181,7 @@ function MiniCalendar({ cursor, setCursor, value, onSelect }: { cursor: Date; se
   );
 }
 function Timeline({ event }: { event: ReservationEvent }) {
-  const when = new Date(event.at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  const when = fmtDataHora(event.at);
   if (event.kind === "message") { const initials = event.author.split(" ").map((part) => part[0]).slice(0, 2).join(""); return <div className="flex gap-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${event.role === "gestor" ? "bg-primary/10 text-primary" : "bg-muted"}`}>{initials}</span><div className="flex-1"><div className="flex items-center gap-2 text-xs"><span className="font-medium">{event.author}</span><span className="text-muted-foreground">{event.role === "gestor" ? "Equipe de Reservas" : "Solicitante"}</span><span className="ml-auto text-muted-foreground">{when}</span></div><p className="mt-1 rounded-lg bg-muted/40 p-3 text-sm">{event.body}</p></div></div>; }
   const text = event.kind === "status" ? `alterou o status de ${STATUS_LABEL[event.from]} para ${STATUS_LABEL[event.to]}` : `alterou o horário de ${event.from} para ${event.to}`;
   return <div className="flex items-start gap-3 text-xs text-muted-foreground"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted"><Clock3 className="h-3.5 w-3.5" /></span><div className="flex-1"><p><strong className="text-foreground">{event.author}</strong> {text}</p>{event.reason && <p className="mt-1">Motivo: {event.reason}</p>}</div><span>{when}</span></div>;

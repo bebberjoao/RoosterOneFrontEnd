@@ -5,12 +5,12 @@ import { SectionCard, ProgressBar, Chip, TONE, Table, StatCard, EmptyState } fro
 import { LoadingCards } from "@/components/shared";
 import { studentService, MIN_ATTENDANCE, overallAttendance, type StudentDiscipline, type StudentAttendanceRecord } from "@/services/mock-api/student.service";
 import { UserCheck, AlertTriangle, CalendarX, Percent, UserX } from "lucide-react";
+import { fmtData, fmtPercentual } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/student/attendance")({ component: StudentAttendance });
 
 function formatDate(iso: string) {
-  const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  return fmtData(iso);
 }
 
 const STATUS_LABEL: Record<StudentAttendanceRecord["status"], string> = {
@@ -60,7 +60,7 @@ function StudentAttendance() {
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Frequência média" value={`${avgAttendance.toFixed(0)}%`} hint="todas as disciplinas" icon={Percent} tone={avgAttendance < 80 ? TONE.warn : TONE.ok} />
+        <StatCard label="Frequência média" value={fmtPercentual(avgAttendance, 0)} hint="todas as disciplinas" icon={Percent} tone={avgAttendance < 80 ? TONE.warn : TONE.ok} />
         <StatCard label="Faltas no semestre" value={totalAbsences.toString()} hint="registros lançados" icon={CalendarX} tone={TONE.info} />
         <StatCard label="Abaixo do mínimo" value={below.length.toString()} hint={`${MIN_ATTENDANCE}% exigidos`} icon={AlertTriangle} tone={below.length ? TONE.danger : TONE.muted} />
         <StatCard label="Em zona de atenção" value={risk.length.toString()} hint="entre o mínimo e 80%" icon={UserCheck} tone={TONE.warn} />

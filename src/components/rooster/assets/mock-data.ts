@@ -7,6 +7,7 @@
 //  - Rooster Rooms: `locationId` referencia um espaço físico (campus/bloco/sala).
 //  - Rooster Desk:  `maintenanceTicketId` guardará o chamado de manutenção.
 //  - Rooster Hub:   `ownerUserId` referencia o usuário responsável.
+import { fmtData, fmtDataHora, fmtMoeda } from "@/lib/formatacao";
 
 export type {
   AssetStatus,
@@ -29,11 +30,8 @@ export {
   UNASSIGNED_SECTOR_ID,
 } from "@/mock/database/assetSectors";
 
-export const money = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+export const money = (v: number | string) => fmtMoeda(v);
 
-export const fmtDate = (iso: string) =>
-  new Date(iso.length <= 10 ? `${iso}T12:00:00Z` : iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+export const fmtDate = (iso: string) => fmtData(iso);
 
-export const fmtDateTime = (iso: string) =>
-  new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+export const fmtDateTime = (iso: string) => fmtDataHora(iso);

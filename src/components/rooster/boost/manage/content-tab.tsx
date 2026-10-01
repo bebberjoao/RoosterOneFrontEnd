@@ -13,14 +13,15 @@ import {
   type BoostModule,
   type LessonType,
 } from "@/services/mock-api/boost.service";
+import { fmtNumeroLivre } from "@/lib/formatacao";
 
 const LESSON_ICON: Record<LessonType, typeof Video> = { video: Video, texto: FileText, pdf: FileText, link: LinkIcon };
 
 function fmtSize(bytes: number) {
   if (!bytes) return "—";
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${fmtNumeroLivre(bytes / 1024, 0)} KB`;
+  return `${fmtNumeroLivre(bytes / 1024 / 1024, 1)} MB`;
 }
 
 type ModuleDraft = { title: string; order: number };

@@ -12,6 +12,7 @@ import { fmtDate } from "@/components/rooster/finance/format";
 import { financeCan } from "@/components/rooster/finance/permissions";
 import { useRole } from "@/components/rooster/role-context";
 import { PageHeader } from "@/components/rooster/page-header";
+import { fmtMoeda, fmtPercentual } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/finance/discounts")({ component: Discounts });
 
@@ -153,7 +154,7 @@ function Discounts() {
               <div className="mt-4 flex items-end justify-between border-t pt-3">
                 <div>
                   <div className="text-xs text-muted-foreground">Valor</div>
-                  <div className="text-lg font-semibold">{d.unidade === "percent" ? `${d.valor}%` : `R$ ${d.valor.toFixed(2)}`}</div>
+                  <div className="text-lg font-semibold">{d.unidade === "percent" ? fmtPercentual(d.valor) : fmtMoeda(d.valor)}</div>
                 </div>
                 <div className="text-right text-xs text-muted-foreground">
                   <div className="flex items-center justify-end gap-1"><Users className="h-3 w-3" /> {d.beneficiarios} beneficiário(s)</div>
@@ -190,7 +191,7 @@ function Discounts() {
         {selected && !editing && (
           <SectionCard title="Detalhes">
             <dl className="grid grid-cols-2 gap-3 text-sm">
-              <div><dt className="text-[11px] text-muted-foreground">Valor</dt><dd>{selected.unidade === "percent" ? `${selected.valor}%` : `R$ ${selected.valor.toFixed(2)}`}</dd></div>
+              <div><dt className="text-[11px] text-muted-foreground">Valor</dt><dd>{selected.unidade === "percent" ? fmtPercentual(selected.valor) : fmtMoeda(selected.valor)}</dd></div>
               <div><dt className="text-[11px] text-muted-foreground">Beneficiários</dt><dd>{selected.beneficiarios}</dd></div>
               <div><dt className="text-[11px] text-muted-foreground">Vigência</dt><dd>{fmtDate(selected.vigenciaInicio)} → {fmtDate(selected.vigenciaFim)}</dd></div>
               <div><dt className="text-[11px] text-muted-foreground">Responsável</dt><dd>{selected.responsavel || "—"}</dd></div>

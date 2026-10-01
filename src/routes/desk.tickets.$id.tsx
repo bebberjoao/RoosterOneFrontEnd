@@ -33,6 +33,7 @@ import {
   Loader2,
   FileText,
 } from "lucide-react";
+import { fmtNumeroLivre } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/desk/tickets/$id")({
   loader: async ({ params }) => {
@@ -304,8 +305,8 @@ function TicketDetail() {
 function formatBytes(bytes: number | null): string {
   if (!bytes) return "";
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${fmtNumeroLivre(bytes / 1024, 1)} KB`;
+  return `${fmtNumeroLivre(bytes / (1024 * 1024), 1)} MB`;
 }
 
 function SidebarCard({ title, children }: { title: string; children: React.ReactNode }) {

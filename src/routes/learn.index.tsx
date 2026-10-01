@@ -12,6 +12,7 @@ import { useCan } from "@/components/rooster/hub/permission-context";
 import {
   Search, Plus, Clock, Users, FileText, Inbox, CheckCircle2, TrendingUp, ClipboardList, BookOpen,
 } from "lucide-react";
+import { fmtNumeroLivre } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/learn/")({
   component: LearnHome,
@@ -193,11 +194,11 @@ function ActivitiesPanel({ activities, classes, isAlunoReal }: { activities: Act
                       <TypeBadge type={a.type} />
                       <div>
                         <Link to="/learn/activities/$id" params={{ id: a.id }} className="font-medium text-foreground hover:underline">{a.title}</Link>
-                        <div className="text-[11px] text-muted-foreground">{a.code ?? "—"} · peso {a.weight}</div>
+                        <div className="text-[11px] text-muted-foreground">{a.code ?? "—"} · peso {fmtNumeroLivre(a.weight)}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 text-xs">{a.disciplineName ?? "—"} · {a.className ?? a.classId}</td>
+                  <td className="px-3 py-2.5 text-xs">{a.disciplineName ?? "—"} · {a.className ?? "—"}</td>
                   <td className="px-3 py-2.5 text-xs">
                     <div className="flex items-center gap-1"><Clock className="h-3 w-3 text-muted-foreground" /> {relativeDue(a.dueAt)}</div>
                     <div className="text-[11px] text-muted-foreground">{formatDate(a.dueAt)}</div>

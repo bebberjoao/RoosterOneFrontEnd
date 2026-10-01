@@ -7,6 +7,7 @@
 // Segue o padrão de tipos "*Back" (DTO cru do backend, português) -> tipos
 // "front" (nomes mais diretos pras telas) de src/services/mock-api/academy.service.ts.
 import { request, requestBlob, BoostApiError, API_URL, API_VERSION_PREFIX } from "./client";
+import { fmtNumeroLivre } from "@/lib/formatacao";
 
 export type Nivel = "iniciante" | "intermediario" | "avancado";
 export type StatusMatricula = "ativa" | "concluida" | "cancelada";
@@ -20,8 +21,8 @@ export function nivelLabel(n: string): string {
 function fmtTamanho(bytes: number | null): string {
   if (!bytes) return "—";
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${fmtNumeroLivre(bytes / 1024, 0)} KB`;
+  return `${fmtNumeroLivre(bytes / 1024 / 1024, 1)} MB`;
 }
 export { fmtTamanho };
 

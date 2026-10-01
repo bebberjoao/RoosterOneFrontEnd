@@ -16,6 +16,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell,
 } from "recharts";
+import { fmtData, dataLocalIso } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/academy/")({ component: AcademyDashboard });
 
@@ -51,8 +52,7 @@ const EVENT_LABEL: Record<CalendarEvent["type"], string> = {
   institucional: "Institucional",
 };
 
-const formatDate = (iso: string) =>
-  new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+const formatDate = (iso: string) => fmtData(iso);
 
 function errMsg(err: unknown) {
   if (err instanceof ApiError) return err.status === 403 ? "Você não tem permissão para ver o painel acadêmico." : err.message;
@@ -114,7 +114,7 @@ function CoordenadorDashboard() {
   }
 
   const { terms, disciplines, classes, teachers, students, courses, events, docs } = data;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dataLocalIso();
 
   const activeTerm = terms.find((t) => t.active);
   const activeDisc = disciplines.filter((d) => d.status === "ativa");

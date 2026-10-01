@@ -6,6 +6,7 @@ import { LoadingCards } from "@/components/shared";
 import { studentService, overallAverage, type StudentDiscipline, type ClassGrades } from "@/services/mock-api/student.service";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
 import { UserX } from "lucide-react";
+import { fmtNumero } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/student/grades")({ component: StudentGrades });
 
@@ -56,7 +57,7 @@ function StudentGrades() {
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Média geral</p><p className="mt-1 text-2xl font-semibold">{avg !== null ? avg.toFixed(1) : "—"}</p></div>
+        <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Média geral</p><p className="mt-1 text-2xl font-semibold">{avg !== null ? fmtNumero(avg, 1) : "—"}</p></div>
         <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Avaliações lançadas</p><p className="mt-1 text-2xl font-semibold">{launched}</p></div>
         <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Avaliações pendentes</p><p className="mt-1 text-2xl font-semibold">{pending}</p></div>
         <div className="rounded-2xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Disciplinas em risco</p><p className="mt-1 text-2xl font-semibold">{atRisk}</p></div>
@@ -96,7 +97,7 @@ function StudentGrades() {
               description={`${d.teacher} · ${d.workload}h`}
               action={
                 <div className="flex items-center gap-2">
-                  <Chip tone={(d.average ?? 0) >= 7 ? TONE.ok : (d.average ?? 0) >= 5 ? TONE.warn : TONE.danger}>Média {d.average?.toFixed(1) ?? "—"}</Chip>
+                  <Chip tone={(d.average ?? 0) >= 7 ? TONE.ok : (d.average ?? 0) >= 5 ? TONE.warn : TONE.danger}>Média {fmtNumero(d.average, 1)}</Chip>
                   <StatusChip status={d.situation} />
                 </div>
               }
@@ -111,13 +112,13 @@ function StudentGrades() {
                         <td className="px-3 py-2.5">{a.name}</td>
                         <td className="px-3 py-2.5 text-muted-foreground">{a.weight}</td>
                         <td className="px-3 py-2.5"><Chip tone={a.origin === "learn" ? TONE.purple : TONE.muted}>{a.origin === "learn" ? "Rooster Learn" : "Manual"}</Chip></td>
-                        <td className="px-3 py-2.5 font-medium">{a.value !== null ? a.value.toFixed(1) : "—"}</td>
+                        <td className="px-3 py-2.5 font-medium">{a.value !== null ? fmtNumero(a.value, 1) : "—"}</td>
                         <td className="px-3 py-2.5">{a.value === null ? <Chip tone={TONE.info}>Aguardando</Chip> : <Chip tone={a.value >= 7 ? TONE.ok : a.value >= 5 ? TONE.warn : TONE.danger}>{a.value >= 7 ? "Suficiente" : a.value >= 5 ? "Atenção" : "Insuficiente"}</Chip>}</td>
                       </tr>
                     ))}
                   </Table>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-                    <span>Média ponderada: <strong className="text-foreground">{d.average !== null ? d.average.toFixed(1) : "—"}</strong> de 10</span>
+                    <span>Média ponderada: <strong className="text-foreground">{d.average !== null ? fmtNumero(d.average, 1) : "—"}</strong> de 10</span>
                     <div className="w-48"><ProgressBar value={(d.average ?? 0) * 10} tone={d.accent} /></div>
                   </div>
                 </>

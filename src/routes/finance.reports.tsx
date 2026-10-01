@@ -6,6 +6,7 @@ import { Btn, StatCard, SectionCard, TONE } from "@/components/shared";
 import { brl, downloadBlob } from "@/components/rooster/finance/format";
 import { PageHeader } from "@/components/rooster/page-header";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, AreaChart, Area } from "recharts";
+import { fmtPercentual } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/finance/reports")({ component: Reports });
 
@@ -64,7 +65,7 @@ function Reports() {
 
       {inadimplencia && (
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <StatCard label="Taxa de inadimplência" value={`${inadimplencia.taxaInadimplencia}%`} icon={AlertTriangle} tone={TONE.danger} />
+          <StatCard label="Taxa de inadimplência" value={fmtPercentual(inadimplencia.taxaInadimplencia)} icon={AlertTriangle} tone={TONE.danger} />
           <StatCard label="Valor vencido" value={brl(inadimplencia.valorVencido)} icon={Wallet} tone={TONE.warn} />
           <StatCard label="Alunos inadimplentes" value={String(inadimplencia.alunosInadimplentes)} icon={Users} tone={TONE.warn} />
         </div>

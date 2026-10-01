@@ -28,6 +28,24 @@
 Incluir a entrada na lista `HubField<T>[]` da tela (nome do campo, rótulo e `validate`, se necessário), sem alterar
 `crud-panel.tsx`, que renderiza o novo campo automaticamente.
 
+## Formatação de datas, horários e números
+
+Toda exibição de data, horário, número decimal, percentual, valor monetário ou tamanho de arquivo utiliza as
+funções de `src/lib/formatacao.ts`, e não `toLocaleDateString`, `toLocaleString` ou `toFixed` diretamente:
+
+- `fmtData` (dd/mm/aaaa), `fmtDataHora` (dd/mm/aaaa · hh:mm), `fmtHora` (hh:mm) e `fmtMesAno` (título de
+  calendário, "Outubro de 2026");
+- `soData`, para reduzir ao formato interno `aaaa-mm-dd` os valores de data pura recebidos da API, e
+  `dataLocalIso`, para obter a data de hoje no fuso local;
+- `paraNumero`, `fmtNumero`, `fmtNumeroLivre`, `fmtPercentual`, `fmtMoeda` e `fmtTamanho`, com vírgula decimal.
+
+Dois cuidados motivaram a centralização. As colunas de data pura do banco (`@db.Date`) chegam da API como
+meia-noite UTC (`2026-10-03T00:00:00.000Z`); repassadas sem normalização ao calendário de reservas, produziam
+"Invalid Date" e dias "NaN", e convertidas por `new Date()` no fuso de Brasília exibiriam o dia anterior. Os
+valores `Decimal` chegam como texto; somados sem conversão, eram concatenados (defeito observado no valor
+patrimonial do Assets). Pelo mesmo motivo, `toISOString().slice(0, 10)` não deve ser utilizado para obter a data
+de hoje, pois calcula a data em UTC. As regras são verificadas por `src/lib/formatacao.test.ts`.
+
 ## Verificação antes da conclusão de alteração no frontend
 
 - [ ] `npx tsc --noEmit` sem erros.

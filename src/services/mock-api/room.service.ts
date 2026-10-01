@@ -11,6 +11,7 @@ import { createResource as createRawResource } from "@/services/hub/index";
 import { request } from "@/services/hub/client";
 import { session } from "@/services/hub/session";
 import { applyFilters, type Filters } from "./utils";
+import { soData, fmtHora } from "@/lib/formatacao";
 
 type CampusBack = {
   id: string; nome: string; codigo: string; endereco?: string | null; cidade?: string | null;
@@ -109,8 +110,8 @@ function reservaToFront(b: ReservaBack): Reservation {
   const ultimoStatus = [...(b.historico ?? [])].reverse().find((h) => h.campo === 'status');
   return {
     id: b.id, code: b.codigo, spaceId: b.ambienteId, roomId: b.ambienteId, responsibleId: b.responsavelId ?? undefined, responsible: b.responsavel,
-    sector: b.setor ?? "", event: b.evento, purpose: b.finalidade ?? "", date: b.data, start: b.horarioInicio,
-    end: b.horarioFim, participants: b.participantes, status: b.status as ReservationStatus,
+    sector: b.setor ?? "", event: b.evento, purpose: b.finalidade ?? "", date: soData(b.data), start: fmtHora(b.horarioInicio),
+    end: fmtHora(b.horarioFim), participants: b.participantes, status: b.status as ReservationStatus,
     recurrence: b.recorrencia as Reservation["recurrence"], notes: b.observacoes ?? undefined,
     events: historicoEvents, cancellationReason: b.motivoCancelamento ?? undefined, decidedBy: ultimoStatus?.usuario?.nome,
     turmaId: b.turmaId ?? undefined,

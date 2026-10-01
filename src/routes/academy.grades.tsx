@@ -29,6 +29,7 @@ import {
   Lock,
 } from "lucide-react";
 import { Modal } from "@/components/shared";
+import { fmtNumero } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/academy/grades")({
   head: () => ({
@@ -421,7 +422,7 @@ function KlassGrades({ klass: k, onBack }: { klass: SchoolClass; onBack: () => v
 
           <p className="mt-3 text-[11px] text-muted-foreground">
             Componentes marcados com <Sparkles className="mx-0.5 inline h-3 w-3" style={{ color: "oklch(0.6 0.2 305)" }} /> vêm de atividades do Rooster Learn corrigidas por lá — somente leitura aqui.
-            As notas lançadas manualmente são salvas automaticamente ao sair do campo. Aprovação a partir de {PASS_MARK.toFixed(1)} (escala 0–10).
+            As notas lançadas manualmente são salvas automaticamente ao sair do campo. Aprovação a partir de {fmtNumero(PASS_MARK, 1)} (escala 0–10).
             {savedNote && <span className="ml-2 font-medium" style={{ color: "oklch(0.62 0.18 155)" }}>Nota salva</span>}
           </p>
         </>

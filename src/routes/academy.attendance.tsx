@@ -27,6 +27,7 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
+import { fmtData, dataLocalIso } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/academy/attendance")({
   head: () => ({
@@ -50,9 +51,8 @@ const STATUS_META: Record<AttendanceStatus, { label: string; tone: string; short
 };
 const STATUS_LIST: AttendanceStatus[] = ["presente", "falta", "atraso", "justificado"];
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
-const formatDate = (iso: string) =>
-  new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+const todayIso = () => dataLocalIso();
+const formatDate = (iso: string) => fmtData(iso);
 
 function errMsg(err: unknown, forbidden = "Você não tem permissão para acessar a frequência desta turma.") {
   if (err instanceof ApiError) return err.status === 403 ? forbidden : err.message;

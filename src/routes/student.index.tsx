@@ -14,10 +14,12 @@ import { brl, valorDevido } from "@/components/rooster/finance/format";
 import {
   BookOpen, ClipboardList, UserCheck, Wallet, CalendarDays, Bell, ArrowUpRight, AlertTriangle, Star, UserX,
 } from "lucide-react";
+import { dataLocalIso, fmtNumero } from "@/lib/formatacao";
+import { fmtPercentual } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/student/")({ component: StudentDashboard });
 
-const today = new Date().toISOString().slice(0, 10);
+const today = dataLocalIso();
 
 function StudentDashboard() {
   const [disciplines, setDisciplines] = useState<StudentDiscipline[] | null>(null);
@@ -78,8 +80,8 @@ function StudentDashboard() {
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Disciplinas" value={disciplines.length.toString()} hint="matriculadas neste período" icon={BookOpen} tone={TONE.info} />
-        <StatCard label="Média geral" value={avg !== null ? avg.toFixed(1) : "—"} hint="médias das turmas com nota lançada" icon={Star} tone={TONE.ok} />
-        <StatCard label="Frequência média" value={`${attendance.toFixed(0)}%`} hint={`mínimo exigido ${MIN_ATTENDANCE}%`} icon={UserCheck} tone={attendance < 80 ? TONE.warn : TONE.cyan} />
+        <StatCard label="Média geral" value={avg !== null ? fmtNumero(avg, 1) : "—"} hint="médias das turmas com nota lançada" icon={Star} tone={TONE.ok} />
+        <StatCard label="Frequência média" value={fmtPercentual(attendance, 0)} hint={`mínimo exigido ${MIN_ATTENDANCE}%`} icon={UserCheck} tone={attendance < 80 ? TONE.warn : TONE.cyan} />
         <StatCard label="Financeiro em aberto" value={brl(openTotal)} hint={`${open.length} cobrança(s)`} icon={Wallet} tone={open.some((c) => c.status === "vencido") ? TONE.danger : TONE.purple} />
       </div>
 
@@ -147,7 +149,7 @@ function StudentDashboard() {
                       <p className="truncate text-sm">{g.name}</p>
                       <p className="truncate text-[11px] text-muted-foreground">{g.origin === "learn" ? "Rooster Learn" : "Manual"}</p>
                     </div>
-                    <Chip tone={val >= 7 ? TONE.ok : val >= 5 ? TONE.warn : TONE.danger}>{val.toFixed(1)}</Chip>
+                    <Chip tone={val >= 7 ? TONE.ok : val >= 5 ? TONE.warn : TONE.danger}>{fmtNumero(val, 1)}</Chip>
                   </li>
                 );
               })}
@@ -167,7 +169,7 @@ function StudentDashboard() {
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>Média {d.average?.toFixed(1) ?? "—"}</span>
+                  <span>Média {fmtNumero(d.average, 1)}</span>
                   <span>Freq. {d.attendance}%</span>
                 </div>
                 <ProgressBar className="mt-1.5" value={d.attendance} tone={d.accent} />

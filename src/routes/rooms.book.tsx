@@ -18,6 +18,7 @@ import { useCan } from "@/components/rooster/hub/permission-context";
 import {
   ChevronLeft, ChevronRight, Search, CalendarDays, CheckCircle2, AlertTriangle, DoorOpen, Users, MessageSquare, Send,
 } from "lucide-react";
+import { fmtMesAno } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/rooms/book")({
   head: () => ({
@@ -308,8 +309,8 @@ function BookRoomPage() {
             description="Clique em um dia para ver os horários já ocupados e solicitar o seu."
           >
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium capitalize">
-                {cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+              <span className="text-sm font-medium">
+                {fmtMesAno(cursor)}
               </span>
               <div className="flex items-center gap-2">
                 <button onClick={() => { const d = new Date(); setCursor(d); setDate(isoOf(d)); }} className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-accent">

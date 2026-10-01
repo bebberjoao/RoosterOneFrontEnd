@@ -6,6 +6,7 @@ import { LoadingCards } from "@/components/shared";
 import { studentService, MIN_ATTENDANCE, type StudentDiscipline } from "@/services/mock-api/student.service";
 import { learnService, type Activity } from "@/services/mock-api/learn.service";
 import { Search, BookOpen, Clock, MapPin, ClipboardList, BarChart3, LayoutGrid, List, UserX } from "lucide-react";
+import { fmtNumero } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/student/disciplines")({ component: StudentDisciplines });
 
@@ -100,7 +101,7 @@ function StudentDisciplines() {
                       <ProgressBar className="mt-1" value={d.attendance} tone={d.attendance < MIN_ATTENDANCE ? TONE.danger : d.attendance < 80 ? TONE.warn : TONE.ok} />
                     </div>
                     <div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Média</span><span>{d.average?.toFixed(1) ?? "—"}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Média</span><span>{fmtNumero(d.average, 1)}</span></div>
                       <ProgressBar className="mt-1" value={(d.average ?? 0) * 10} tone={d.accent} />
                     </div>
                   </div>
@@ -126,7 +127,7 @@ function StudentDisciplines() {
                       <p className="text-[11px] text-muted-foreground">{d.code} · {d.teacher} · {d.schedule || "horário a definir"}</p>
                     </div>
                     <div className="w-28 text-xs"><span className="text-muted-foreground">Freq.</span> {d.attendance}%</div>
-                    <div className="w-24 text-xs"><span className="text-muted-foreground">Média</span> {d.average?.toFixed(1) ?? "—"}</div>
+                    <div className="w-24 text-xs"><span className="text-muted-foreground">Média</span> {fmtNumero(d.average, 1)}</div>
                     <StatusChip status={d.situation} />
                     <Link to="/student/activities" className="rounded-lg border px-2.5 py-1.5 text-[11px] hover:bg-accent">Atividades</Link>
                   </li>

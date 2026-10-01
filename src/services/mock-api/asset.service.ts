@@ -10,6 +10,7 @@ import type { AssetSector } from "@/mock/database/assetSectors";
 import { mapResource } from "@/services/hub/mapped-resource";
 import { request } from "@/services/hub/client";
 import { applyFilters, type Filters } from "./utils";
+import { soData, paraNumero } from "@/lib/formatacao";
 
 type PatrimonioBack = {
   id: string;
@@ -28,7 +29,7 @@ type PatrimonioBack = {
   status: string;
   condicao: string;
   adquiridoEm?: string | null;
-  valor: number;
+  valor: number | string;
   observacoes?: string | null;
   foto?: string | null;
   chamadoManutencaoId?: string | null;
@@ -51,8 +52,8 @@ function patrimonioToFront(b: PatrimonioBack): Asset {
     owner: b.responsavel ?? "",
     status: b.status as AssetStatus,
     condition: b.condicao as AssetCondition,
-    acquiredAt: b.adquiridoEm ?? "",
-    value: b.valor,
+    acquiredAt: soData(b.adquiridoEm),
+    value: paraNumero(b.valor),
     notes: b.observacoes ?? undefined,
     photo: b.foto ?? undefined,
     maintenanceTicketId: b.chamadoManutencaoId ?? undefined,
@@ -118,7 +119,7 @@ function movimentoToFront(b: MovimentoBack): AssetMovement {
   return {
     id: b.id, assetId: b.patrimonioId, type: b.tipo as MovementType, from: b.origem ?? undefined,
     to: b.destino ?? undefined, user: b.usuario, date: b.criadoEm, notes: b.observacoes ?? undefined,
-    dueDate: b.dataDevolucaoPrevista ?? undefined, returnedAt: b.devolvidoEm ?? undefined,
+    dueDate: b.dataDevolucaoPrevista ? soData(b.dataDevolucaoPrevista) : undefined, returnedAt: b.devolvidoEm ?? undefined,
   };
 }
 const movementToBack = (f: Partial<AssetMovement>): Partial<MovimentoBack> => ({

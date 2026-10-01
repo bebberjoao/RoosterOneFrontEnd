@@ -5,6 +5,7 @@ import { SelectInput } from "@/components/shared";
 import { useHubDirectory } from "./hub-directory";
 import { LOCATIONS, CONDITION_META, STATUS_META, type Asset, type AssetCondition, type AssetStatus } from "./mock-data";
 import { useAssets } from "./store";
+import { dataLocalIso } from "@/lib/formatacao";
 
 export type AssetDraft = Omit<Asset, "id" | "createdAt">;
 
@@ -20,7 +21,7 @@ const empty = (categoryId: string): AssetDraft => ({
   owner: "",
   status: "disponivel",
   condition: "novo",
-  acquiredAt: new Date().toISOString().slice(0, 10),
+  acquiredAt: dataLocalIso(),
   value: 0,
   notes: "",
   photo: "",
