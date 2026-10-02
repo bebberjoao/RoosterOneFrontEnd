@@ -57,6 +57,7 @@ pelo `AppShell` nem pelo `RequireAccess`:
 | Chaves de `localStorage` | `rooster.session.*` | `rooster.boost.session.token` e `rooster.boost.session.usuario`, distintas por decisão de projeto, para que não haja colisão com as do Hub mesmo com as duas sessões abertas |
 | Login | `POST /auth/login` | `POST /boost/login` (conta do portal) ou `POST /boost/login-institucional` (aluno da instituição, com e-mail e senha do Hub; o token devolvido é do portal) |
 | Cadastro | inexistente (o usuário é criado no Hub) | `POST /boost/cadastro`, público |
+| Recuperação de senha | `POST /auth/esqueci-senha` e `POST /auth/redefinir-senha` (`/redefinir-senha`) | `POST /boost/esqueci-senha` e `POST /boost/redefinir-senha` (`/boost-portal/esqueci-senha` e `/boost-portal/redefinir-senha`), apenas para conta externa |
 | Declaração do JWT | sem `tipo` | `tipo: 'boost'`; o backend recusa esse token nas rotas do Hub, e vice-versa (ver `docs/security/03-rbac.md` no repositório do backend) |
 | Cliente HTTP | `services/hub/client.ts` (`request`, `ApiError` e `ApiUnavailableError`) | `services/boost-portal/client.ts` (`request`, `BoostApiError` e `BoostApiUnavailableError`), com implementação análoga, sem chamada recíproca |
 | Proteção de rota | o `AppShell` redireciona para `/login` | layout próprio (`boost-portal.tsx`), fora do `AppShell`; cada rota que exige login decide localmente com `useBoostAuth().authed` |

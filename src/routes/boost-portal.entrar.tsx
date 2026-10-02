@@ -134,12 +134,19 @@ function EntrarPage() {
             </Link>
           </p>
         ) : (
+          <>
+          <p className="text-center text-xs">
+            <Link to="/boost-portal/esqueci-senha" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Esqueci minha senha
+            </Link>
+          </p>
           <p className="text-center text-xs text-muted-foreground">
             Ainda não possui conta?{" "}
             <Link to="/boost-portal/cadastro" search={{ slug, matriculaId }} className="font-medium text-foreground underline-offset-4 hover:underline">
               Criar conta
             </Link>
           </p>
+          </>
         )}
       </form>
     </div>

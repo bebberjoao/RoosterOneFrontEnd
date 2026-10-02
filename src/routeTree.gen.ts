@@ -33,6 +33,8 @@ import { Route as AssetsInventoryRouteImport } from './routes/assets.inventory'
 import { Route as BoostPortalIndexRouteImport } from './routes/boost-portal.index'
 import { Route as BoostPortalCadastroRouteImport } from './routes/boost-portal.cadastro'
 import { Route as BoostPortalEntrarRouteImport } from './routes/boost-portal.entrar'
+import { Route as BoostPortalEsqueciSenhaRouteImport } from './routes/boost-portal.esqueci-senha'
+import { Route as BoostPortalRedefinirSenhaRouteImport } from './routes/boost-portal.redefinir-senha'
 import { Route as BoostPortalVerificarRouteImport } from './routes/boost-portal.verificar'
 import { Route as BoostIndexRouteImport } from './routes/boost.index'
 import { Route as BoostConversasRouteImport } from './routes/boost.conversas'
@@ -204,6 +206,17 @@ const BoostPortalEntrarRoute = BoostPortalEntrarRouteImport.update({
   path: '/entrar',
   getParentRoute: () => BoostPortalRoute,
 } as any)
+const BoostPortalEsqueciSenhaRoute = BoostPortalEsqueciSenhaRouteImport.update({
+  id: '/esqueci-senha',
+  path: '/esqueci-senha',
+  getParentRoute: () => BoostPortalRoute,
+} as any)
+const BoostPortalRedefinirSenhaRoute =
+  BoostPortalRedefinirSenhaRouteImport.update({
+    id: '/redefinir-senha',
+    path: '/redefinir-senha',
+    getParentRoute: () => BoostPortalRoute,
+  } as any)
 const BoostPortalVerificarRoute = BoostPortalVerificarRouteImport.update({
   id: '/verificar',
   path: '/verificar',
@@ -478,6 +491,8 @@ export interface FileRoutesByFullPath {
   '/assets/inventory': typeof AssetsInventoryRoute
   '/boost-portal/cadastro': typeof BoostPortalCadastroRoute
   '/boost-portal/entrar': typeof BoostPortalEntrarRoute
+  '/boost-portal/esqueci-senha': typeof BoostPortalEsqueciSenhaRoute
+  '/boost-portal/redefinir-senha': typeof BoostPortalRedefinirSenhaRoute
   '/boost-portal/verificar': typeof BoostPortalVerificarRoute
   '/boost/conversas': typeof BoostConversasRoute
   '/boost/students': typeof BoostStudentsRoute
@@ -544,6 +559,8 @@ export interface FileRoutesByTo {
   '/assets/inventory': typeof AssetsInventoryRoute
   '/boost-portal/cadastro': typeof BoostPortalCadastroRoute
   '/boost-portal/entrar': typeof BoostPortalEntrarRoute
+  '/boost-portal/esqueci-senha': typeof BoostPortalEsqueciSenhaRoute
+  '/boost-portal/redefinir-senha': typeof BoostPortalRedefinirSenhaRoute
   '/boost-portal/verificar': typeof BoostPortalVerificarRoute
   '/boost/conversas': typeof BoostConversasRoute
   '/boost/students': typeof BoostStudentsRoute
@@ -620,6 +637,8 @@ export interface FileRoutesById {
   '/assets/inventory': typeof AssetsInventoryRoute
   '/boost-portal/cadastro': typeof BoostPortalCadastroRoute
   '/boost-portal/entrar': typeof BoostPortalEntrarRoute
+  '/boost-portal/esqueci-senha': typeof BoostPortalEsqueciSenhaRoute
+  '/boost-portal/redefinir-senha': typeof BoostPortalRedefinirSenhaRoute
   '/boost-portal/verificar': typeof BoostPortalVerificarRoute
   '/boost/conversas': typeof BoostConversasRoute
   '/boost/students': typeof BoostStudentsRoute
@@ -698,6 +717,8 @@ export interface FileRouteTypes {
     | '/assets/inventory'
     | '/boost-portal/cadastro'
     | '/boost-portal/entrar'
+    | '/boost-portal/esqueci-senha'
+    | '/boost-portal/redefinir-senha'
     | '/boost-portal/verificar'
     | '/boost/conversas'
     | '/boost/students'
@@ -764,6 +785,8 @@ export interface FileRouteTypes {
     | '/assets/inventory'
     | '/boost-portal/cadastro'
     | '/boost-portal/entrar'
+    | '/boost-portal/esqueci-senha'
+    | '/boost-portal/redefinir-senha'
     | '/boost-portal/verificar'
     | '/boost/conversas'
     | '/boost/students'
@@ -839,6 +862,8 @@ export interface FileRouteTypes {
     | '/assets/inventory'
     | '/boost-portal/cadastro'
     | '/boost-portal/entrar'
+    | '/boost-portal/esqueci-senha'
+    | '/boost-portal/redefinir-senha'
     | '/boost-portal/verificar'
     | '/boost/conversas'
     | '/boost/students'
@@ -1080,6 +1105,20 @@ declare module '@tanstack/react-router' {
       path: '/entrar'
       fullPath: '/boost-portal/entrar'
       preLoaderRoute: typeof BoostPortalEntrarRouteImport
+      parentRoute: typeof BoostPortalRoute
+    }
+    '/boost-portal/esqueci-senha': {
+      id: '/boost-portal/esqueci-senha'
+      path: '/esqueci-senha'
+      fullPath: '/boost-portal/esqueci-senha'
+      preLoaderRoute: typeof BoostPortalEsqueciSenhaRouteImport
+      parentRoute: typeof BoostPortalRoute
+    }
+    '/boost-portal/redefinir-senha': {
+      id: '/boost-portal/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/boost-portal/redefinir-senha'
+      preLoaderRoute: typeof BoostPortalRedefinirSenhaRouteImport
       parentRoute: typeof BoostPortalRoute
     }
     '/boost-portal/verificar': {
@@ -1484,6 +1523,8 @@ const BoostRouteWithChildren = BoostRoute._addFileChildren(BoostRouteChildren)
 interface BoostPortalRouteChildren {
   BoostPortalCadastroRoute: typeof BoostPortalCadastroRoute
   BoostPortalEntrarRoute: typeof BoostPortalEntrarRoute
+  BoostPortalEsqueciSenhaRoute: typeof BoostPortalEsqueciSenhaRoute
+  BoostPortalRedefinirSenhaRoute: typeof BoostPortalRedefinirSenhaRoute
   BoostPortalVerificarRoute: typeof BoostPortalVerificarRoute
   BoostPortalIndexRoute: typeof BoostPortalIndexRoute
   BoostPortalCursosSlugRoute: typeof BoostPortalCursosSlugRoute
@@ -1494,6 +1535,8 @@ interface BoostPortalRouteChildren {
 const BoostPortalRouteChildren: BoostPortalRouteChildren = {
   BoostPortalCadastroRoute: BoostPortalCadastroRoute,
   BoostPortalEntrarRoute: BoostPortalEntrarRoute,
+  BoostPortalEsqueciSenhaRoute: BoostPortalEsqueciSenhaRoute,
+  BoostPortalRedefinirSenhaRoute: BoostPortalRedefinirSenhaRoute,
   BoostPortalVerificarRoute: BoostPortalVerificarRoute,
   BoostPortalIndexRoute: BoostPortalIndexRoute,
   BoostPortalCursosSlugRoute: BoostPortalCursosSlugRoute,

@@ -272,8 +272,10 @@ respectivo módulo.
 | Rota | Arquivo | Função |
 |---|---|---|
 | `/boost-portal` | `boost-portal.index.tsx` | Catálogo público dos cursos publicados, navegável sem login |
-| `/boost-portal/entrar` | `boost-portal.entrar.tsx` | Login do Boost com duas opções: **Aluno da instituição** (e-mail e senha do Rooster One, `POST /boost/login-institucional`) e **Aluno externo** (conta própria do portal, `POST /boost/login`); parâmetro opcional `modo` |
+| `/boost-portal/entrar` | `boost-portal.entrar.tsx` | Login do Boost com duas opções: **Aluno da instituição** (e-mail e senha do Rooster One, `POST /boost/login-institucional`) e **Aluno externo** (conta própria do portal, `POST /boost/login`, com o link "Esqueci minha senha"); parâmetro opcional `modo` |
 | `/boost-portal/cadastro` | `boost-portal.cadastro.tsx` | Cadastro público (nome, e-mail e senha) |
+| `/boost-portal/esqueci-senha` | `boost-portal.esqueci-senha.tsx` | Recuperação de senha do aluno externo: solicita o link por e-mail (`POST /boost/esqueci-senha`), com confirmação genérica |
+| `/boost-portal/redefinir-senha` | `boost-portal.redefinir-senha.tsx` | Nova senha a partir do link recebido (`POST /boost/redefinir-senha`; parâmetro `token`), com confirmação da senha |
 | `/boost-portal/cursos/:slug` | `boost-portal.cursos.$slug.tsx` | Prévia do curso (aluno não matriculado) ou conteúdo completo, com aulas, materiais, progresso, conversa com o orientador e certificado (aluno matriculado) |
 | `/boost-portal/painel` | `boost-portal.painel.index.tsx` | Matrículas do aluno (rota `index`; como `painel.tsx` era rota pai sem `<Outlet />`, a página de matrícula não era renderizada, defeito corrigido em setembro de 2026) |
 | `/boost-portal/painel/:matriculaId` | `boost-portal.painel.$matriculaId.tsx` | Detalhe da matrícula, com o reprodutor do curso |
