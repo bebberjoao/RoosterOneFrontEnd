@@ -12,6 +12,9 @@ import { useCan } from "@/components/rooster/hub/permission-context";
 import { boostService, type BoostCourseDetail } from "@/services/mock-api/boost.service";
 
 export const Route = createFileRoute("/boost/manage/$id")({
+  // O loader depende da sessão, guardada no navegador: sem SSR, ele roda no cliente também no acesso direto
+  // pelo endereço e na atualização da página (no servidor, a requisição falharia por falta de token).
+  ssr: false,
   loader: async ({ params }) => {
     const course = await boostService.getById(params.id);
     return { course };

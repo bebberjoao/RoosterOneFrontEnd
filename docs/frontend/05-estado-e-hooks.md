@@ -55,6 +55,17 @@ As telas de Academy (gestão), Learn e Student seguem o mesmo padrão:
   `catch(() => setNoLink(true))`; quando o usuário não possui `Aluno` vinculado, a tela exibe `EmptyState` ("Sem
   vínculo de aluno"), sem propagar o erro. Ver `10-tratamento-erros.md`.
 - Nenhuma dessas telas utiliza `react-query`; o padrão manual permanece o único mecanismo de busca de dados.
+- **Ordem dos hooks**: todo hook da tela (inclusive `useNotificacoes`) é chamado antes de qualquer retorno
+  antecipado (estado de carregamento ou "sem vínculo"). A chamada após um `return` condicional altera a ordem dos
+  hooks entre renderizações e interrompe a tela; o defeito ocorreu no painel do aluno (`student.index.tsx`) e foi
+  corrigido em 02/10/2026.
+
+### Exceção: rotas com `loader`
+
+`/boost/manage/:id` e `/desk/tickets/:id` carregam o registro no `loader` da rota, e não em `useEffect`. Como a
+sessão (token) é mantida no navegador, essas rotas declaram `ssr: false`: sem essa opção, o acesso direto pelo
+endereço ou a atualização da página executava o `loader` no servidor, sem token, e a tela informava que o curso
+ou o chamado não existia. Toda nova rota que utilize `loader` com dados autenticados deve declarar `ssr: false`.
 
 ## Hooks personalizados (`src/hooks/`)
 

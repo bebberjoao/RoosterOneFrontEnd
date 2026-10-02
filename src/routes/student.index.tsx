@@ -28,6 +28,8 @@ function StudentDashboard() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
   const [noLink, setNoLink] = useState(false);
+  // Hook chamado antes de qualquer retorno antecipado: a ordem dos hooks deve ser a mesma em toda renderização.
+  const { naoLidas: unread } = useNotificacoes();
 
   useEffect(() => {
     studentService.getMyEnrollments().then(setDisciplines).catch(() => setNoLink(true));
@@ -61,7 +63,6 @@ function StudentDashboard() {
   const recentGrades = grades.flatMap((g) => g.items.filter((i) => i.value !== null).map((i) => ({ ...i, classId: g.classId }))).slice(0, 5);
   const risky = disciplines.filter((d) => d.attendance < MIN_ATTENDANCE + 5);
   const nextEvents = [...events].filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
-  const { naoLidas: unread } = useNotificacoes();
   const avg = overallAverage(disciplines);
   const attendance = overallAttendance(disciplines);
 

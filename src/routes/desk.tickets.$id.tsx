@@ -36,6 +36,9 @@ import {
 import { fmtNumeroLivre } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/desk/tickets/$id")({
+  // O loader depende da sessão, guardada no navegador: sem SSR, ele roda no cliente também no acesso direto
+  // pelo endereço e na atualização da página (no servidor, a requisição falharia por falta de token).
+  ssr: false,
   loader: async ({ params }) => {
     const ticket = await ticketService.getById(params.id);
     if (!ticket) throw notFound();
