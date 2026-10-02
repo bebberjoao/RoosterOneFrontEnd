@@ -15,7 +15,8 @@ src/
       student/          Busca global (student/global-search.tsx), ui.tsx e mock-data.ts (avisos e documentos de exemplo do portal)
       academy/          manage/ (abas de gestão acadêmica: disciplinas, turmas, professores, alunos, calendário e user-picker.tsx);
                         badges.tsx, permissions.ts e event-labels.ts (EVENT_TONE e EVENT_LABEL)
-      learn/            badges.tsx; forms-store.ts (construtor local de formulários, sem endpoint), inicializado por forms-seed.ts
+      learn/            badges.tsx; questions.tsx (editor, preenchimento e resultado das questões) e questions-utils.ts;
+                        submission-modals.tsx (modais de resposta e revisão, compartilhados por Learn e Student)
       boost/            manage/ (abas de gestão do curso: identificação, conteúdo, detalhes, alunos e conversas)
       auth-context.tsx        Sessão (login e logout)
       role-context.tsx        Perfil de interface deduzido das permissões efetivas (deriveRole) e useCurrentPerson() (nome do usuário)

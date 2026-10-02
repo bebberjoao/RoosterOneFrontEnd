@@ -49,6 +49,16 @@ nome e e-mail e o botão "Trocar"; na edição de registro existente, o campo é
 `usuarioId` não pode ser alterado após a criação, apenas por exclusão e novo cadastro. É o componente de referência
 para futuras telas que necessitem do mesmo tipo de vínculo (por exemplo, coordenador ou atendente).
 
+### `src/components/rooster/learn/`: questões e entregas
+
+`questions.tsx` reúne o editor de questões do professor (`QuestionsEditor` e o modal de cadastro), o campo de resposta
+do aluno por tipo de questão (`QuestionAnswerInput`), a exibição do resultado com gabarito e pontuação
+(`QuestionResult`, que aceita um campo de pontuação opcional para a correção) e a imagem de apoio (`QuestionImage`,
+obtida como `Blob` e exibida por URL de objeto, revogada ao desmontar). As funções auxiliares (`salvarArquivo`,
+`emptyAnswer` e `answerMissing`) ficam em `questions-utils.ts`, para preservar o recarregamento rápido do Vite.
+`submission-modals.tsx` contém `AnswerModal` e `ReviewModal`, utilizados tanto por `/learn/student` quanto por
+`/student/activities`.
+
 ## Componentes de estrutura (`src/components/rooster/*.tsx`, fora de subpastas)
 
 `app-shell.tsx`, `app-sidebar.tsx`, `app-topbar.tsx` e `page-header.tsx`: layout autenticado, menu lateral, barra

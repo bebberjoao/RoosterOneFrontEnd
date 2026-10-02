@@ -90,7 +90,11 @@ realiza a conversão para o tipo utilizado pelas telas, que não manipulam o for
   itens avaliativos e notas, eventos de calendário e documentos acadêmicos (listagem, envio, exclusão e download).
   `createTeacher` e `createStudent` recebem o `usuarioId` de `Usuario` existente no Hub, sem criar usuário (ver
   `UserPicker` em `04-componentes.md`).
-- **`learnService`**: atividades (`Atividade`) e entregas (`Entrega`) de turma do Academy (mesmo `classId`/`turmaId`).
+- **`learnService`**: atividades (`Atividade`) e entregas (`Entrega`) de turma do Academy (mesmo `classId`/`turmaId`);
+  questões (`getQuestions`, `createQuestion`, `updateQuestion`, `removeQuestion`, `reorderQuestions`,
+  `uploadQuestionImage`, `removeQuestionImage` e `getQuestionImage`), envio com respostas (`submit(activityId, texto,
+  answers)`), anexo vinculado à questão (`uploadAttachment(entregaId, file, questionId)`) e correção por questão
+  (`gradeByQuestion`). A entrega expõe `answers` (`RespostaQuestao`) e cada anexo, `questionId`.
 - **`studentService`**: dados do portal do aluno (seção `/me/*` abaixo); as matrículas expõem `disciplineId`, utilizado
   pela central de documentos para filtrar os documentos das disciplinas do aluno.
 

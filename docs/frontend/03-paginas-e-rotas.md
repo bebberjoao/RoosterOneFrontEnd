@@ -150,7 +150,7 @@ simulados internamente**, sem intermediador de pagamento e sem transmissão à S
 | `/student` | `student.index.tsx` | API* | Painel: disciplinas, notas e atividades (`studentService` e `learnService`), eventos (`academyService`) e cobranças (`financeService.me.getCobrancas()`). *O quadro de avisos (`NOTICES`) utiliza dados de exemplo de `student/mock-data.ts` |
 | `/student/profile` | `student.profile.tsx` | API | Perfil acadêmico (`studentService.getMe()`); a edição do e-mail pessoal é apenas local, sem endpoint |
 | `/student/disciplines` | `student.disciplines.tsx` | API | Disciplinas matriculadas (`studentService.getMyEnrollments()`) |
-| `/student/activities` | `student.activities.tsx` | API | Atividades e entregas do aluno (`learnService`) |
+| `/student/activities` | `student.activities.tsx` | API | Atividades e entregas do aluno (`learnService`), com os mesmos modais de resposta e revisão do Learn |
 | `/student/grades` | `student.grades.tsx` | API | Boletim por turma (`studentService.getMyGrades()`) |
 | `/student/attendance` | `student.attendance.tsx` | API | Frequência (`studentService.getMyAttendance()`) |
 | `/student/history` | `student.history.tsx` | API | Histórico acadêmico e coeficiente de rendimento (`studentService.getMyHistory()`) |
@@ -194,21 +194,28 @@ possui vínculo de professor.
 |---|---|---|
 | `/learn` | `learn.index.tsx` | Painel: estatísticas (o professor visualiza as turmas por `academyService.getClasses`; o aluno, `learnService.getMyActivities`), lista de atividades e abas Turmas e Relatórios |
 | `/learn/classes` | `learn.classes.tsx` | Professor e coordenação: seleção de turma do Academy, cadastro de atividades (`learnService.create`, `update`, `remove` e `publish`) e correção de entregas |
-| `/learn/activities/:id` | `learn.activities.$id.tsx` | Detalhe da atividade: descrição, entregas, correção, notas, parecer e histórico |
-| `/learn/student` | `learn.student.tsx` | Área do aluno: atividades por disciplina, resposta (texto e anexo) e consulta de nota e parecer |
+| `/learn/activities/:id` | `learn.activities.$id.tsx` | Detalhe da atividade: descrição, questões (editor), entregas, correção (por nota ou por questão), notas, parecer e histórico |
+| `/learn/student` | `learn.student.tsx` | Área do aluno: atividades por disciplina, resposta (texto, questões e anexos) e consulta de nota, parecer e gabarito |
 
 Layout: `learn.tsx`.
 
 As atividades pertencem a turma do Academy (mesmo identificador devolvido por `academyService.getClasses()`); não há
-turma ou disciplina paralela no Learn. O banco de questões do protótipo anterior (`Question` e `QuestionType`, com
-múltipla escolha e embaralhamento) não possui equivalente no backend e foi removido destas telas: a entrega do aluno
-consiste em texto livre e anexos.
+turma ou disciplina paralela no Learn.
 
-`src/components/rooster/learn/forms-store.ts` é um construtor de formulários mantido exclusivamente no cliente, por
-decisão de escopo, sem endpoint no backend, inicializado por `learn/forms-seed.ts` (tipos `ActivityStatus`,
-`ActivityType` e `Question` e dados de exemplo). O antigo `learn/mock-data.ts` (229 linhas, em sua maior parte sem
-consumidor) foi removido em setembro de 2026; apenas `ACTIVITIES` e `QUESTIONS`, efetivamente utilizados por
-`forms-store.ts`, foram preservados em `forms-seed.ts`.
+**Questões** (desde 02/10/2026): a aba **Questões** de `/learn/activities/:id` (`QuestionsEditor`, em
+`src/components/rooster/learn/questions.tsx`) cadastra questões de múltipla escolha com uma ou várias respostas,
+verdadeiro ou falso, discursivas e de envio de arquivo, com enunciado, texto e imagem de apoio, valor, obrigatoriedade
+e, nas objetivas, alternativas com indicação da correta; permite reordenar e excluir, e informa o bloqueio da edição
+quando a atividade já possui entregas (RN048). A imagem de apoio é obtida como `Blob` (`learnService.getQuestionImage`),
+por ser servida em rota autenticada. A aba **Correção** passa a exibir, na atividade com questões, cada resposta com o
+gabarito e um campo de pontuação por questão (as objetivas já pontuadas automaticamente), com prévia da nota
+proporcional (`QuestionGradeForm`). O aluno responde questão a questão em `AnswerModal` e consulta o resultado em
+`ReviewModal` (`src/components/rooster/learn/submission-modals.tsx`), modais compartilhados por `/learn/student` e
+`/student/activities`; o gabarito é exibido somente após a correção (RN050). Sem questões, a entrega permanece
+texto livre com anexos.
+
+O construtor de formulários mantido exclusivamente no cliente (`learn/forms-store.ts` e `learn/forms-seed.ts`), sem
+endpoint no backend e sem consumidor nas telas, foi removido em 02/10/2026, substituído pelas questões persistidas.
 
 ## Rooster Boost: gestão e orientação (`API`, no `AppShell`)
 

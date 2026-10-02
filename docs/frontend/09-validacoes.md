@@ -42,10 +42,17 @@ salvar e sem `HubCrud`:
   o curso."), e não por campo.
 - **Cadastro de atividade (`learn.classes.tsx` e `learn.activities.$id.tsx`)**: exige apenas título não vazio
   (`title.trim()`); os demais campos (peso, nota máxima e prazo) possuem valor padrão.
-- **Entrega de atividade pelo aluno (`learn.student.tsx`, `AnswerModal`)**: não há validação no cliente que exija
-  texto ou anexo; a tela permite o envio com texto vazio e sem anexo. O backend aceita `texto` opcional
-  (`EnviarEntregaDto`), e os anexos são enviados em requisições separadas após a criação da entrega; não há regra que
-  exija ao menos um dos dois.
+- **Entrega de atividade pelo aluno (`AnswerModal`, em `learn/submission-modals.tsx`)**: na atividade sem questões,
+  não há validação no cliente que exija texto ou anexo; o backend aceita `texto` opcional (`EnviarEntregaDto`), e os
+  anexos são enviados em requisições separadas após a criação da entrega. Na atividade com questões, o envio é
+  bloqueado enquanto houver questão obrigatória sem resposta (`answerMissing`, em `questions-utils.ts`), com
+  destaque das questões e mensagem que as enumera; a verificação equivalente do backend (RN049) permanece a
+  autoritativa, exceto para a questão de envio de arquivo, cuja obrigatoriedade é verificada apenas no cliente, por
+  ser o arquivo enviado após o registro da entrega.
+- **Questão (`QuestionFormModal`, em `learn/questions.tsx`)**: enunciado obrigatório, valor maior que zero e, nas
+  objetivas, alternativas com texto e quantidade de corretas conforme o tipo (mesmas regras do backend, RN048);
+  imagem de apoio de até 5 MB.
+- **Correção por questão (`QuestionGradeForm`)**: exige pontuação entre zero e o valor de cada questão.
 - **Correção de entrega (`GradePanel` e `GradeForm`, no Learn)**: exige apenas que `nota` seja número válido
   (verificação `Number.isNaN`); a nota máxima é exibida como indicação ("máx. X"), mas o limite é aplicado pelo
   backend, que recusa valor superior com `400`.
