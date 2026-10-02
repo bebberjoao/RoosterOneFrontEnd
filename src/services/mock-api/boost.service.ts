@@ -85,6 +85,14 @@ export type ExternalStudent = {
   active: boolean;
   createdAt: string;
   enrollmentCount: number;
+  /** Conta vinculada à conta institucional (aluno interno): nome, e-mail e senha são os do Rooster Hub. */
+  institutional: boolean;
+};
+
+/** Candidatos à matrícula pela gestão: contas externas e alunos internos (Academy). */
+export type EnrollmentCandidates = {
+  external: Array<{ boostUserId: string; name: string; email: string }>;
+  internal: Array<{ userId: string; name: string; email: string; ra: string | null }>;
 };
 
 export type BoostModule = { id: string; title: string; order: number; courseId: string; lessons: BoostLesson[] };
@@ -102,6 +110,7 @@ export type BoostEnrollment = {
   studentName: string;
   studentEmail: string;
   certificateIssued: boolean;
+  institutional: boolean;
 };
 
 export type BoostMessage = { id: string; text: string; createdAt: string; authorName: string; fromInstructor: boolean };
@@ -143,7 +152,8 @@ type ExternalStudentBack = {
   email: string;
   ativo: boolean;
   criadoEm: string;
-  _count: { matriculas: number };
+  usuarioId?: string | null;
+  _count?: { matriculas: number };
 };
 
 type ModuloBack = { id: string; titulo: string; ordem: number; cursoId: string; aulas?: AulaBack[] };
@@ -182,7 +192,7 @@ type AlunoBoostBack = {
   progressoPct: number;
   matriculadoEm: string;
   concluidoEm?: string | null;
-  boostUsuario: { id: string; nome: string; email: string };
+  boostUsuario: { id: string; nome: string; email: string; usuarioId?: string | null };
   certificado: { id: string; [k: string]: unknown } | null;
 };
 
@@ -262,7 +272,10 @@ function lessonToFront(b: AulaBack): BoostLesson {
 }
 
 function externalStudentToFront(b: ExternalStudentBack): ExternalStudent {
-  return { id: b.id, name: b.nome, email: b.email, active: b.ativo, createdAt: b.criadoEm, enrollmentCount: b._count.matriculas };
+  return {
+    id: b.id, name: b.nome, email: b.email, active: b.ativo, createdAt: b.criadoEm,
+    enrollmentCount: b._count?.matriculas ?? 0, institutional: !!b.usuarioId,
+  };
 }
 
 function moduleToFront(b: ModuloBack): BoostModule {
@@ -291,6 +304,7 @@ function enrollmentToFront(b: AlunoBoostBack): BoostEnrollment {
     studentName: b.boostUsuario?.nome ?? "—",
     studentEmail: b.boostUsuario?.email ?? "",
     certificateIssued: !!b.certificado,
+    institutional: !!b.boostUsuario?.usuarioId,
   };
 }
 
@@ -481,13 +495,53 @@ export const boostService = {
     return rows.map(externalStudentToFront);
   },
   async toggleExternalStudent(id: string, active: boolean): Promise<ExternalStudent> {
-    const updated = await request<ExternalStudentBack & { _count?: { matriculas: number } }>(`/boost-alunos-externos/${id}`, {
-      method: "PATCH",
-      body: { ativo: active },
+    return this.updateExternalStudent(id, { active });
+  },
+  /**
+   * Cadastro de conta externa. Sem senha, o backend gera senha temporária, devolvida apenas nesta
+   * resposta (`temporaryPassword`), para repasse ao aluno.
+   */
+  async createExternalStudent(dto: { name: string; email: string; password?: string }): Promise<{ student: ExternalStudent; temporaryPassword?: string }> {
+    const created = await request<ExternalStudentBack & { senhaTemporaria?: string }>("/boost-alunos-externos", {
+      method: "POST",
+      body: { nome: dto.name, email: dto.email, ...(dto.password ? { senha: dto.password } : {}) },
     });
-    // A resposta do PATCH não traz `_count` (endpoint devolve só os campos básicos) —
-    // a tela já tem a contagem da listagem em memória, então mantém 0 aqui e recarrega a lista.
-    return externalStudentToFront({ ...updated, _count: updated._count ?? { matriculas: 0 } });
+    return { student: externalStudentToFront(created), temporaryPassword: created.senhaTemporaria };
+  },
+  async updateExternalStudent(id: string, dto: { name?: string; email?: string; active?: boolean }): Promise<ExternalStudent> {
+    const updated = await request<ExternalStudentBack>(`/boost-alunos-externos/${id}`, {
+      method: "PATCH",
+      body: {
+        ...(dto.name !== undefined && { nome: dto.name }),
+        ...(dto.email !== undefined && { email: dto.email }),
+        ...(dto.active !== undefined && { ativo: dto.active }),
+      },
+    });
+    return externalStudentToFront(updated);
+  },
+  /** Exclui conta sem matrícula; com matrícula, o backend responde 409 e a conta deve ser desativada. */
+  async removeExternalStudent(id: string): Promise<void> {
+    await request<void>(`/boost-alunos-externos/${id}`, { method: "DELETE" });
+  },
+
+  // ---------- Matrícula pela gestão ----------
+  async getEnrollmentCandidates(courseId: string, search?: string): Promise<EnrollmentCandidates> {
+    const qs = search?.trim() ? `?busca=${encodeURIComponent(search.trim())}` : "";
+    const r = await request<{
+      externos: Array<{ id: string; nome: string; email: string }>;
+      internos: Array<{ usuarioId: string; nome: string; email: string; ra: string | null }>;
+    }>(`/cursos-boost/${courseId}/candidatos-matricula${qs}`);
+    return {
+      external: r.externos.map((e) => ({ boostUserId: e.id, name: e.nome, email: e.email })),
+      internal: r.internos.map((i) => ({ userId: i.usuarioId, name: i.nome, email: i.email, ra: i.ra })),
+    };
+  },
+  async enrollStudent(courseId: string, target: { boostUserId: string } | { userId: string }): Promise<void> {
+    const body = "boostUserId" in target ? { boostUsuarioId: target.boostUserId } : { usuarioId: target.userId };
+    await request(`/cursos-boost/${courseId}/matriculas`, { method: "POST", body });
+  },
+  async cancelEnrollment(enrollmentId: string): Promise<void> {
+    await request(`/matriculas-boost/${enrollmentId}/cancelar`, { method: "PATCH" });
   },
   /** Gera e devolve uma senha temporária (visível só nesta resposta) para a conta externa. */
   async resetExternalStudentPassword(id: string): Promise<{ email: string; temporaryPassword: string }> {

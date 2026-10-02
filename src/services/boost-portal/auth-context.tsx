@@ -15,6 +15,8 @@ type BoostAuthCtx = {
   usuario: BoostSessionUser | null;
   /** POST /boost/login. Lança BoostApiError (credenciais) ou BoostApiUnavailableError (sem servidor). */
   login: (email: string, senha: string) => Promise<void>;
+  /** POST /boost/login-institucional: aluno interno, com e-mail e senha do Rooster One. Emite token do portal. */
+  loginInstitucional: (email: string, senha: string) => Promise<void>;
   /** POST /boost/cadastro. Lança BoostApiError (ex.: 409 e-mail já cadastrado) ou BoostApiUnavailableError. */
   cadastro: (nome: string, email: string, senha: string) => Promise<void>;
   logout: () => void;
@@ -25,6 +27,7 @@ const Ctx = createContext<BoostAuthCtx>({
   ready: false,
   usuario: null,
   login: async () => {},
+  loginInstitucional: async () => {},
   cadastro: async () => {},
   logout: () => {},
 });
@@ -48,6 +51,11 @@ export function BoostAuthProvider({ children }: { children: ReactNode }) {
     boostSession.set(res.accessToken, res.usuario);
   };
 
+  const loginInstitucional = async (email: string, senha: string) => {
+    const res = await request<SessaoBoostResponse>("/boost/login-institucional", { method: "POST", body: { email, senha } });
+    boostSession.set(res.accessToken, res.usuario);
+  };
+
   const cadastro = async (nome: string, email: string, senha: string) => {
     const res = await request<SessaoBoostResponse>("/boost/cadastro", { method: "POST", body: { nome, email, senha } });
     boostSession.set(res.accessToken, res.usuario);
@@ -56,7 +64,7 @@ export function BoostAuthProvider({ children }: { children: ReactNode }) {
   const logout = () => boostSession.clear();
 
   return (
-    <Ctx.Provider value={{ authed: usuario !== null, ready, usuario, login, cadastro, logout }}>
+    <Ctx.Provider value={{ authed: usuario !== null, ready, usuario, login, loginInstitucional, cadastro, logout }}>
       {children}
     </Ctx.Provider>
   );

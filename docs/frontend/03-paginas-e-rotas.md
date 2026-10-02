@@ -244,11 +244,24 @@ envio de novo arquivo substitui o anterior. A listagem de aulas identifica as qu
 `uploadFileWithProgress` **não renova a sessão automaticamente** diante de `401`, ao contrário de `uploadFile`: a
 repetição integral de um envio de vários minutos seria mais prejudicial que a simples indicação da falha.
 
-**`/boost/students` (`boost.students.tsx`)**: gestão das contas públicas do portal (`BoostUsuario`): relação com busca,
-contagem de matrículas, ativação e desativação e **redefinição de senha**, que abre modal com a senha temporária gerada,
-botão de cópia e aviso de que ela **não será exibida novamente**. Destinada apenas ao administrador (item de menu com
+**`/boost/students` (`boost.students.tsx`, menu "Alunos do portal")**: cadastro das contas do portal (`BoostUsuario`):
+relação com busca, tipo de conta (externa ou institucional), contagem de matrículas, **cadastro** de aluno externo
+("Novo aluno externo", com senha informada ou senha temporária gerada), **edição** de nome e e-mail, ativação e
+desativação, **exclusão** de conta sem matrícula e **redefinição de senha**. A senha temporária é exibida em modal, com
+botão de cópia e aviso de que **não será exibida novamente**. As contas institucionais não oferecem edição nem
+redefinição de senha, pois esses dados são mantidos no Rooster Hub. Destinada apenas ao administrador (item de menu com
 `roles: ["admin"]` em `module-config.ts`; permissão `boost.students.*` no catálogo). Não utiliza o `HubCrud` genérico,
-pois as ações (ativação e redefinição) não seguem o formato de CRUD por ele pressuposto.
+pois as ações (ativação, redefinição e senha temporária) não seguem o formato de CRUD por ele pressuposto.
+
+**Aba "Alunos" de `/boost/manage/:id` (`boost/manage/students-tab.tsx`)**: alunos matriculados, com tipo (instituição
+ou externo), progresso, data da matrícula, status e certificado. Com a permissão `boost.manage.matricular`, exibe o
+botão **Matricular aluno**, que abre a busca de candidatos (alunos do Academy e contas externas ainda não
+matriculados), e a ação **Cancelar matrícula** nas matrículas ativas.
+
+**Atalhos para o portal**: o menu do Rooster Boost possui o item "Portal do aluno", o menu do Rooster Student possui o
+item "Cursos livres (Boost)" e a tela de login possui o link "acessar o Rooster Boost", todos para `/boost-portal`.
+Como `/boost-portal` não corresponde a tela do catálogo de permissões, os itens são exibidos a todos os usuários do
+respectivo módulo.
 
 ## Portal do Rooster Boost: aluno (`API`, autenticação pública, fora do `AppShell`)
 
@@ -259,7 +272,7 @@ pois as ações (ativação e redefinição) não seguem o formato de CRUD por e
 | Rota | Arquivo | Função |
 |---|---|---|
 | `/boost-portal` | `boost-portal.index.tsx` | Catálogo público dos cursos publicados, navegável sem login |
-| `/boost-portal/entrar` | `boost-portal.entrar.tsx` | Login do Boost (conta própria, distinta da conta do Hub) |
+| `/boost-portal/entrar` | `boost-portal.entrar.tsx` | Login do Boost com duas opções: **Aluno da instituição** (e-mail e senha do Rooster One, `POST /boost/login-institucional`) e **Aluno externo** (conta própria do portal, `POST /boost/login`); parâmetro opcional `modo` |
 | `/boost-portal/cadastro` | `boost-portal.cadastro.tsx` | Cadastro público (nome, e-mail e senha) |
 | `/boost-portal/cursos/:slug` | `boost-portal.cursos.$slug.tsx` | Prévia do curso (aluno não matriculado) ou conteúdo completo, com aulas, materiais, progresso, conversa com o orientador e certificado (aluno matriculado) |
 | `/boost-portal/painel` | `boost-portal.painel.index.tsx` | Matrículas do aluno (rota `index`; como `painel.tsx` era rota pai sem `<Outlet />`, a página de matrícula não era renderizada, defeito corrigido em setembro de 2026) |

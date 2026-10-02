@@ -9,7 +9,8 @@
 const TOKEN_KEY = "rooster.boost.session.token";
 const USER_KEY = "rooster.boost.session.usuario";
 
-export type BoostSessionUser = { id: string; nome: string; email: string };
+/** `institucional`: sessão aberta com a conta institucional (aluno interno), e não com conta própria do portal. */
+export type BoostSessionUser = { id: string; nome: string; email: string; institucional?: boolean };
 
 let token: string | null = null;
 let usuario: BoostSessionUser | null = null;

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import logoAsset from "@/assets/rooster-logo.png.asset.json";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import logoUrl from "@/assets/rooster-logo.png";
 import { ApiError, ApiUnavailableError, useAuth } from "@/components/rooster/auth-context";
 
 export const Route = createFileRoute("/login")({
@@ -32,7 +32,7 @@ function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
           <img
-            src={logoAsset.url}
+            src={logoUrl}
             alt="Rooster One"
             className="h-16 w-16 brightness-0 invert"
           />
@@ -154,6 +154,12 @@ function LoginPage() {
             </form>
           )}
         </div>
+        <p className="mt-6 text-center text-xs text-white/60">
+          Cursos livres e certificações:{" "}
+          <Link to="/boost-portal" className="font-medium text-white underline-offset-4 hover:underline">
+            acessar o Rooster Boost
+          </Link>
+        </p>
       </div>
     </div>
   );

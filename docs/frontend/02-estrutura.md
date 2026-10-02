@@ -4,7 +4,7 @@
 
 ```
 src/
-  assets/              Recursos estáticos (por exemplo, rooster-logo.png.asset.json)
+  assets/              Recursos estáticos importados pelo Vite (rooster-logo.png, logotipo do sistema)
   components/
     rooster/           Componentes de domínio do Rooster One (não genéricos)
       hub/              CRUD genérico do Hub; catálogo e contexto de permissões

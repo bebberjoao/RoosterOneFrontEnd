@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import logoAsset from "@/assets/rooster-logo.png.asset.json";
+import logoUrl from "@/assets/rooster-logo.png";
 import { ApiError, ApiUnavailableError, useAuth } from "@/components/rooster/auth-context";
 
 export const Route = createFileRoute("/redefinir-senha")({
@@ -29,7 +29,7 @@ function RedefinirSenhaPage() {
     <div className="dark flex min-h-screen items-center justify-center bg-[oklch(0.19_0.06_265)] px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <img src={logoAsset.url} alt="Rooster One" className="h-16 w-16 brightness-0 invert" />
+          <img src={logoUrl} alt="Rooster One" className="h-16 w-16 brightness-0 invert" />
           <h1 className="mt-4 text-2xl font-semibold text-white">Redefinir senha</h1>
           <p className="mt-1 text-sm text-white/60">Escolha uma nova senha de acesso</p>
         </div>

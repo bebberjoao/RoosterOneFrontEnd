@@ -187,14 +187,14 @@ const SCREENS: Record<string, ScreenDef[]> = {
       a("ver-progresso", "Ver progresso dos alunos"),
       a("certificado", "Configurar certificado"),
       a("vincular-orientadores", "Vincular orientadores"),
+      a("matricular", "Matricular e cancelar matrícula de alunos"),
     ]),
     // Orientador: professor vinculado a um curso; só conversa com os alunos dele.
     screen("/boost/conversas", "Conversas com alunos", [a("responder", "Responder alunos")]),
-    // Gestão entre cursos (contas externas do portal público) — fora do
-    // modelo de posse "dono do curso" do resto do Boost, por isso tela própria.
-    screen("/boost/students", "Alunos externos", [
-      a("acessar", "Ver contas externas"),
-      a("gerenciar", "Ativar/desativar e redefinir senha"),
+    // Contas do portal (externas e institucionais), gestão entre cursos, por isso tela própria.
+    screen("/boost/students", "Alunos do portal", [
+      a("acessar", "Ver contas do portal"),
+      a("gerenciar", "Cadastrar, editar, ativar/desativar, excluir e redefinir senha"),
     ]),
   ],
 };

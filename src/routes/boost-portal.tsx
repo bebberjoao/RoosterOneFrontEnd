@@ -6,7 +6,7 @@
 // completamente separada da sessão do Hub — ver services/boost-portal/session.ts).
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { GraduationCap, LogOut, User } from "lucide-react";
-import logoAsset from "@/assets/rooster-logo.png.asset.json";
+import logoUrl from "@/assets/rooster-logo.png";
 import { BoostAuthProvider, useBoostAuth } from "@/services/boost-portal/auth-context";
 
 export const Route = createFileRoute("/boost-portal")({
@@ -35,7 +35,7 @@ function BoostPortalLayout() {
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link to="/boost-portal" className="flex items-center gap-2.5">
-            <img src={logoAsset.url} alt="Rooster One" className="h-8 w-8" />
+            <img src={logoUrl} alt="Rooster One" className="h-8 w-8" />
             <div className="leading-tight">
               <p className="flex items-center gap-1.5 text-sm font-semibold">
                 Rooster Boost <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />

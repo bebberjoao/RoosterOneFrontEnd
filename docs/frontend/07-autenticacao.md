@@ -46,8 +46,8 @@ do backend.
 
 ## Segunda sessão, paralela e independente: portal do Rooster Boost
 
-Todo o conteúdo acima refere-se à sessão do **Hub**. O portal público do Boost (`/boost-portal/*`, para alunos externos
-sem conta no Hub) possui sessão **completamente separada**, que não importa nenhum elemento do Hub e não é considerada
+Todo o conteúdo acima refere-se à sessão do **Hub**. O portal do Boost (`/boost-portal/*`, para alunos externos e para
+os alunos da instituição) possui sessão **completamente separada**, que não importa nenhum elemento do Hub e não é considerada
 pelo `AppShell` nem pelo `RequireAccess`:
 
 | | Hub | Portal do Boost |
@@ -55,7 +55,7 @@ pelo `AppShell` nem pelo `RequireAccess`:
 | Provider | `auth-context.tsx` (`useAuth()`) | `services/boost-portal/auth-context.tsx` (`useBoostAuth()`) |
 | Sessão e armazenamento | `services/hub/session.ts` | `services/boost-portal/session.ts` |
 | Chaves de `localStorage` | `rooster.session.*` | `rooster.boost.session.token` e `rooster.boost.session.usuario`, distintas por decisão de projeto, para que não haja colisão com as do Hub mesmo com as duas sessões abertas |
-| Login | `POST /auth/login` | `POST /boost/login` |
+| Login | `POST /auth/login` | `POST /boost/login` (conta do portal) ou `POST /boost/login-institucional` (aluno da instituição, com e-mail e senha do Hub; o token devolvido é do portal) |
 | Cadastro | inexistente (o usuário é criado no Hub) | `POST /boost/cadastro`, público |
 | Declaração do JWT | sem `tipo` | `tipo: 'boost'`; o backend recusa esse token nas rotas do Hub, e vice-versa (ver `docs/security/03-rbac.md` no repositório do backend) |
 | Cliente HTTP | `services/hub/client.ts` (`request`, `ApiError` e `ApiUnavailableError`) | `services/boost-portal/client.ts` (`request`, `BoostApiError` e `BoostApiUnavailableError`), com implementação análoga, sem chamada recíproca |

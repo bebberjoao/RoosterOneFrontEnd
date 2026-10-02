@@ -191,6 +191,8 @@ export const MODULES: ModuleItem[] = [
       { id: "st-fin", title: "Financeiro", to: "/student/finance", icon: Wallet },
       { id: "st-docs", title: "Documentos", to: "/student/documents", icon: FileText },
       { id: "st-notif", title: "Notificações", to: "/student/notifications", icon: BadgeCheck },
+      // Portal do Rooster Boost (área pública, fora do AppShell): o aluno entra com a conta institucional.
+      { id: "st-boost", title: "Cursos livres (Boost)", to: "/boost-portal", icon: Rocket },
     ],
   },
   {
@@ -232,15 +234,16 @@ export const MODULES: ModuleItem[] = [
     icon: Rocket,
     description: "Cursos extracurriculares, videoaulas e certificados.",
     accent: "oklch(0.68 0.18 40)",
-    // Aluno usa o portal público do Boost (autenticação própria, fora do shell do Hub) —
-    // aqui dentro é a GESTÃO dos cursos (por permissão) e as CONVERSAS do orientador.
+    // O aluno (externo ou da instituição) utiliza o portal do Boost, fora do AppShell, com sessão própria;
+    // aqui estão a gestão dos cursos (por permissão), as conversas do orientador e o atalho para o portal.
     roles: ["admin", "professor", "coordenador"],
     children: [
       { id: "bo-cur", title: "Cursos", to: "/boost", icon: BookMarked },
       { id: "bo-conv", title: "Conversas", to: "/boost/conversas", icon: MessagesSquare },
       // Gestão entre cursos (contas externas do portal público) — só admin,
       // diferente do resto do Boost, que já é aberto a professor também.
-      { id: "bo-students", title: "Alunos externos", to: "/boost/students", icon: UsersIcon, roles: ["admin"] },
+      { id: "bo-students", title: "Alunos do portal", to: "/boost/students", icon: UsersIcon, roles: ["admin"] },
+      { id: "bo-portal", title: "Portal do aluno", to: "/boost-portal", icon: GraduationCap },
     ],
   },
 ];
