@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   learnService, TYPE_LABEL, formatDate, fmtSize,
-  type Activity, type ActivityType, type Submission,
+  type Activity, type ActivityType, type Attachment, type Question, type Submission,
 } from "@/services/mock-api/learn.service";
+import { QuestionsEditor, QuestionResult } from "@/components/rooster/learn/questions";
+import { salvarArquivo } from "@/components/rooster/learn/questions-utils";
 import { ActivityStatusBadge, SubmissionBadge } from "@/components/rooster/learn/badges";
 import { useRole, learnCan } from "@/components/rooster/role-context";
 import {
@@ -22,7 +24,7 @@ export const Route = createFileRoute("/learn/activities/$id")({
   component: ActivityDetail,
 });
 
-type Tab = "descricao" | "entregas" | "correcao" | "notas" | "feedback" | "historico";
+type Tab = "descricao" | "questoes" | "entregas" | "correcao" | "notas" | "feedback" | "historico";
 
 function toDatetimeLocal(iso: string | null) {
   return iso ? iso.slice(0, 16) : "";
@@ -63,6 +65,7 @@ function ActivityDetail() {
 
   const tabs = [
     { value: "descricao", label: "Descrição" },
+    { value: "questoes", label: `Questões (${activity.questionsCount})` },
     { value: "entregas", label: "Entregas" },
     ...(learnCan(role, "gradeActivity") ? [{ value: "correcao", label: "Correção" }] : []),
     { value: "notas", label: "Notas" },
@@ -111,6 +114,7 @@ function ActivityDetail() {
       </div>
 
       {tab === "descricao" ? <DescricaoTab activity={activity} onSaved={reload} /> : null}
+      {tab === "questoes" ? <QuestionsEditor activity={activity} canEdit={learnCan(role, "manageQuestions")} onChanged={reload} /> : null}
       {tab === "entregas" ? <EntregasTab activityId={activity.id} /> : null}
       {tab === "correcao" ? <CorrecaoTab activity={activity} /> : null}
       {tab === "notas" ? <NotasTab activityId={activity.id} maxGrade={activity.maxGrade} /> : null}
@@ -224,34 +228,49 @@ function EntregasTab({ activityId }: { activityId: string }) {
 function CorrecaoTab({ activity }: { activity: Activity }) {
   const [rows, setRows] = useState<Submission[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
 
   function reload() { learnService.getSubmissions(activity.id).then(setRows); }
   useEffect(reload, [activity.id]);
+  useEffect(() => {
+    if (activity.questionsCount > 0) learnService.getQuestions(activity.id).then(setQuestions).catch(() => setQuestions([]));
+  }, [activity.id, activity.questionsCount]);
 
   const current = rows.find((s) => s.id === selected) ?? rows[0] ?? null;
 
+  async function download(entregaId: string, a: Attachment) {
+    try {
+      salvarArquivo(await learnService.downloadAttachment(entregaId, a.id), a.name);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao baixar o arquivo");
+    }
+  }
+
+  if (current && questions.length > 0) {
+    return (
+      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+        <SubmissionList rows={rows} selected={selected} onSelect={setSelected} />
+        <section className="rounded-xl border border-border/60 bg-card p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">{current.studentName}</h3>
+            <SubmissionBadge status={current.status} />
+          </div>
+          <QuestionGradeForm
+            key={current.id}
+            submission={current}
+            questions={questions}
+            maxGrade={activity.maxGrade}
+            onDownload={(a) => download(current.id, a)}
+            onSaved={reload}
+          />
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-      <aside className="overflow-hidden rounded-xl border border-border/60 bg-card">
-        <div className="border-b border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground">{rows.length} entregas</div>
-        <ul className="max-h-[480px] divide-y divide-border/60 overflow-y-auto">
-          {rows.map((s) => {
-            const isActive = (selected ?? rows[0]?.id) === s.id;
-            return (
-              <li key={s.id}>
-                <button onClick={() => setSelected(s.id)} className={`flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/40 ${isActive ? "bg-muted/60" : ""}`}>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{s.studentName}</div>
-                    <div className="text-[11px] text-muted-foreground">{s.submittedAt ? formatDate(s.submittedAt) : "Não enviou"}</div>
-                  </div>
-                  {s.grade !== null ? <span className="text-sm font-semibold tabular-nums">{fmtNumero(s.grade, 1)}</span> : null}
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </aside>
+      <SubmissionList rows={rows} selected={selected} onSelect={setSelected} />
 
       <section className="rounded-xl border border-border/60 bg-card p-5">
         {current ? (
@@ -268,8 +287,10 @@ function CorrecaoTab({ activity }: { activity: Activity }) {
                 {current.attachments.length > 0 && (
                   <ul className="space-y-1.5">
                     {current.attachments.map((f) => (
-                      <li key={f.id} className="flex items-center gap-2 rounded-lg border bg-card/60 px-2.5 py-1.5 text-xs">
-                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> {f.name} <span className="text-muted-foreground">({fmtSize(f.size)})</span>
+                      <li key={f.id}>
+                        <button type="button" onClick={() => download(current.id, f)} className="flex w-full items-center gap-2 rounded-lg border bg-card/60 px-2.5 py-1.5 text-left text-xs hover:bg-accent/50">
+                          <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> {f.name} <span className="text-muted-foreground">({fmtSize(f.size)})</span>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -282,6 +303,135 @@ function CorrecaoTab({ activity }: { activity: Activity }) {
           <div className="p-12 text-center text-sm text-muted-foreground">Nenhuma entrega para corrigir.</div>
         )}
       </section>
+    </div>
+  );
+}
+
+function SubmissionList({ rows, selected, onSelect }: { rows: Submission[]; selected: string | null; onSelect: (id: string) => void }) {
+  return (
+    <aside className="overflow-hidden rounded-xl border border-border/60 bg-card">
+      <div className="border-b border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground">{rows.length} entregas</div>
+      <ul className="max-h-[480px] divide-y divide-border/60 overflow-y-auto">
+        {rows.map((s) => {
+          const isActive = (selected ?? rows[0]?.id) === s.id;
+          return (
+            <li key={s.id}>
+              <button onClick={() => onSelect(s.id)} className={`flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/40 ${isActive ? "bg-muted/60" : ""}`}>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{s.studentName}</div>
+                  <div className="text-[11px] text-muted-foreground">{s.submittedAt ? formatDate(s.submittedAt) : "Não enviou"}</div>
+                </div>
+                {s.grade !== null ? <span className="text-sm font-semibold tabular-nums">{fmtNumero(s.grade, 1)}</span> : null}
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </aside>
+  );
+}
+
+/**
+ * Correção de atividade com questões: o professor pontua cada questão (as objetivas já chegam
+ * pontuadas pela correção automática e podem ser revistas) e a nota é calculada no backend como
+ * a proporção dos pontos obtidos sobre o total, aplicada à nota máxima.
+ */
+function QuestionGradeForm({
+  submission, questions, maxGrade, onDownload, onSaved,
+}: { submission: Submission; questions: Question[]; maxGrade: number; onDownload: (a: Attachment) => void; onSaved: () => void }) {
+  const [scores, setScores] = useState<Record<string, string>>(() =>
+    Object.fromEntries(questions.map((q) => {
+      const answer = submission.answers.find((a) => a.questionId === q.id);
+      return [q.id, answer?.score !== null && answer?.score !== undefined ? String(answer.score) : ""];
+    })),
+  );
+  const [feedback, setFeedback] = useState(submission.feedback ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const total = questions.reduce((s, q) => s + q.points, 0);
+  const parsed = questions.map((q) => ({ q, value: scores[q.id] === "" ? null : Number(scores[q.id].replace(",", ".")) }));
+  const complete = parsed.every((p) => p.value !== null && !Number.isNaN(p.value));
+  const preview = complete && total > 0 ? (parsed.reduce((s, p) => s + (p.value as number), 0) / total) * maxGrade : null;
+
+  async function save() {
+    const invalida = parsed.find((p) => p.value === null || Number.isNaN(p.value) || p.value < 0 || p.value > p.q.points);
+    if (invalida) {
+      setError(`Informe, na questão ${questions.indexOf(invalida.q) + 1}, uma pontuação entre 0 e ${fmtNumero(invalida.q.points, 2)}.`);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await learnService.gradeByQuestion(submission.id, parsed.map((p) => ({ questionId: p.q.id, score: p.value as number })), feedback.trim() || undefined);
+      onSaved();
+      toast.success("Correção salva com sucesso");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao salvar a correção";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[1fr_260px]">
+      <div className="space-y-3">
+        {questions.map((q, i) => (
+          <QuestionResult
+            key={q.id}
+            question={q}
+            index={i}
+            answer={submission.answers.find((a) => a.questionId === q.id)}
+            attachment={submission.attachments.find((a) => a.questionId === q.id)}
+            showKey
+            onDownload={onDownload}
+            scoreInput={
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                Pontos
+                <Input
+                  type="number" min="0" max={q.points} step="0.25"
+                  value={scores[q.id]}
+                  onChange={(e) => setScores((s) => ({ ...s, [q.id]: e.target.value }))}
+                  aria-label={`Pontuação da questão ${i + 1}`}
+                  className="h-8 w-20 text-right tabular-nums"
+                />
+                / {fmtNumero(q.points, q.points % 1 ? 2 : 0)}
+              </label>
+            }
+          />
+        ))}
+        {(submission.text || submission.attachments.some((a) => !a.questionId)) && (
+          <div className="rounded-xl border p-4">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Observações e anexos gerais do aluno</p>
+            {submission.text && <p className="whitespace-pre-wrap text-sm">{submission.text}</p>}
+            <ul className="mt-2 space-y-1.5">
+              {submission.attachments.filter((a) => !a.questionId).map((f) => (
+                <li key={f.id}>
+                  <button type="button" onClick={() => onDownload(f)} className="flex items-center gap-2 rounded-lg border bg-card/60 px-2.5 py-1.5 text-xs hover:bg-accent/50">
+                    <Paperclip className="h-3.5 w-3.5 text-muted-foreground" /> {f.name} <span className="text-muted-foreground">({fmtSize(f.size)})</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      <div className="space-y-3">
+        <div className="rounded-lg border border-border/60 p-4">
+          <p className="text-xs font-medium text-muted-foreground">Nota calculada (máx. {fmtNumero(maxGrade, 1)})</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{preview !== null ? fmtNumero(preview, 2) : "—"}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Pontos obtidos ÷ {fmtNumero(total, total % 1 ? 2 : 0)} pontos × nota máxima.</p>
+        </div>
+        <div className="rounded-lg border border-border/60 p-4">
+          <label className="text-xs font-medium text-muted-foreground">Feedback</label>
+          <Textarea rows={4} className="mt-2" value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Escreva um feedback construtivo..." />
+        </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+        <Button size="sm" className="w-full gap-1.5" onClick={save} disabled={saving}><CheckCircle2 className="h-3.5 w-3.5" /> {saving ? "Salvando…" : "Salvar correção"}</Button>
+      </div>
     </div>
   );
 }

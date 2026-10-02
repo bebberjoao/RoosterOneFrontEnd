@@ -4,8 +4,9 @@ import { PageHeader } from "@/components/rooster/page-header";
 import { SectionCard, StatusChip, FilterInput, Select, Chip, TONE, EmptyState, Btn, Pagination } from "@/components/rooster/student/ui";
 import { LoadingBlock } from "@/components/shared";
 import { learnService, TYPE_LABEL, formatDate as formatDateTime, type Activity, type Submission } from "@/services/mock-api/learn.service";
+import { AnswerModal, ReviewModal } from "@/components/rooster/learn/submission-modals";
 import { toneFor } from "@/services/mock-api/academy.service";
-import { Search, ClipboardList, Upload, FileText, MessageSquare, Paperclip, X, CheckCircle2, UserX } from "lucide-react";
+import { Search, ClipboardList, Upload, FileText, MessageSquare, UserX } from "lucide-react";
 import { fmtNumero } from "@/lib/formatacao";
 
 export const Route = createFileRoute("/student/activities")({ component: StudentActivities });
@@ -30,7 +31,8 @@ function StudentActivities() {
   const [status, setStatus] = useState("todas");
   const [disc, setDisc] = useState("todas");
   const [page, setPage] = useState(1);
-  const [open, setOpen] = useState<Row | null>(null);
+  // "responder" abre o formulário de entrega; "detalhes", a revisão da entrega já enviada.
+  const [open, setOpen] = useState<{ row: Row; mode: "responder" | "detalhes" } | null>(null);
 
   function reload() {
     learnService.getMyActivities().then(setActivities).catch(() => setNoLink(true));
@@ -145,9 +147,9 @@ function StudentActivities() {
                 ) : null}
 
                 <div className="mt-3 flex justify-end gap-2 border-t pt-3">
-                  <Btn onClick={() => setOpen(r)}><FileText className="h-4 w-4" /> Detalhes</Btn>
+                  <Btn onClick={() => setOpen({ row: r, mode: r.submission ? "detalhes" : "responder" })}><FileText className="h-4 w-4" /> Detalhes</Btn>
                   {r.display !== "corrigida" ? (
-                    <Btn variant="solid" onClick={() => setOpen(r)}><Upload className="h-4 w-4" /> {r.submission ? "Reenviar" : "Enviar entrega"}</Btn>
+                    <Btn variant="solid" onClick={() => setOpen({ row: r, mode: "responder" })}><Upload className="h-4 w-4" /> {r.submission ? "Reenviar" : "Enviar entrega"}</Btn>
                   ) : null}
                 </div>
               </article>
@@ -158,106 +160,12 @@ function StudentActivities() {
 
       <Pagination page={page} pages={pages} onPage={setPage} total={filtered.length} />
 
-      {open ? <ActivityModal row={open} onClose={() => setOpen(null)} onSubmitted={() => { setOpen(null); reload(); }} /> : null}
+      {open?.mode === "responder" ? (
+        <AnswerModal activity={open.row.activity} existing={open.row.submission} onClose={() => setOpen(null)} onSubmit={() => { setOpen(null); reload(); }} />
+      ) : null}
+      {open?.mode === "detalhes" ? (
+        <ReviewModal activity={open.row.activity} submission={open.row.submission} onClose={() => setOpen(null)} />
+      ) : null}
     </>
-  );
-}
-
-function ActivityModal({ row, onClose, onSubmitted }: { row: Row; onClose: () => void; onSubmitted: () => void }) {
-  const { activity, submission } = row;
-  const [text, setText] = useState(submission?.text ?? "");
-  const [files, setFiles] = useState<File[]>([]);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const submitted = row.display === "entregue" || row.display === "corrigida";
-
-  async function send() {
-    setSending(true);
-    setError(null);
-    try {
-      const entrega = await learnService.submit(activity.id, text.trim() || undefined);
-      for (const file of files) {
-        await learnService.uploadAttachment(entrega.id, file);
-      }
-      onSubmitted();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao enviar a entrega");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-2xl rounded-2xl border bg-card shadow-xl">
-        <div className="flex items-start justify-between gap-3 border-b p-5">
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{activity.disciplineName ?? activity.className} · {TYPE_LABEL[activity.type]}</p>
-            <h2 className="text-base font-semibold">{activity.title}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Prazo {formatDateTime(activity.dueAt)} · vale {activity.maxGrade} pontos</p>
-          </div>
-          <button onClick={onClose} className="rounded-lg border p-1.5 hover:bg-accent"><X className="h-4 w-4" /></button>
-        </div>
-
-        <div className="space-y-4 p-5">
-          {activity.description ? <p className="text-sm text-muted-foreground">{activity.description}</p> : null}
-
-          {submitted && submission ? (
-            <div className="rounded-xl border bg-background/40 p-4 text-sm">
-              <p className="flex items-center gap-2 font-medium"><CheckCircle2 className="h-4 w-4" style={{ color: TONE.ok }} /> Entrega registrada</p>
-              {submission.text ? <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{submission.text}</p> : null}
-              {submission.attachments.length > 0 ? (
-                <ul className="mt-2 space-y-1">
-                  {submission.attachments.map((f) => (
-                    <li key={f.id} className="flex items-center gap-2 text-xs text-muted-foreground"><Paperclip className="h-3.5 w-3.5" /> {f.name}</li>
-                  ))}
-                </ul>
-              ) : null}
-              {submission.feedback ? <p className="mt-2 text-xs text-muted-foreground"><strong className="text-foreground">Feedback:</strong> {submission.feedback}</p> : <p className="mt-2 text-xs text-muted-foreground">Aguardando correção do professor.</p>}
-            </div>
-          ) : (
-            <>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium">Sua resposta</label>
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  rows={8}
-                  placeholder="Escreva sua resposta…"
-                  className="w-full rounded-xl border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium">Arquivos (opcional)</label>
-                <div className="rounded-xl border border-dashed p-4 text-center">
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent/50">
-                    <Paperclip className="h-3.5 w-3.5" /> Anexar arquivo
-                    <input type="file" multiple className="hidden" onChange={(e) => setFiles((f) => [...f, ...Array.from(e.target.files ?? [])])} />
-                  </label>
-                </div>
-                {files.length > 0 && (
-                  <ul className="mt-2 space-y-1">
-                    {files.map((f, i) => (
-                      <li key={`${f.name}-${i}`} className="flex items-center justify-between rounded-lg border bg-background/40 px-3 py-2 text-xs">
-                        <span className="flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> {f.name}</span>
-                        <button onClick={() => setFiles((p) => p.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {error ? <p className="text-xs text-destructive">{error}</p> : null}
-
-              <div className="flex justify-end gap-2 border-t pt-4">
-                <Btn onClick={onClose}>Cancelar</Btn>
-                <Btn variant="solid" onClick={send} disabled={sending}><CheckCircle2 className="h-4 w-4" /> {sending ? "Enviando…" : "Enviar entrega"}</Btn>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }

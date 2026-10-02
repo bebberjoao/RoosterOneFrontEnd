@@ -1,11 +1,11 @@
 // Rooster Learn — 100% ligado ao backend real via client HTTP compartilhado
 // (mesmo padrão de src/services/mock-api/academy.service.ts). Atividades
 // pertencem a uma Turma real do Academy (mesmo espaço de ids retornado por
-// academyService.getClasses()) — não existe mais uma turma/disciplina
-// paralela só do Learn. O banco de perguntas/quiz do mock antigo foi
-// deliberadamente cortado do backend: uma Atividade não tem questões, só
-// {titulo, tipo, descricao, peso, notaMaxima, prazo...} e a entrega do aluno
-// é só um texto livre (`texto`) + anexos de arquivo.
+// academyService.getClasses()) — não existe uma turma/disciplina paralela só
+// do Learn. A atividade pode ter questões (múltipla escolha com uma ou várias
+// respostas, verdadeiro ou falso, discursiva e envio de arquivo), com texto e
+// imagem de apoio; sem questões, a entrega é um texto livre + anexos.
+// As objetivas são corrigidas no envio; as demais, pontuadas pelo professor.
 import { request, uploadFile, requestBlob } from "@/services/hub/client";
 import { fmtDataHora, fmtTamanho } from "@/lib/formatacao";
 import { fmtNumeroLivre } from "@/lib/formatacao";
@@ -34,10 +34,47 @@ export type Activity = {
   createdAt: string | null;
   publishedAt: string | null;
   submissionsCount: number;
+  questionsCount: number;
   hasGradeItem: boolean;
 };
 
-export type Attachment = { id: string; name: string; type: string | null; size: number | null };
+export type QuestionType = "multipla-uma" | "multipla-varias" | "vf" | "discursiva" | "arquivo";
+
+export type QuestionOption = { id: string; text: string; correct?: boolean };
+
+export type Question = {
+  id: string;
+  order: number;
+  type: QuestionType;
+  statement: string;
+  supportText: string | null;
+  hasImage: boolean;
+  imageName: string | null;
+  points: number;
+  required: boolean;
+  options: QuestionOption[];
+};
+
+export type QuestionDraft = {
+  type: QuestionType;
+  statement: string;
+  supportText?: string;
+  points?: number;
+  required?: boolean;
+  options?: Array<{ text: string; correct?: boolean }>;
+};
+
+export type Answer = {
+  questionId: string;
+  optionIds: string[];
+  text: string | null;
+  score: number | null;
+  autoGraded: boolean;
+};
+
+export type AnswerDraft = { questionId: string; optionIds?: string[]; text?: string };
+
+export type Attachment = { id: string; name: string; type: string | null; size: number | null; questionId: string | null };
 
 export type Submission = {
   id: string;
@@ -51,6 +88,7 @@ export type Submission = {
   feedback: string | null;
   gradedAt: string | null;
   attachments: Attachment[];
+  answers: Answer[];
   activity?: { id: string; title: string; type: ActivityType; status: ActivityStatus; maxGrade: number; classId: string; disciplineName?: string; className?: string; dueAt: string | null };
 };
 
@@ -62,17 +100,29 @@ type AtividadeBack = {
   abreEm?: string | null; prazoEm?: string | null; tempoLimiteMin?: number | null; permiteAtraso: boolean;
   criadoEm?: string | null; publicadoEm?: string | null;
   itemAvaliativo?: unknown | null;
-  _count?: { entregas?: number };
+  _count?: { entregas?: number; questoes?: number };
   turma?: { codigo?: string; disciplina?: { nome: string; codigo: string } };
 };
 
-type AnexoBack = { id: string; nomeArquivo: string | null; tipo: string | null; tamanho: number | null };
+type QuestaoBack = {
+  id: string; ordem: number; tipo: string; enunciado: string; textoApoio: string | null;
+  possuiImagem: boolean; imagemNome: string | null; pontos: number; obrigatoria: boolean;
+  alternativas: Array<{ id: string; texto: string; correta?: boolean }>;
+};
+
+type RespostaBack = {
+  questaoId: string; alternativasIds: string[] | null; texto: string | null;
+  pontuacao: number | null; corrigidaAutomaticamente: boolean;
+};
+
+type AnexoBack = { id: string; nomeArquivo: string | null; tipo: string | null; tamanho: number | null; questaoId?: string | null };
 
 type EntregaBack = {
   id: string; atividadeId: string; alunoId: string; status: string; texto?: string | null;
   enviadoEm?: string | null; nota?: number | string | null; feedback?: string | null;
   corrigidoPorId?: string | null; corrigidoEm?: string | null;
   anexos?: AnexoBack[];
+  respostas?: RespostaBack[];
   aluno?: { usuario?: { id: string; nome: string } };
   atividade?: AtividadeBack & { turma?: { codigo?: string; disciplina?: { nome: string; codigo: string } } };
 };
@@ -95,12 +145,40 @@ function atividadeToFront(b: AtividadeBack): Activity {
     weight: num(b.peso), maxGrade: num(b.notaMaxima) || 10,
     opensAt: b.abreEm ?? null, dueAt: b.prazoEm ?? null, timeLimitMin: b.tempoLimiteMin ?? null,
     allowLate: b.permiteAtraso, createdAt: b.criadoEm ?? null, publishedAt: b.publicadoEm ?? null,
-    submissionsCount: b._count?.entregas ?? 0, hasGradeItem: !!b.itemAvaliativo,
+    submissionsCount: b._count?.entregas ?? 0, questionsCount: b._count?.questoes ?? 0,
+    hasGradeItem: !!b.itemAvaliativo,
+  };
+}
+
+function questaoToFront(b: QuestaoBack): Question {
+  return {
+    id: b.id, order: b.ordem, type: b.tipo as QuestionType, statement: b.enunciado,
+    supportText: b.textoApoio, hasImage: b.possuiImagem, imageName: b.imagemNome,
+    points: num(b.pontos), required: b.obrigatoria,
+    options: b.alternativas.map((a) => ({ id: a.id, text: a.texto, correct: a.correta })),
+  };
+}
+
+function questaoDraftToDto(d: Partial<QuestionDraft>) {
+  return {
+    ...(d.type !== undefined && { tipo: d.type }),
+    ...(d.statement !== undefined && { enunciado: d.statement }),
+    ...(d.supportText !== undefined && { textoApoio: d.supportText }),
+    ...(d.points !== undefined && { pontos: d.points }),
+    ...(d.required !== undefined && { obrigatoria: d.required }),
+    ...(d.options !== undefined && { alternativas: d.options.map((o) => ({ texto: o.text, correta: !!o.correct })) }),
+  };
+}
+
+function respostaToFront(b: RespostaBack): Answer {
+  return {
+    questionId: b.questaoId, optionIds: b.alternativasIds ?? [], text: b.texto ?? null,
+    score: numOrNull(b.pontuacao), autoGraded: b.corrigidaAutomaticamente,
   };
 }
 
 function anexoToFront(b: AnexoBack): Attachment {
-  return { id: b.id, name: b.nomeArquivo ?? "arquivo", type: b.tipo, size: b.tamanho };
+  return { id: b.id, name: b.nomeArquivo ?? "arquivo", type: b.tipo, size: b.tamanho, questionId: b.questaoId ?? null };
 }
 
 function entregaToFront(b: EntregaBack): Submission {
@@ -110,6 +188,7 @@ function entregaToFront(b: EntregaBack): Submission {
     text: b.texto ?? null, submittedAt: b.enviadoEm ?? null, grade: numOrNull(b.nota),
     feedback: b.feedback ?? null, gradedAt: b.corrigidoEm ?? null,
     attachments: (b.anexos ?? []).map(anexoToFront),
+    answers: (b.respostas ?? []).map(respostaToFront),
     activity: b.atividade
       ? {
           id: b.atividade.id, title: b.atividade.titulo, type: b.atividade.tipo as ActivityType,
@@ -180,10 +259,47 @@ export const learnService = {
     const updated = await request<EntregaBack>(`/entregas/${entregaId}/corrigir`, { method: "PATCH", body: { nota, feedback } });
     return entregaToFront(updated);
   },
+  /** Correção de atividade com questões: a nota é calculada no backend a partir das pontuações. */
+  async gradeByQuestion(entregaId: string, scores: Array<{ questionId: string; score: number }>, feedback?: string): Promise<Submission> {
+    const updated = await request<EntregaBack>(`/entregas/${entregaId}/corrigir`, {
+      method: "PATCH",
+      body: { pontuacoes: scores.map((s) => ({ questaoId: s.questionId, pontuacao: s.score })), feedback },
+    });
+    return entregaToFront(updated);
+  },
+
+  // ---------- Questões ----------
+  async getQuestions(activityId: string): Promise<Question[]> {
+    return (await request<QuestaoBack[]>(`/atividades/${activityId}/questoes`)).map(questaoToFront);
+  },
+  async createQuestion(activityId: string, draft: QuestionDraft): Promise<Question> {
+    return questaoToFront(await request<QuestaoBack>(`/atividades/${activityId}/questoes`, { method: "POST", body: questaoDraftToDto(draft) }));
+  },
+  async updateQuestion(questionId: string, draft: Partial<QuestionDraft>): Promise<Question> {
+    return questaoToFront(await request<QuestaoBack>(`/questoes/${questionId}`, { method: "PATCH", body: questaoDraftToDto(draft) }));
+  },
+  async removeQuestion(questionId: string): Promise<void> {
+    await request<void>(`/questoes/${questionId}`, { method: "DELETE" });
+  },
+  async reorderQuestions(activityId: string, ids: string[]): Promise<Question[]> {
+    return (await request<QuestaoBack[]>(`/atividades/${activityId}/questoes/ordem`, { method: "PATCH", body: { ids } })).map(questaoToFront);
+  },
+  async uploadQuestionImage(questionId: string, file: File): Promise<Question> {
+    const form = new FormData();
+    form.append("arquivo", file);
+    return questaoToFront(await uploadFile<QuestaoBack>(`/questoes/${questionId}/imagem`, form));
+  },
+  async removeQuestionImage(questionId: string): Promise<Question> {
+    return questaoToFront(await request<QuestaoBack>(`/questoes/${questionId}/imagem`, { method: "DELETE" }));
+  },
+  async getQuestionImage(questionId: string): Promise<Blob> {
+    return requestBlob(`/questoes/${questionId}/imagem`);
+  },
 
   // ---------- Portal do aluno ("meus dados") ----------
-  async submit(activityId: string, texto?: string): Promise<Submission> {
-    const created = await request<EntregaBack>(`/atividades/${activityId}/entregas`, { method: "POST", body: { texto } });
+  async submit(activityId: string, texto?: string, answers?: AnswerDraft[]): Promise<Submission> {
+    const respostas = answers?.map((a) => ({ questaoId: a.questionId, alternativasIds: a.optionIds, texto: a.text }));
+    const created = await request<EntregaBack>(`/atividades/${activityId}/entregas`, { method: "POST", body: { texto, respostas } });
     return entregaToFront(created);
   },
   async getMySubmission(activityId: string): Promise<Submission | null> {
@@ -200,8 +316,9 @@ export const learnService = {
   },
 
   // ---------- Anexos de entrega ----------
-  async uploadAttachment(entregaId: string, file: File): Promise<Attachment> {
+  async uploadAttachment(entregaId: string, file: File, questionId?: string): Promise<Attachment> {
     const form = new FormData();
+    if (questionId) form.append("questaoId", questionId);
     form.append("arquivo", file);
     return anexoToFront(await uploadFile<AnexoBack>(`/entregas/${entregaId}/anexos`, form));
   },
@@ -217,6 +334,15 @@ export const TYPE_TONE: Record<ActivityType, string> = {
   prova: "oklch(0.6 0.22 25)", lista: "oklch(0.6 0.18 260)", trabalho: "oklch(0.6 0.2 305)",
   questionario: "oklch(0.72 0.14 90)", material: "oklch(0.68 0.14 195)",
 };
+export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
+  "multipla-uma": "Múltipla escolha (uma resposta)",
+  "multipla-varias": "Múltipla escolha (várias respostas)",
+  vf: "Verdadeiro ou falso",
+  discursiva: "Discursiva",
+  arquivo: "Envio de arquivo",
+};
+export const OBJECTIVE_TYPES: ReadonlySet<QuestionType> = new Set(["multipla-uma", "multipla-varias", "vf"]);
+
 export const STATUS_LABEL: Record<ActivityStatus, string> = {
   rascunho: "Rascunho", agendada: "Agendada", publicada: "Publicada", encerrada: "Encerrada", arquivada: "Arquivada",
 };

@@ -6,11 +6,12 @@ import {
   learnService, TYPE_LABEL, formatDate, relativeDue,
   type Activity, type Submission,
 } from "@/services/mock-api/learn.service";
+import { AnswerModal, ReviewModal } from "@/components/rooster/learn/submission-modals";
 import { TypeBadge, SubmissionBadge, ProgressBar } from "@/components/rooster/learn/badges";
 import { useRole } from "@/components/rooster/role-context";
 import {
   ClipboardList, CheckCircle2, TrendingUp, Clock, Search, BookOpen, Send, AlertTriangle, ArrowLeft,
-  Eye, X, MessageSquare, Paperclip, FileText, UserX,
+  Eye, UserX,
 } from "lucide-react";
 import { fmtNumero } from "@/lib/formatacao";
 
@@ -247,106 +248,5 @@ function StudentActivitiesPage() {
         <ReviewModal activity={reviewing} submission={subOf(reviewing.id)} onClose={() => setReviewing(null)} />
       )}
     </>
-  );
-}
-
-function AnswerModal({
-  activity, existing, onClose, onSubmit,
-}: { activity: Activity; existing: Submission | null; onClose: () => void; onSubmit: () => void }) {
-  const [text, setText] = useState(existing?.text ?? "");
-  const [files, setFiles] = useState<File[]>([]);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit() {
-    setSending(true);
-    setError(null);
-    try {
-      const entrega = await learnService.submit(activity.id, text.trim() || undefined);
-      for (const file of files) await learnService.uploadAttachment(entrega.id, file);
-      onSubmit();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao enviar a entrega");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      size="lg"
-      title={activity.title}
-      description={`${TYPE_LABEL[activity.type]} · entrega até ${formatDate(activity.dueAt)}`}
-      footer={<><Btn onClick={onClose}>Cancelar</Btn><Btn variant="solid" onClick={submit} disabled={sending}><Send className="h-3.5 w-3.5" /> {sending ? "Enviando…" : "Enviar resposta"}</Btn></>}
-    >
-      <div className="space-y-4">
-        {activity.description && <p className="text-xs text-muted-foreground">{activity.description}</p>}
-        <div>
-          <label className="mb-1.5 block text-xs font-medium">Sua resposta</label>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={8}
-            placeholder="Digite sua resposta…"
-            className="w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium">Arquivos (opcional)</label>
-          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent/50">
-            <Paperclip className="h-3.5 w-3.5" /> Anexar arquivo
-            <input type="file" multiple className="hidden" onChange={(e) => setFiles((f) => [...f, ...Array.from(e.target.files ?? [])])} />
-          </label>
-          {files.length > 0 && (
-            <ul className="mt-2 space-y-1.5">
-              {files.map((f, i) => (
-                <li key={`${f.name}-${i}`} className="flex items-center gap-2 rounded-lg border bg-card/60 px-2.5 py-1.5 text-xs">
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 truncate">{f.name}</span>
-                  <button type="button" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
-    </Modal>
-  );
-}
-
-function ReviewModal({ activity, submission, onClose }: { activity: Activity; submission: Submission | null; onClose: () => void }) {
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      size="lg"
-      title={activity.title}
-      description={`Sua entrega · ${submission?.grade !== null && submission?.grade !== undefined ? `nota ${fmtNumero(submission.grade, 1)} de ${activity.maxGrade}` : "aguardando correção"}`}
-      footer={<Btn onClick={onClose}>Fechar</Btn>}
-    >
-      <div className="space-y-4">
-        {submission?.feedback && (
-          <div className="flex items-start gap-2 rounded-xl border bg-card/60 p-3">
-            <MessageSquare className="mt-0.5 h-3.5 w-3.5 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground"><strong className="text-foreground">Retorno do professor:</strong> {submission.feedback}</p>
-          </div>
-        )}
-        <div className="rounded-xl border p-4 text-sm whitespace-pre-wrap">
-          {submission?.text || <span className="text-muted-foreground">Sem resposta em texto.</span>}
-        </div>
-        {submission && submission.attachments.length > 0 && (
-          <ul className="space-y-1.5">
-            {submission.attachments.map((f) => (
-              <li key={f.id} className="flex items-center gap-2 rounded-lg border bg-card/60 px-2.5 py-1.5 text-xs">
-                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> {f.name}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Modal>
   );
 }

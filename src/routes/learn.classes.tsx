@@ -248,7 +248,7 @@ function ActivityMetaModal({
       open
       onClose={onClose}
       title={editing ? "Editar atividade" : "Nova atividade"}
-      description="Provas, listas, trabalhos, questionários e materiais — sem banco de questões (o aluno responde com texto livre e anexos)."
+      description="Provas, listas, trabalhos, questionários e materiais, com questões objetivas (corrigidas automaticamente), discursivas e de envio de arquivo, ou resposta em texto livre e anexos."
       footer={<><Btn onClick={onClose}>Cancelar</Btn><Btn variant="solid" onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar"}</Btn></>}
     >
       <div className="grid gap-4">
