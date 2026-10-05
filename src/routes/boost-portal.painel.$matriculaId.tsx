@@ -308,7 +308,7 @@ function PlayerPage() {
               <div className="mt-4">
                 {aulaAtiva.hostedVideo ? (
                   videoStreamUrl ? (
-                    // eslint-disable-next-line jsx-a11y/media-has-caption -- vídeo enviado pelo instrutor, sem legenda cadastrada
+                    // Vídeo enviado pelo instrutor, sem legenda cadastrada (o projeto não utiliza o plugin jsx-a11y).
                     <video
                       key={aulaAtiva.id}
                       ref={videoRef}

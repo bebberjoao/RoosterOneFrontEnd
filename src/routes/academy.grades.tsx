@@ -27,6 +27,7 @@ import {
   Loader2,
   AlertTriangle,
   Lock,
+  type LucideIcon,
 } from "lucide-react";
 import { Modal } from "@/components/shared";
 import { fmtNumero } from "@/lib/formatacao";
@@ -526,7 +527,7 @@ function ComponentModal({
   );
 }
 
-function Kpi({ icon: Icon, tone, label, value }: { icon: any; tone: string; label: string; value: string }) {
+function Kpi({ icon: Icon, tone, label, value }: { icon: LucideIcon; tone: string; label: string; value: string }) {
   return (
     <div className="rounded-2xl border bg-card p-4">
       <div className="flex items-center gap-2">

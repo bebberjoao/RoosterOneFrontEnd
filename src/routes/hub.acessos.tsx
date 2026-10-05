@@ -327,7 +327,10 @@ function UserPermissionsPanel({ usuarios, loadingUsuarios }: { usuarios: Usuario
       for (const key of added) {
         if (byName.has(key)) continue;
         const meta = describeKey(key);
+        // Vincula ao mesmo módulo das demais permissões da tela, para que não fique sem módulo.
+        const moduloId = perms.find((p) => p.recurso === meta?.recurso && p.moduloId)?.moduloId ?? null;
         const created = await permissoesService.create({
+          moduloId,
           nome: key,
           recurso: meta?.recurso ?? null,
           acao: meta?.acao ?? null,

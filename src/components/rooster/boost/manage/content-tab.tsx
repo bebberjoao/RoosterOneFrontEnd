@@ -445,7 +445,7 @@ export function CourseContentTab({ courseId, initialModules }: { courseId: strin
                         </div>
                       </div>
                       {videoPreviewUrl && (
-                        // eslint-disable-next-line jsx-a11y/media-has-caption -- prévia interna do instrutor, sem legenda cadastrada ainda
+                        // Prévia interna do instrutor, sem legenda cadastrada (o projeto não utiliza o plugin jsx-a11y).
                         <video src={videoPreviewUrl} controls className="mt-2 aspect-video w-full rounded-lg bg-black" />
                       )}
                       <p className="mt-2 text-[11px] text-muted-foreground">Enviar outro arquivo substitui este vídeo.</p>

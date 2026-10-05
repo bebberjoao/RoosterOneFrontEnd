@@ -26,6 +26,7 @@ import {
   History,
   Loader2,
   AlertTriangle,
+  type LucideIcon,
 } from "lucide-react";
 import { fmtData, dataLocalIso } from "@/lib/formatacao";
 
@@ -513,7 +514,7 @@ function RollCall({ klass: k, date: initialDate, onBack }: { klass: SchoolClass;
   );
 }
 
-function Card({ icon: Icon, tone, label, value }: any) {
+function Card({ icon: Icon, tone, label, value }: { icon: LucideIcon; tone: string; label: string; value: number }) {
   return (
     <div className="rounded-2xl border bg-card p-4">
       <div className="flex items-center gap-2">

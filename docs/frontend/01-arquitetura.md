@@ -95,6 +95,7 @@ do portal do Boost (`/boost-portal/*`), que possuem layout e sessão próprios.
   `docs/operations/04-deploy.md` no repositório do backend.
 - Alias de importação `@/*` → `./src/*` (`tsconfig.json`).
 - Scripts (`package.json`): `dev` (`vite dev`), `build`, `build:dev`, `preview`, `lint`, `format`, `test`
-  (`vitest run`) e `audit`.
+  (`vitest run`) e `audit`. O `lint` não integra o CI, e o código ainda não foi formatado de modo uniforme pelo
+  Prettier (registrado em `docs/engineering/08-divida-tecnica.md`, no backend).
 
 Situação: **implementado**.

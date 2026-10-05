@@ -75,13 +75,12 @@ const SCREENS: Record<string, ScreenDef[]> = {
       a("encerrar", "Encerrar"),
       a("reabrir", "Reabrir"),
       a("transferir", "Transferir"),
-      a("registrar-solucao", "Registrar solução"),
       a("anexar", "Anexar arquivo"),
       a("nota-interna", "Registrar nota interna"),
       a("ver-sla", "Visualizar SLA"),
     ]),
     screen("/desk/categories", "Categorias", [...CRUD, a("subcategorias", "Gerenciar subcategorias")]),
-    screen("/desk/team", "Atendentes", [...CRUD, a("vincular-categoria", "Vincular a categoria")]),
+    screen("/desk/team", "Atendentes", [a("vincular-categoria", "Vincular a categoria")]),
   ],
   student: [
     screen("/student", "Dashboard", []),
@@ -134,7 +133,7 @@ const SCREENS: Record<string, ScreenDef[]> = {
       a("cancelar", "Cancelar com motivo"),
       a("alterar-horario", "Alterar horário"),
     ]),
-    screen("/rooms/structure", "Estrutura física", [...CRUD, a("gerar-periodos", "Gerar períodos de funcionamento")]),
+    screen("/rooms/structure", "Estrutura física", [...CRUD]),
   ],
   assets: [
     screen("/assets", "Dashboard", []),

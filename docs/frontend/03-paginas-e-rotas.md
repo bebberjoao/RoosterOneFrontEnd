@@ -56,7 +56,8 @@ CSV" (`downloadBlob`, no mesmo padrão de `finance.reports.tsx`). O relatório d
 | `/desk/categories/:id` | `desk.categories.$id.tsx` | Detalhe e subcategorias de uma categoria |
 | `/desk/team` | `desk.team.tsx` | Atendentes |
 
-Layout: `desk.tsx`.
+Layout: `desk.tsx`. As duas rotas de categorias compartilham ainda o layout `desk.categories.tsx`, que apenas renderiza
+a rota filha.
 
 ## Rooster Rooms (`API`)
 

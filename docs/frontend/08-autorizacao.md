@@ -47,7 +47,12 @@ quanto para corresponder ao `@RequirePermission` do backend. `permissionKey(modu
 **último segmento da rota** da tela (ou `"dashboard"`, quando a tela é a raiz do módulo), mesma convenção de
 `prisma/seed-dev.ts` no backend. Toda nova permissão deve existir nos dois lados com grafia idêntica; não há geração
 automática de um catálogo a partir do outro nem verificação cruzada automatizada, de modo que divergências são
-identificadas apenas por busca manual ou, em uso, como `403` inesperado.
+identificadas apenas por busca manual ou, em uso, como `403` ou "Acesso negado" inesperados. Na conferência de
+05/10/2026, os dois catálogos foram igualados (149 permissões): o banco recebeu a ação `acessar` de sete telas, que
+faltava (migration `20261005090000_permissoes_acesso_telas`), e o catálogo deixou de oferecer cinco opções sem efeito.
+
+Ao salvar, a tela "Acessos e permissões" (`hub.acessos.tsx`) cria no banco a permissão do catálogo que ainda não
+existe, vinculada ao módulo das demais permissões da mesma tela, e só então a concede ao usuário.
 
 ## `RequireAccess`
 
