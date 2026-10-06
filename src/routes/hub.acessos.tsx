@@ -376,7 +376,7 @@ function UserPermissionsPanel({ usuarios, loadingUsuarios }: { usuarios: Usuario
   return (
     <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
       {/* Etapa 1 — usuário */}
-      <SectionCard title="1. Usuário" description="Selecione de quem você quer ajustar os acessos.">
+      <SectionCard title="1. Usuário" description="Selecione de quem você quer ajustar os acessos." tour="acessos-usuarios">
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -386,7 +386,7 @@ function UserPermissionsPanel({ usuarios, loadingUsuarios }: { usuarios: Usuario
             className="h-9 w-full rounded-lg border bg-background pl-8 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
           />
         </div>
-        <div className="max-h-[420px] space-y-1 overflow-y-auto pr-1">
+        <div className="max-h-[420px] space-y-1 overflow-y-auto pr-1" data-tour="acessos-lista-usuarios">
           {loadingUsuarios ? (
             <div className="flex items-center gap-2 px-2 py-6 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando usuários...
@@ -443,7 +443,7 @@ function UserPermissionsPanel({ usuarios, loadingUsuarios }: { usuarios: Usuario
               <Btn variant="ghost" onClick={() => setDraft(new Set(savedKeys))} disabled={!dirty || saving}>
                 <RotateCcw className="h-3.5 w-3.5" /> Descartar
               </Btn>
-              <Btn onClick={handleSave} disabled={!dirty || saving}>
+              <Btn onClick={handleSave} disabled={!dirty || saving} tour="acessos-salvar">
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Salvar permissões
               </Btn>
@@ -464,7 +464,7 @@ function UserPermissionsPanel({ usuarios, loadingUsuarios }: { usuarios: Usuario
 
             <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
               {/* Etapa 2 — módulos */}
-              <div className="space-y-1 rounded-xl border bg-card p-2">
+              <div className="space-y-1 rounded-xl border bg-card p-2" data-tour="acessos-modulos">
                 <p className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   2. Módulo
                 </p>
@@ -496,6 +496,7 @@ function UserPermissionsPanel({ usuarios, loadingUsuarios }: { usuarios: Usuario
 
               {/* Etapas 3 e 4 — telas e ações */}
               <SectionCard
+                tour="acessos-telas"
                 title={`3. Telas de ${mod?.name ?? ""}`}
                 description="Marque as operações liberadas em cada tela."
                 action={

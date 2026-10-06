@@ -81,9 +81,20 @@ export function Modal({
   );
 }
 
-export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+export function Field({
+  label,
+  children,
+  hint,
+  tour,
+}: {
+  label: string;
+  children: ReactNode;
+  hint?: string;
+  /** Identificador do campo nos roteiros guiados do assistente (atributo data-tour). */
+  tour?: string;
+}) {
   return (
-    <label className="block">
+    <label className="block" data-tour={tour}>
       <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
       {children}
       {hint ? <span className="mt-1 block text-[11px] text-muted-foreground">{hint}</span> : null}

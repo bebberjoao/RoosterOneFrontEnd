@@ -170,7 +170,7 @@ export function QuestionsEditor({ activity, canEdit, onChanged }: { activity: Ac
           </p>
         </div>
         {editable && (
-          <Btn variant="solid" onClick={() => setEditing("new")}><Plus className="h-3.5 w-3.5" /> Adicionar questão</Btn>
+          <Btn variant="solid" onClick={() => setEditing("new")} tour="questoes-adicionar"><Plus className="h-3.5 w-3.5" /> Adicionar questão</Btn>
         )}
       </div>
 
@@ -357,11 +357,11 @@ function QuestionFormModal({
       size="lg"
       title={question ? "Editar questão" : "Nova questão"}
       description="Defina o tipo, o enunciado, o material de apoio, o valor e, nas objetivas, as alternativas e o gabarito."
-      footer={<><Btn onClick={onClose}>Cancelar</Btn><Btn variant="solid" onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar questão"}</Btn></>}
+      footer={<><Btn onClick={onClose}>Cancelar</Btn><Btn variant="solid" onClick={save} disabled={saving} tour="questao-salvar">{saving ? "Salvando…" : "Salvar questão"}</Btn></>}
     >
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
-          <label className="block">
+          <label className="block" data-tour="questao-tipo">
             <span className="mb-1.5 block text-xs font-medium">Tipo de questão</span>
             <select value={type} onChange={(e) => changeType(e.target.value as QuestionType)} className={controle}>
               {(Object.keys(QUESTION_TYPE_LABEL) as QuestionType[]).map((t) => (
@@ -369,23 +369,23 @@ function QuestionFormModal({
               ))}
             </select>
           </label>
-          <label className="block">
+          <label className="block" data-tour="questao-tipo">
             <span className="mb-1.5 block text-xs font-medium">Valor (pontos)</span>
             <input type="number" min="0.01" step="0.25" value={points} onChange={(e) => setPoints(e.target.value)} className={controle} />
           </label>
         </div>
 
-        <label className="block">
+        <label className="block" data-tour="questao-enunciado">
           <span className="mb-1.5 block text-xs font-medium">Enunciado</span>
           <textarea rows={3} value={statement} onChange={(e) => setStatement(e.target.value)} className={`${controle} resize-y`} placeholder="Digite a pergunta…" />
         </label>
 
-        <label className="block">
+        <label className="block" data-tour="questao-apoio">
           <span className="mb-1.5 block text-xs font-medium">Texto de apoio (opcional)</span>
           <textarea rows={3} value={supportText} onChange={(e) => setSupportText(e.target.value)} className={`${controle} resize-y`} placeholder="Trecho, citação, dados ou contexto exibido acima do enunciado." />
         </label>
 
-        <div>
+        <div data-tour="questao-apoio">
           <span className="mb-1.5 block text-xs font-medium">Imagem de apoio (opcional)</span>
           <div className="flex flex-wrap items-center gap-2">
             <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent/50">
@@ -403,7 +403,7 @@ function QuestionFormModal({
         </div>
 
         {objective && (
-          <div>
+          <div data-tour="questao-alternativas">
             <span className="mb-1.5 block text-xs font-medium">
               Alternativas · {type === "multipla-varias" ? "marque todas as corretas" : "marque a correta"}
             </span>
@@ -448,7 +448,7 @@ function QuestionFormModal({
           </div>
         )}
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm" data-tour="questao-obrigatoria">
           <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} className="h-4 w-4" />
           Resposta obrigatória
         </label>

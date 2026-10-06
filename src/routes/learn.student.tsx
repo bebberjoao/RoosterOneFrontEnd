@@ -112,7 +112,7 @@ function StudentActivitiesPage() {
           {bySubject.length === 0 ? (
             <EmptyState icon={BookOpen} title="Nenhuma atividade publicada" description="Assim que o professor publicar uma atividade nas suas turmas, ela aparece aqui." />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-tour="aluno-materias">
               {bySubject.map((s) => (
                 <button
                   key={s.classId}
@@ -223,7 +223,7 @@ function StudentActivitiesPage() {
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3.5 w-3.5" /> {a.maxGrade} pts</span>
-                          <Btn variant="solid" onClick={() => setAnswering(a)}><BookOpen className="h-3.5 w-3.5" /> Responder</Btn>
+                          <Btn variant="solid" onClick={() => setAnswering(a)} tour="aluno-responder"><BookOpen className="h-3.5 w-3.5" /> Responder</Btn>
                         </div>
                       )}
                     </div>

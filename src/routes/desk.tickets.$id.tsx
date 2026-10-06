@@ -188,6 +188,7 @@ function TicketDetail() {
       <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* Sidebar */}
         <aside className="space-y-4">
+          <div data-tour="chamado-detalhes">
           <SidebarCard title="Detalhes">
             <Field label="Status"><StatusBadge status={ticket.status} /></Field>
             <Field label="Prioridade"><PriorityBadge priority={ticket.priority} /></Field>
@@ -204,6 +205,7 @@ function TicketDetail() {
               <div className="text-xs text-muted-foreground">{ticket.subcategory}</div>
             </Field>
           </SidebarCard>
+          </div>
 
           <SidebarCard title="Ações rápidas">
             <QuickSelect label="Alterar status" options={Object.entries(STATUS_LABEL)} defaultValue={ticket.status} />
@@ -230,7 +232,7 @@ function TicketDetail() {
         </aside>
 
         {/* Timeline */}
-        <section className="rounded-xl border border-border/60 bg-card">
+        <section className="rounded-xl border border-border/60 bg-card" data-tour="chamado-conversa">
           <div className="border-b border-border/60 px-5 py-3">
             <div className="flex items-center gap-2">
               <button
@@ -268,6 +270,7 @@ function TicketDetail() {
 
           <div className="p-4">
             <Textarea
+              data-tour="chamado-resposta"
               value={reply}
               onChange={(ev) => setReply(ev.target.value)}
               placeholder={tab === "internal" ? "Comentário interno (visível apenas para a equipe)" : "Responder ao solicitante..."}
@@ -278,6 +281,7 @@ function TicketDetail() {
                 <input ref={fileInputRef} type="file" className="hidden" onChange={handleFilePicked} />
                 {tab === "public" && (
                   <Button
+                    data-tour="chamado-anexar"
                     variant="ghost"
                     size="sm"
                     className="gap-1.5"
@@ -294,7 +298,7 @@ function TicketDetail() {
                   </span>
                 )}
               </div>
-              <Button size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90" disabled={sending || !reply.trim()} onClick={handleSend}>
+              <Button data-tour="chamado-enviar-resposta" size="sm" className="gap-1.5 bg-foreground text-background hover:opacity-90" disabled={sending || !reply.trim()} onClick={handleSend}>
                 <Send className="h-4 w-4" /> {sending ? "Enviando…" : "Enviar"}
               </Button>
             </div>

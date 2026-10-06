@@ -173,7 +173,7 @@ function ActivitiesPanel({ activities, classes, isAlunoReal }: { activities: Act
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-card" data-tour="learn-atividades">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-border/60 bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">

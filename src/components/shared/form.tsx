@@ -10,15 +10,18 @@ export function Field({
   required,
   className,
   children,
+  tour,
 }: {
   label: string;
   hint?: string;
   required?: boolean;
   className?: string;
   children: ReactNode;
+  /** Identificador do campo nos roteiros guiados do assistente (atributo data-tour). */
+  tour?: string;
 }) {
   return (
-    <label className={cn("block", className)}>
+    <label className={cn("block", className)} data-tour={tour}>
       <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
         {label}
         {required ? <span className="ml-0.5 text-destructive">*</span> : null}

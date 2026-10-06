@@ -258,7 +258,7 @@ function BookRoomPage() {
 
       <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
         {/* Aba lateral: seleção de sala */}
-        <aside className="rounded-2xl border bg-card p-3">
+        <aside className="rounded-2xl border bg-card p-3" data-tour="reserva-ambientes">
           <div className="relative mb-2">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -274,7 +274,7 @@ function BookRoomPage() {
             options={[{ value: "all", label: "Todos os campus" }, ...campuses.map((c) => ({ value: c.id, label: c.name }))]}
           />
 
-          <ul className="mt-3 max-h-[520px] space-y-1.5 overflow-y-auto pr-1">
+          <ul className="mt-3 max-h-[520px] space-y-1.5 overflow-y-auto pr-1" data-tour="reserva-lista-ambientes">
             {filteredRooms.length === 0 ? (
               <li><EmptyState icon={DoorOpen} title="Nenhum ambiente encontrado" /></li>
             ) : (
@@ -305,6 +305,7 @@ function BookRoomPage() {
         <div className="space-y-4">
           {/* Calendário */}
           <SectionCard
+            tour="reserva-calendario"
             title={room ? `Disponibilidade · ${room.name}` : "Disponibilidade"}
             description="Clique em um dia para ver os horários já ocupados e solicitar o seu."
           >
@@ -326,7 +327,7 @@ function BookRoomPage() {
             <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-muted-foreground">
               {WEEKDAYS.map((d) => <div key={d} className="py-1">{d}</div>)}
             </div>
-            <div className="grid grid-cols-7 gap-1.5">
+            <div className="grid grid-cols-7 gap-1.5" data-tour="reserva-dias">
               {cells.map((d) => {
                 const iso = isoOf(d);
                 const outside = d.getMonth() !== cursor.getMonth();
@@ -366,6 +367,7 @@ function BookRoomPage() {
                 <button
                   key={v}
                   type="button"
+                  data-tour={`reserva-aba-${v}`}
                   onClick={() => setTab(v)}
                   className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     tab === v ? "bg-foreground text-background" : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -379,10 +381,10 @@ function BookRoomPage() {
 
             {tab === "detalhes" ? (
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Título do evento">
+                <Field label="Título do evento" tour="reserva-titulo">
                   <TextInput value={form.event} onChange={(e) => setForm({ ...form, event: e.target.value })} placeholder="Ex.: Aula prática de Redes" />
                 </Field>
-                <Field label="Finalidade">
+                <Field label="Finalidade" tour="reserva-finalidade">
                   <SelectInput
                     value={form.purpose}
                     onChange={(e) => setForm({ ...form, purpose: e.target.value })}
@@ -397,6 +399,7 @@ function BookRoomPage() {
                 </Field>
                 {form.purpose === "aula" && minhasTurmas.length > 0 && (
                   <Field
+                    tour="reserva-turma"
                     label="Turma (opcional)"
                     className="sm:col-span-2"
                     hint="Vincula esta reserva a uma das suas turmas — quem acompanha a turma vê o horário da aula automaticamente."
@@ -410,6 +413,7 @@ function BookRoomPage() {
                   </Field>
                 )}
                 <Field
+                  tour="reserva-horario"
                   label="Horário"
                   className="sm:col-span-2"
                   hint={room ? `Períodos cadastrados para ${room.name} (${room.openingHours}). Horários já reservados ficam indisponíveis.` : undefined}
@@ -424,10 +428,11 @@ function BookRoomPage() {
                     options={slotOptions}
                   />
                 </Field>
-                <Field label="Participantes">
+                <Field label="Participantes" tour="reserva-participantes">
                   <TextInput type="number" value={String(form.participants)} onChange={(e) => setForm({ ...form, participants: Number(e.target.value) })} />
                 </Field>
                 <Field
+                  tour="reserva-repeticao"
                   label="Repetição"
                   hint={!podeRecorrente ? "Seu perfil não tem permissão para reserva recorrente — fale com a coordenação." : undefined}
                 >
@@ -466,7 +471,7 @@ function BookRoomPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3" data-tour="reserva-mensagem">
                 <Field label="Mensagem para o setor de reservas" hint="Observações, necessidades especiais ou justificativa da solicitação.">
                   <TextArea
                     value={form.message}
@@ -536,7 +541,7 @@ function BookRoomPage() {
                 </p>
               )}
               <div className="flex justify-end">
-                <Btn variant="solid" disabled={!canSubmit} onClick={submit}>
+                <Btn variant="solid" disabled={!canSubmit} onClick={submit} tour="reserva-enviar">
                   <Send className="h-4 w-4" /> Enviar solicitação
                 </Btn>
               </div>

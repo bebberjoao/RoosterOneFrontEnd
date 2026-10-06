@@ -9,3 +9,4 @@ export * from "./finance.service";
 export * from "./learn.service";
 export * from "./boost.service";
 export * from "./asset.service";
+export * from "./assistente.service";

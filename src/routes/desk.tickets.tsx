@@ -185,7 +185,7 @@ function TicketsList() {
         description="Fila completa de tickets com filtros e ordenação."
         actions={
           <>
-            <Btn variant="solid" onClick={() => setNewOpen(true)}>
+            <Btn variant="solid" onClick={() => setNewOpen(true)} tour="chamados-novo">
               <Plus className="h-4 w-4" /> Novo chamado
             </Btn>
           </>
@@ -212,12 +212,14 @@ function TicketsList() {
         }
       />
 
-      <DataTable
-        rows={filtered}
-        columns={columns}
-        onRowClick={(t) => navigate({ to: "/desk/tickets/$id", params: { id: t.id } })}
-        emptyMessage="Nenhum chamado encontrado"
-      />
+      <div data-tour="chamados-lista">
+        <DataTable
+          rows={filtered}
+          columns={columns}
+          onRowClick={(t) => navigate({ to: "/desk/tickets/$id", params: { id: t.id } })}
+          emptyMessage="Nenhum chamado encontrado"
+        />
+      </div>
 
       <NewTicketModal
         open={newOpen}
@@ -298,30 +300,30 @@ function NewTicketModal({
       footer={
         <>
           <Btn onClick={onClose}>Cancelar</Btn>
-          <Btn variant="solid" onClick={handleSubmit}>{saving ? "Enviando..." : "Enviar chamado"}</Btn>
+          <Btn variant="solid" onClick={handleSubmit} tour="chamado-enviar">{saving ? "Enviando..." : "Enviar chamado"}</Btn>
         </>
       }
     >
       <div className="space-y-4">
-        <Field label="Título">
+        <Field label="Título" tour="chamado-titulo">
           <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Descreva o problema em uma frase" />
         </Field>
         <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Categoria">
+          <Field label="Categoria" tour="chamado-categoria">
             <SelectInput
               value={categoryId}
               onChange={(e) => { setCategoryId(e.target.value); setSubcategory(""); }}
               options={[{ value: "", label: "Selecione" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
             />
           </Field>
-          <Field label="Subcategoria">
+          <Field label="Subcategoria" tour="chamado-subcategoria">
             <SelectInput
               value={subcategory}
               onChange={(e) => setSubcategory(e.target.value)}
               options={[{ value: "", label: categoryId ? "Selecione" : "Selecione a categoria" }, ...subs.map((s) => ({ value: s, label: s }))]}
             />
           </Field>
-          <Field label="Prioridade">
+          <Field label="Prioridade" tour="chamado-prioridade">
             <SelectInput
               value={priority}
               onChange={(e) => setPriority(e.target.value as TicketPriority)}
@@ -329,7 +331,7 @@ function NewTicketModal({
             />
           </Field>
         </div>
-        <Field label="Descrição">
+        <Field label="Descrição" tour="chamado-descricao">
           <TextArea
             value={description}
             onChange={(e) => setDescription(e.target.value)}

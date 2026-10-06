@@ -309,7 +309,7 @@ function CorrecaoTab({ activity }: { activity: Activity }) {
 
 function SubmissionList({ rows, selected, onSelect }: { rows: Submission[]; selected: string | null; onSelect: (id: string) => void }) {
   return (
-    <aside className="overflow-hidden rounded-xl border border-border/60 bg-card">
+    <aside className="overflow-hidden rounded-xl border border-border/60 bg-card" data-tour="correcao-entregas">
       <div className="border-b border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground">{rows.length} entregas</div>
       <ul className="max-h-[480px] divide-y divide-border/60 overflow-y-auto">
         {rows.map((s) => {
@@ -378,7 +378,7 @@ function QuestionGradeForm({
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1fr_260px]">
-      <div className="space-y-3">
+      <div className="space-y-3" data-tour="correcao-pontos">
         {questions.map((q, i) => (
           <QuestionResult
             key={q.id}
@@ -425,12 +425,12 @@ function QuestionGradeForm({
           <p className="mt-1 text-2xl font-semibold tabular-nums">{preview !== null ? fmtNumero(preview, 2) : "—"}</p>
           <p className="mt-1 text-[11px] text-muted-foreground">Pontos obtidos ÷ {fmtNumero(total, total % 1 ? 2 : 0)} pontos × nota máxima.</p>
         </div>
-        <div className="rounded-lg border border-border/60 p-4">
+        <div className="rounded-lg border border-border/60 p-4" data-tour="correcao-feedback">
           <label className="text-xs font-medium text-muted-foreground">Feedback</label>
           <Textarea rows={4} className="mt-2" value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Escreva um feedback construtivo..." />
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
-        <Button size="sm" className="w-full gap-1.5" onClick={save} disabled={saving}><CheckCircle2 className="h-3.5 w-3.5" /> {saving ? "Salvando…" : "Salvar correção"}</Button>
+        <Button data-tour="correcao-salvar" size="sm" className="w-full gap-1.5" onClick={save} disabled={saving}><CheckCircle2 className="h-3.5 w-3.5" /> {saving ? "Salvando…" : "Salvar correção"}</Button>
       </div>
     </div>
   );
@@ -462,18 +462,18 @@ function GradeForm({ submission, maxGrade, onSaved }: { submission: Submission; 
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-border/60 p-4">
+      <div className="rounded-lg border border-border/60 p-4" data-tour="correcao-nota">
         <label className="text-xs font-medium text-muted-foreground">Nota final (máx. {maxGrade})</label>
         <div className="mt-2 flex items-center gap-2">
           <Input type="number" step="0.1" value={nota} onChange={(e) => setNota(e.target.value)} className="h-9 text-lg font-semibold" placeholder="0.0" />
         </div>
       </div>
-      <div className="rounded-lg border border-border/60 p-4">
+      <div className="rounded-lg border border-border/60 p-4" data-tour="correcao-feedback">
         <label className="text-xs font-medium text-muted-foreground">Feedback</label>
         <Textarea rows={4} className="mt-2" value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Escreva um feedback construtivo..." />
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
-      <Button size="sm" className="w-full gap-1.5" onClick={save} disabled={saving}><CheckCircle2 className="h-3.5 w-3.5" /> {saving ? "Salvando…" : "Salvar correção"}</Button>
+      <Button data-tour="correcao-salvar" size="sm" className="w-full gap-1.5" onClick={save} disabled={saving}><CheckCircle2 className="h-3.5 w-3.5" /> {saving ? "Salvando…" : "Salvar correção"}</Button>
     </div>
   );
 }

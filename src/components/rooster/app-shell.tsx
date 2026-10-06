@@ -7,6 +7,7 @@ import { useAuth } from "./auth-context";
 import { PermissionProvider, RequireAccess } from "./hub/permission-context";
 import { GlobalCommandPalette, GlobalSearchProvider } from "./global-command-palette";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AssistenteChat } from "./assistente/assistente-chat";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -49,6 +50,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </SidebarInset>
     </SidebarProvider>
     <GlobalCommandPalette />
+    <AssistenteChat />
     </GlobalSearchProvider>
     </PermissionProvider>
   );

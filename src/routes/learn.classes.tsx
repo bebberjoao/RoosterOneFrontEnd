@@ -82,7 +82,7 @@ function TeacherClassesPage() {
       <CrudHeader
         title="Turmas e atividades"
         description="Selecione uma turma para gerenciar as atividades disponíveis para os alunos."
-        actions={klass ? <Btn variant="solid" onClick={() => setMeta({ open: true })}><Plus className="h-4 w-4" /> Nova atividade</Btn> : undefined}
+        actions={klass ? <Btn variant="solid" onClick={() => setMeta({ open: true })} tour="atividades-nova"><Plus className="h-4 w-4" /> Nova atividade</Btn> : undefined}
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-1.5 text-sm">
@@ -100,7 +100,7 @@ function TeacherClassesPage() {
       </div>
 
       {!klass ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-tour="atividades-turmas">
           {classes.filter((k) => match(k.code)).map((k) => (
             <button
               key={k.id}
@@ -137,7 +137,7 @@ function TeacherClassesPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     {a.status === "rascunho" || a.status === "agendada" ? (
-                      <Btn onClick={async () => {
+                      <Btn tour="atividade-publicar" onClick={async () => {
                         try {
                           await learnService.publish(a.id);
                           reloadActivities(klass.id);
@@ -249,18 +249,18 @@ function ActivityMetaModal({
       onClose={onClose}
       title={editing ? "Editar atividade" : "Nova atividade"}
       description="Provas, listas, trabalhos, questionários e materiais, com questões objetivas (corrigidas automaticamente), discursivas e de envio de arquivo, ou resposta em texto livre e anexos."
-      footer={<><Btn onClick={onClose}>Cancelar</Btn><Btn variant="solid" onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar"}</Btn></>}
+      footer={<><Btn onClick={onClose}>Cancelar</Btn><Btn variant="solid" onClick={save} disabled={saving} tour="atividade-salvar">{saving ? "Salvando…" : "Salvar"}</Btn></>}
     >
       <div className="grid gap-4">
-        <Field label="Título" required><TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Lista 4 — Integrais" /></Field>
-        <Field label="Descrição"><TextArea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+        <Field label="Título" required tour="atividade-titulo"><TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Lista 4 — Integrais" /></Field>
+        <Field label="Descrição" tour="atividade-descricao"><TextArea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tipo"><SelectInput options={TYPE_OPTIONS} value={type} onChange={(e) => setType(e.target.value as ActivityType)} /></Field>
-          <Field label="Peso"><TextInput type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} /></Field>
-          <Field label="Nota máxima"><TextInput type="number" value={maxGrade} onChange={(e) => setMaxGrade(e.target.value)} /></Field>
+          <Field label="Tipo" tour="atividade-tipo"><SelectInput options={TYPE_OPTIONS} value={type} onChange={(e) => setType(e.target.value as ActivityType)} /></Field>
+          <Field label="Peso" tour="atividade-nota"><TextInput type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} /></Field>
+          <Field label="Nota máxima" tour="atividade-nota"><TextInput type="number" value={maxGrade} onChange={(e) => setMaxGrade(e.target.value)} /></Field>
           <Field label="Tempo máximo (min, opcional)"><TextInput type="number" value={timeLimitMin} onChange={(e) => setTimeLimitMin(e.target.value)} /></Field>
-          <Field label="Abertura (opcional)"><TextInput type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} /></Field>
-          <Field label="Prazo de entrega"><TextInput type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></Field>
+          <Field label="Abertura (opcional)" tour="atividade-prazo"><TextInput type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} /></Field>
+          <Field label="Prazo de entrega" tour="atividade-prazo"><TextInput type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></Field>
         </div>
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <input type="checkbox" checked={allowLate} onChange={(e) => setAllowLate(e.target.checked)} /> Permitir entrega após o prazo (marcada como atrasada)

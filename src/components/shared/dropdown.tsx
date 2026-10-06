@@ -102,6 +102,8 @@ export function PopoverSelect({
         ? createPortal(
             <div
               ref={popRef}
+              // Camada aberta a partir do campo: os roteiros guiados do assistente não a escurecem nem a bloqueiam.
+              data-camada-flutuante=""
               className="z-[80] overflow-hidden rounded-xl border bg-card shadow-lg"
               style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width }}
             >

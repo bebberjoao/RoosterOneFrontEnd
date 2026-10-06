@@ -115,15 +115,18 @@ export function SectionCard({
   action,
   children,
   className,
+  tour,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Identificador da seção nos roteiros guiados do assistente (atributo data-tour). */
+  tour?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl border bg-card p-5", className)}>
+    <section className={cn("rounded-2xl border bg-card p-5", className)} data-tour={tour}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold">{title}</h2>
@@ -224,6 +227,7 @@ export function Btn({
   className,
   type = "button",
   disabled = false,
+  tour,
 }: {
   children: ReactNode;
   variant?: "solid" | "ghost";
@@ -231,9 +235,12 @@ export function Btn({
   className?: string;
   type?: "button" | "submit";
   disabled?: boolean;
+  /** Identificador do elemento nos roteiros guiados do assistente (atributo data-tour). */
+  tour?: string;
 }) {
   return (
     <button
+      data-tour={tour}
       type={type}
       onClick={onClick}
       disabled={disabled}

@@ -134,7 +134,7 @@ function Grades() {
       )}
 
       {!loading && !error && (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-tour="notas-turmas">
           {classes.map((k) => {
             const accent = toneFor(k.disciplineId);
             const items = itemsByClass[k.id] ?? [];
@@ -269,7 +269,7 @@ function KlassGrades({ klass: k, onBack }: { klass: SchoolClass; onBack: () => v
         title={k.disciplineName ?? "Notas"}
         description={`${k.shift} · ${k.schedule || "Horário a definir"} · ${roster.length} alunos matriculados`}
         actions={
-          <button onClick={() => setModal("new")} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm hover:bg-accent">
+          <button data-tour="notas-novo-componente" onClick={() => setModal("new")} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm hover:bg-accent">
             <Plus className="h-4 w-4" /> Novo componente
           </button>
         }
@@ -294,7 +294,7 @@ function KlassGrades({ klass: k, onBack }: { klass: SchoolClass; onBack: () => v
             <Kpi icon={Users} tone="oklch(0.72 0.14 90)" label="Aprovação" value={`${approval}%`} />
           </div>
 
-          <div className="mb-4 overflow-hidden rounded-2xl border bg-card">
+          <div className="mb-4 overflow-hidden rounded-2xl border bg-card" data-tour="notas-composicao">
             <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5">
               <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Composição da nota</span>
               <span className="text-[11px] text-muted-foreground">
@@ -346,7 +346,7 @@ function KlassGrades({ klass: k, onBack }: { klass: SchoolClass; onBack: () => v
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border bg-card">
+          <div className="overflow-x-auto rounded-2xl border bg-card" data-tour="notas-tabela">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b bg-muted/30 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">

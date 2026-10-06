@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { RoleProvider } from "@/components/rooster/role-context";
 import { ThemeProvider, useTheme } from "@/components/rooster/theme-context";
 import { AuthProvider } from "@/components/rooster/auth-context";
+import { AssistenteProvider } from "@/components/rooster/assistente/assistente-context";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -134,8 +135,11 @@ function RootComponent() {
       <ThemeProvider>
         <AuthProvider>
           <RoleProvider>
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
+            {/* Conversa do assistente e roteiro guiado em execução: na raiz, para sobreviverem à troca de módulo. */}
+            <AssistenteProvider>
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+            </AssistenteProvider>
             <AppToaster />
           </RoleProvider>
         </AuthProvider>

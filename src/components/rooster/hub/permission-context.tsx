@@ -83,13 +83,22 @@ export function usePermissions() {
   return useContext(Ctx);
 }
 
+/**
+ * Regra de acesso a uma rota, a partir das permissões concedidas: rota sem tela conhecida no catálogo é sempre
+ * liberada (ex.: `/`, `/settings`). Versão sem hook, para rotas calculadas em tempo de execução (ex.: respostas do
+ * assistente de dúvidas).
+ */
+export function canAccessRoute(route: string, granted: ReadonlySet<string>): boolean {
+  const match = findScreenByRoute(route);
+  if (!match) return true;
+  return granted.has(permissionKey(match.module.id, match.screen.id, ACCESS_ACTION.id));
+}
+
 /** O usuário logado pode entrar nesta tela/rota? Rota sem tela conhecida no catálogo é sempre liberada (ex.: `/`, `/settings`). */
 export function useCanAccess(route: string): boolean {
   const { granted, hasCustom } = usePermissions();
   if (!hasCustom) return true; // sessão ainda não restaurada — não bloqueia, RequireAccess espera `ready`
-  const match = findScreenByRoute(route);
-  if (!match) return true;
-  return granted.has(permissionKey(match.module.id, match.screen.id, ACCESS_ACTION.id));
+  return canAccessRoute(route, granted);
 }
 
 /** O usuário logado pode executar esta ação na tela informada? */

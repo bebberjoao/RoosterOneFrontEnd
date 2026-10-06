@@ -70,6 +70,7 @@ export function AssetFormModal({
           <Btn onClick={onClose}>Cancelar</Btn>
           <Btn
             variant="solid"
+            tour="item-salvar"
             onClick={() => {
               if (!valid) return;
               onSubmit(draft);
@@ -84,38 +85,38 @@ export function AssetFormModal({
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Field label="Nome *">
+          <Field label="Nome *" tour="item-nome">
             <input className={inputCls} value={draft.name} onChange={(e) => set("name", e.target.value)} placeholder="Ex.: Notebook Dell Latitude" />
           </Field>
         </div>
-        <Field label="Número de patrimônio *">
+        <Field label="Número de patrimônio *" tour="item-numero">
           <input className={inputCls} value={draft.tag} onChange={(e) => set("tag", e.target.value)} placeholder="PAT-000000" />
         </Field>
-        <Field label="Categoria *">
+        <Field label="Categoria *" tour="item-categoria">
           <SelectInput className={inputCls} value={draft.categoryId} onChange={(e) => set("categoryId", e.target.value)} options={categories.map((c) => ({ value: c.id, label: c.name }))} />
         </Field>
-        <Field label="Marca">
+        <Field label="Marca" tour="item-identificacao">
           <input className={inputCls} value={draft.brand} onChange={(e) => set("brand", e.target.value)} />
         </Field>
-        <Field label="Modelo">
+        <Field label="Modelo" tour="item-identificacao">
           <input className={inputCls} value={draft.model} onChange={(e) => set("model", e.target.value)} />
         </Field>
-        <Field label="Número de série">
+        <Field label="Número de série" tour="item-identificacao">
           <input className={inputCls} value={draft.serial} onChange={(e) => set("serial", e.target.value)} />
         </Field>
         <Field label="Localização" hint="Integração futura com o Rooster Rooms.">
           <SelectInput className={inputCls} value={draft.location} onChange={(e) => set("location", e.target.value)} options={LOCATIONS.map((l) => ({ value: l, label: l }))} />
         </Field>
-        <Field label="Setor vinculado" hint="Somente setores cadastrados no Rooster Hub.">
+        <Field label="Setor vinculado" tour="item-responsabilidade" hint="Somente setores cadastrados no Rooster Hub.">
           <SelectInput className={inputCls} value={draft.sector} onChange={(e) => set("sector", e.target.value)} options={[{ value: "", label: "Sem setor vinculado" }, ...sectors.map((s) => ({ value: s.name, label: s.name }))]} />
         </Field>
-        <Field label="Usuário responsável">
+        <Field label="Usuário responsável" tour="item-responsabilidade">
           <SelectInput className={inputCls} value={draft.owner} onChange={(e) => set("owner", e.target.value)} options={[{ value: "", label: "Não atribuído" }, ...usersOfSector(draft.sector).map((u) => ({ value: u.name, label: `${u.name} · ${u.email}` }))]} />
         </Field>
-        <Field label="Situação">
+        <Field label="Situação" tour="item-situacao">
           <SelectInput className={inputCls} value={draft.status} onChange={(e) => set("status", e.target.value as AssetStatus)} options={Object.entries(STATUS_META).map(([k, v]) => ({ value: k, label: v.label }))} />
         </Field>
-        <Field label="Estado de conservação">
+        <Field label="Estado de conservação" tour="item-situacao">
           <SelectInput className={inputCls} value={draft.condition} onChange={(e) => set("condition", e.target.value as AssetCondition)} options={Object.entries(CONDITION_META).map(([k, v]) => ({ value: k, label: v.label }))} />
         </Field>
         <Field label="Data de aquisição">

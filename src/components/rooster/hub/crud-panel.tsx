@@ -211,7 +211,7 @@ export function HubCrud<T extends { id: string }>({
               <RefreshCw className="h-3.5 w-3.5" /> Atualizar
             </Btn>
             {canCreate ? (
-              <Btn variant="solid" onClick={openCreate}>
+              <Btn variant="solid" onClick={openCreate} tour="crud-novo">
                 <Plus className="h-3.5 w-3.5" /> Novo
               </Btn>
             ) : null}
@@ -246,7 +246,7 @@ export function HubCrud<T extends { id: string }>({
         footer={
           <>
             <Btn onClick={closeForm}>Cancelar</Btn>
-            <Btn variant="solid" onClick={() => void submit()}>
+            <Btn variant="solid" onClick={() => void submit()} tour="crud-salvar">
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Salvar
             </Btn>
           </>
@@ -262,6 +262,7 @@ export function HubCrud<T extends { id: string }>({
               return (
                 <Field
                   key={f.name}
+                  tour={`campo-${f.name}`}
                   label={f.label}
                   required={f.required}
                   hint={err ?? f.hint}

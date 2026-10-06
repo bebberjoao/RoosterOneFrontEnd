@@ -203,6 +203,7 @@ function Charges() {
         }
       />
 
+      <div data-tour="cobrancas-busca">
       <CrudToolbar
         search={q}
         onSearch={setQ}
@@ -221,10 +222,13 @@ function Charges() {
           </>
         }
       />
+      </div>
 
       {error && !selected && <p className="mb-3 text-xs text-destructive">{error}</p>}
 
-      <DataTable rows={filtered} columns={columns} onRowClick={setSelected} emptyMessage="Nenhuma cobrança encontrada" />
+      <div data-tour="cobrancas-lista">
+        <DataTable rows={filtered} columns={columns} onRowClick={setSelected} emptyMessage="Nenhuma cobrança encontrada" />
+      </div>
 
       <Drawer
         open={!!selected}
@@ -235,7 +239,7 @@ function Charges() {
           <>
             <Btn onClick={() => { setModalCancelar(true); setError(null); }} className="text-destructive"><XCircle className="h-3.5 w-3.5" /> Cancelar</Btn>
             <Btn onClick={() => { setModalNegociar(true); setError(null); }}><HandCoins className="h-3.5 w-3.5" /> Negociar</Btn>
-            <Btn variant="solid" onClick={() => { setModalPagar(true); setError(null); }}><CheckCircle2 className="h-3.5 w-3.5" /> Marcar como paga</Btn>
+            <Btn variant="solid" tour="cobranca-marcar-paga" onClick={() => { setModalPagar(true); setError(null); }}><CheckCircle2 className="h-3.5 w-3.5" /> Marcar como paga</Btn>
           </>
         ) : undefined}
       >
@@ -299,8 +303,8 @@ function Charges() {
         </div>
       </Modal>
 
-      <Modal open={modalPagar} onClose={() => setModalPagar(false)} title="Marcar como paga" description="Deixe o valor em branco para considerar o total devido." footer={<><Btn onClick={() => setModalPagar(false)}>Cancelar</Btn><Btn variant="solid" onClick={doMarcarPago}>Confirmar pagamento</Btn></>}>
-        <Field label="Valor pago (R$)" hint={selected ? `Total devido: ${brl(valorDevido(selected))}` : undefined}>
+      <Modal open={modalPagar} onClose={() => setModalPagar(false)} title="Marcar como paga" description="Deixe o valor em branco para considerar o total devido." footer={<><Btn onClick={() => setModalPagar(false)}>Cancelar</Btn><Btn variant="solid" onClick={doMarcarPago} tour="pagamento-confirmar">Confirmar pagamento</Btn></>}>
+        <Field label="Valor pago (R$)" tour="pagamento-valor" hint={selected ? `Total devido: ${brl(valorDevido(selected))}` : undefined}>
           <TextInput type="number" min={0} step="0.01" value={valorPago} onChange={(e) => setValorPago(e.target.value === "" ? "" : Number(e.target.value))} />
         </Field>
       </Modal>

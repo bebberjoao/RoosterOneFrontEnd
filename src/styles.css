@@ -157,4 +157,10 @@
     font-family: var(--font-display);
     letter-spacing: -0.015em;
   }
+
+  /* Alvos dos roteiros guiados do assistente: a rolagem automática desconta a barra superior fixa (h-14). */
+  [data-tour] {
+    scroll-margin-top: 5rem;
+    scroll-margin-bottom: 1.5rem;
+  }
 }

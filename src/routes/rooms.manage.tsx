@@ -83,9 +83,9 @@ function ManageReservations() {
     {
       key: "actions", header: "Ações", cell: (r) => (
         <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-          {r.status === "analise" && <Btn onClick={() => void approve(r)}><CheckCircle2 className="h-4 w-4" /> Aprovar</Btn>}
-          <Btn onClick={() => { setDialog({ kind: "reply", item: r }); setText(""); }}><Reply className="h-4 w-4" /> Responder</Btn>
-          {r.status !== "cancelada" && <Btn className="text-destructive" onClick={() => { setDialog({ kind: "cancel", item: r }); setText(""); }}><XCircle className="h-4 w-4" /> Cancelar</Btn>}
+          {r.status === "analise" && <Btn onClick={() => void approve(r)} tour="reserva-aprovar"><CheckCircle2 className="h-4 w-4" /> Aprovar</Btn>}
+          <Btn onClick={() => { setDialog({ kind: "reply", item: r }); setText(""); }} tour="reserva-responder"><Reply className="h-4 w-4" /> Responder</Btn>
+          {r.status !== "cancelada" && <Btn className="text-destructive" onClick={() => { setDialog({ kind: "cancel", item: r }); setText(""); }} tour="reserva-cancelar"><XCircle className="h-4 w-4" /> Cancelar</Btn>}
         </div>
       ),
     },
@@ -99,7 +99,7 @@ function ManageReservations() {
       <StatCard label="Confirmadas" value={String(reservations.filter((r) => r.status === "confirmada").length)} hint="Reservas aprovadas" icon={CheckCircle2} tone={TONE.ok} />
       <StatCard label="Canceladas" value={String(reservations.filter((r) => r.status === "cancelada").length)} hint="Com motivo registrado" icon={CircleX} tone={TONE.danger} />
     </div>
-    <div className="mb-3 flex flex-wrap gap-2">{(["all", "analise", "confirmada", "andamento", "finalizada", "cancelada"] as const).map((value) => <button key={value} onClick={() => setStatus(value)} className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${status === value ? "border-foreground bg-foreground text-background" : "bg-card hover:bg-accent"}`}>{value === "all" ? "Todas" : STATUS_LABEL[value]}</button>)}</div>
+    <div className="mb-3 flex flex-wrap gap-2" data-tour="reservas-filtros">{(["all", "analise", "confirmada", "andamento", "finalizada", "cancelada"] as const).map((value) => <button key={value} onClick={() => setStatus(value)} className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${status === value ? "border-foreground bg-foreground text-background" : "bg-card hover:bg-accent"}`}>{value === "all" ? "Todas" : STATUS_LABEL[value]}</button>)}</div>
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <Select
         className="w-44"
@@ -123,7 +123,7 @@ function ManageReservations() {
       )}
     </div>
     <CrudToolbar search={search} onSearch={setSearch} placeholder="Buscar por código, reserva, solicitante ou ambiente..." />
-    <DataTable rows={rows} columns={columns} onRowClick={(reservation) => navigate({ to: "/rooms/reservations/$id", params: { id: reservation.id } })} emptyMessage="Nenhuma reserva encontrada." />
+    <div data-tour="reservas-lista"><DataTable rows={rows} columns={columns} onRowClick={(reservation) => navigate({ to: "/rooms/reservations/$id", params: { id: reservation.id } })} emptyMessage="Nenhuma reserva encontrada." /></div>
     <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Clock3 className="h-3.5 w-3.5" /> Abra uma reserva para ver a conversa completa e o histórico.</p>
 
     <Modal

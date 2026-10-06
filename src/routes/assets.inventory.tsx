@@ -245,7 +245,7 @@ function InventoryPage() {
           level === "categories" ? (
             canManage ? <Btn variant="solid" onClick={() => startCategory()}><Plus className="h-4 w-4" /> Nova categoria</Btn> : undefined
           ) : canCreate ? (
-            <Btn variant="solid" onClick={() => { setEditing(undefined); setFormOpen(true); }}>
+            <Btn variant="solid" tour="patrimonio-novo" onClick={() => { setEditing(undefined); setFormOpen(true); }}>
               <Plus className="h-4 w-4" /> Novo item
             </Btn>
           ) : undefined
@@ -289,7 +289,7 @@ function InventoryPage() {
       </div>
 
       {level === "categories" ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-tour="patrimonio-categorias">
           {categories.filter((c) => match(`${c.name} ${c.description ?? ""}`)).map((c) => {
             const list = assets.filter((a) => a.categoryId === c.id);
             const linked = list.filter((a) => a.sector).length;

@@ -153,7 +153,7 @@ function Attendance() {
       )}
 
       {!loading && !error && (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-tour="frequencia-turmas">
           {classes.map((k) => {
             const accent = toneFor(k.disciplineId);
             const summary = summaries[k.id] ?? { calls: 0, avgPct: 0 };
@@ -248,6 +248,7 @@ function KlassAttendance({ klass: k, onBack }: { klass: SchoolClass; onBack: () 
         description={`${k.shift} · ${k.schedule || "Horário a definir"} · ${k.enrolledCount} alunos matriculados`}
         actions={
           <button
+            data-tour="frequencia-nova-chamada"
             onClick={() => setRollCallDate(todayIso())}
             className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90"
           >
@@ -429,6 +430,7 @@ function RollCall({ klass: k, date: initialDate, onBack }: { klass: SchoolClass;
         description={`${k.shift} · ${k.schedule || "Horário a definir"} · ${roster.length} alunos matriculados`}
         actions={
           <button
+            data-tour="chamada-salvar"
             onClick={save}
             disabled={saving || loading}
             className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90 disabled:opacity-60"
@@ -445,11 +447,11 @@ function RollCall({ klass: k, date: initialDate, onBack }: { klass: SchoolClass;
       )}
 
       <div className="mb-4 grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[180px_1fr]">
-        <div>
+        <div data-tour="chamada-data">
           <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Data da aula</label>
           <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setSaved(false); }} className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm" />
         </div>
-        <div>
+        <div data-tour="chamada-marcar-todos">
           <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Marcar todos</label>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {STATUS_LIST.map((m) => (
@@ -477,7 +479,7 @@ function RollCall({ klass: k, date: initialDate, onBack }: { klass: SchoolClass;
           <Loader2 className="h-4 w-4 animate-spin" /> Carregando turma…
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border bg-card">
+        <div className="overflow-hidden rounded-2xl border bg-card" data-tour="chamada-alunos">
           <div className="grid grid-cols-[minmax(0,1fr)_140px_minmax(0,1.6fr)] items-center border-b bg-muted/30 px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             <span>Aluno</span><span>RA</span><span className="text-right">Registro</span>
           </div>

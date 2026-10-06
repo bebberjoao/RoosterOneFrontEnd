@@ -128,7 +128,7 @@ function Tuitions() {
         eyebrow="Rooster Finance"
         title="Mensalidades"
         description="Gestão de mensalidades por competência — geração em lote, descontos aplicados e edição de vencimentos e valores."
-        actions={canManage ? <Btn variant="solid" onClick={() => { setLoteDraft(EMPTY_LOTE); setLoteResult(null); setError(null); setLoteOpen(true); }}><RefreshCcw className="h-4 w-4" /> Gerar em lote</Btn> : undefined}
+        actions={canManage ? <Btn variant="solid" tour="mensalidades-gerar" onClick={() => { setLoteDraft(EMPTY_LOTE); setLoteResult(null); setError(null); setLoteOpen(true); }}><RefreshCcw className="h-4 w-4" /> Gerar em lote</Btn> : undefined}
       />
 
       <CrudToolbar
@@ -199,15 +199,15 @@ function Tuitions() {
         onClose={() => setLoteOpen(false)}
         title="Gerar mensalidades em lote"
         description="Gera uma cobrança por aluno com matrícula ativa (ou por turma, se selecionada). Idempotente: rodar de novo para a mesma competência/serviço não duplica."
-        footer={<><Btn onClick={() => setLoteOpen(false)}>Fechar</Btn><Btn variant="solid" onClick={doGerarLote}>Gerar</Btn></>}
+        footer={<><Btn onClick={() => setLoteOpen(false)}>Fechar</Btn><Btn variant="solid" onClick={doGerarLote} tour="lote-gerar">Gerar</Btn></>}
       >
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Competência"><TextInput value={loteDraft.competencia} onChange={(e) => setLoteDraft({ ...loteDraft, competencia: e.target.value })} placeholder="2026-09" /></Field>
-            <Field label="Vencimento"><TextInput type="date" value={loteDraft.vencimento} onChange={(e) => setLoteDraft({ ...loteDraft, vencimento: e.target.value })} /></Field>
+            <Field label="Competência" tour="lote-competencia"><TextInput value={loteDraft.competencia} onChange={(e) => setLoteDraft({ ...loteDraft, competencia: e.target.value })} placeholder="2026-09" /></Field>
+            <Field label="Vencimento" tour="lote-vencimento"><TextInput type="date" value={loteDraft.vencimento} onChange={(e) => setLoteDraft({ ...loteDraft, vencimento: e.target.value })} /></Field>
           </div>
-          <Field label="Serviço"><SelectInput value={loteDraft.servicoId} onChange={(e) => setLoteDraft({ ...loteDraft, servicoId: e.target.value })} options={servicos.map((s) => ({ value: s.id, label: `${s.nome} — ${brl(s.preco)}` }))} placeholder="Selecione o serviço de mensalidade" /></Field>
-          <Field label="Turma (opcional)" hint="Deixe em branco para gerar para todos os alunos com matrícula ativa.">
+          <Field label="Serviço" tour="lote-servico"><SelectInput value={loteDraft.servicoId} onChange={(e) => setLoteDraft({ ...loteDraft, servicoId: e.target.value })} options={servicos.map((s) => ({ value: s.id, label: `${s.nome} — ${brl(s.preco)}` }))} placeholder="Selecione o serviço de mensalidade" /></Field>
+          <Field label="Turma (opcional)" tour="lote-turma" hint="Deixe em branco para gerar para todos os alunos com matrícula ativa.">
             <SelectInput value={loteDraft.turmaId} onChange={(e) => setLoteDraft({ ...loteDraft, turmaId: e.target.value })} options={classes.map((c) => ({ value: c.id, label: c.code }))} placeholder="Todas as turmas" />
           </Field>
           {error && <p className="text-xs text-destructive">{error}</p>}

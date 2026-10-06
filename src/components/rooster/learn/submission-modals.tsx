@@ -86,14 +86,14 @@ export function AnswerModal({
       size="lg"
       title={activity.title}
       description={`${TYPE_LABEL[activity.type]} · entrega até ${formatDate(activity.dueAt)}`}
-      footer={<><Btn onClick={onClose}>Cancelar</Btn><Btn variant="solid" onClick={submit} disabled={sending || questions === null}><Send className="h-3.5 w-3.5" /> {sending ? "Enviando…" : "Enviar resposta"}</Btn></>}
+      footer={<><Btn onClick={onClose}>Cancelar</Btn><Btn variant="solid" onClick={submit} disabled={sending || questions === null} tour="resposta-enviar"><Send className="h-3.5 w-3.5" /> {sending ? "Enviando…" : "Enviar resposta"}</Btn></>}
     >
       <div className="space-y-4">
         {activity.description && <p className="whitespace-pre-wrap text-xs text-muted-foreground">{activity.description}</p>}
         {questions === null ? (
           <div className="h-24 animate-pulse rounded-xl bg-muted" />
         ) : hasQuestions ? (
-          <div className="space-y-3">
+          <div className="space-y-3" data-tour="resposta-questoes">
             {questions.map((q, i) => (
               <QuestionAnswerInput
                 key={q.id}
@@ -106,7 +106,7 @@ export function AnswerModal({
             ))}
           </div>
         ) : null}
-        <div>
+        <div data-tour="resposta-texto">
           <label className="mb-1.5 block text-xs font-medium">{hasQuestions ? "Observações (opcional)" : "Sua resposta"}</label>
           <textarea
             value={text}
@@ -116,7 +116,7 @@ export function AnswerModal({
             className="w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
           />
         </div>
-        <div>
+        <div data-tour="resposta-anexos">
           <label className="mb-1.5 block text-xs font-medium">Arquivos (opcional)</label>
           <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent/50">
             <Paperclip className="h-3.5 w-3.5" /> Anexar arquivo

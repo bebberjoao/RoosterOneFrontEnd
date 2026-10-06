@@ -3,7 +3,10 @@ import { cn } from "@/lib/utils";
 
 export type TabItem = { value: string; label: string; badge?: ReactNode };
 
-/** Lightweight, design-system consistent tab bar used by every consolidated module screen. */
+/**
+ * Lightweight, design-system consistent tab bar used by every consolidated module screen.
+ * Cada aba recebe data-tour="aba-<valor>", usado pelos roteiros guiados do assistente.
+ */
 export function TabBar({
   tabs,
   value,
@@ -23,6 +26,7 @@ export function TabBar({
           <button
             key={t.value}
             type="button"
+            data-tour={`aba-${t.value}`}
             onClick={() => onChange(t.value)}
             className={cn(
               "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
