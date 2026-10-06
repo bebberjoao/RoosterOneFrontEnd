@@ -92,7 +92,8 @@ do portal do Boost (`/boost-portal/*`), que possuem layout e sessão próprios.
 - Para execução como servidor Node.js (por exemplo, em Windows Server), o build deve ser gerado com
   `NITRO_PRESET=node-server`; o servidor resultante é iniciado por `node .output/server/index.mjs`. A aplicação
   depende de renderização no servidor e não é distribuída como conjunto de arquivos estáticos. Ver
-  `docs/operations/04-deploy.md` no repositório do backend.
+  `docs/operations/04-deploy.md` no repositório do backend. O instalador para Windows (`scripts/instalador`, no
+  repositório do backend; ver `docs/operations/09-instalador.md`) aplica esse ajuste automaticamente.
 - Alias de importação `@/*` → `./src/*` (`tsconfig.json`).
 - Scripts (`package.json`): `dev` (`vite dev`), `build`, `build:dev`, `preview`, `lint`, `format`, `test`
   (`vitest run`) e `audit`. O `lint` não integra o CI, e o código ainda não foi formatado de modo uniforme pelo
