@@ -11,7 +11,13 @@ Reexportados por `index.ts` (importação única por `@/components/shared`) e ut
 - **`overlays.tsx`**: `Modal`, `Drawer` e `ConfirmDialog`.
 - **`form.tsx`**: `Field`, `TextInput`, `TextArea`, `SelectInput` e `FileUpload`.
 - **`dropdown.tsx`**: `PopoverSelect`, base de `SelectInput` e `Select`. Não se trata de `<select>` HTML nativo, e sim
-  de botão que abre um painel de opções, aspecto relevante para a automação de testes de interface.
+  de botão que abre um painel de opções, aspecto relevante para a automação de testes de interface. O painel, aberto
+  em portal, recebe o atributo `data-camada-flutuante`, para que o roteiro guiado não o escureça nem o bloqueie.
+
+**Marcadores dos roteiros guiados.** `Btn`, `Field` e `SectionCard` aceitam a propriedade opcional `tour`, gravada
+como atributo `data-tour`, que identifica o elemento nos roteiros do assistente; as abas do `TabBar` recebem
+automaticamente `data-tour="aba-<valor>"`, e o `HubCrud`, `crud-novo`, `crud-salvar` e `campo-<nome do campo>`.
+Elementos que não utilizam esses componentes recebem o atributo `data-tour` diretamente.
 
 ## `HubCrud`: componente central de CRUD
 
@@ -58,6 +64,28 @@ obtida como `Blob` e exibida por URL de objeto, revogada ao desmontar). As funç
 `emptyAnswer` e `answerMissing`) ficam em `questions-utils.ts`, para preservar o recarregamento rápido do Vite.
 `submission-modals.tsx` contém `AnswerModal` e `ReviewModal`, utilizados tanto por `/learn/student` quanto por
 `/student/activities`.
+
+### `src/components/rooster/assistente/`: assistente de dúvidas e roteiros guiados
+
+- **`AssistenteChat`** (`assistente-chat.tsx`): botão flutuante e painel de conversa (`role="dialog"`, com a
+  conversa em `role="log"`). Envia a dúvida com a rota atual, exibe as sugestões de tarefas permitidas e apresenta a
+  resposta em cartão: módulo, título, usuários, resumo, procedimento, "Mais detalhes" (observações), "Abrir a tela"
+  (quando a rota é acessível ao usuário, verificada por `canAccessRoute`) e "Mostrar na tela" (quando a resposta
+  traz roteiro com `permitido: true` e há etapas definidas no frontend); sem a permissão, orienta a solicitá-la. Fica
+  oculto durante um roteiro.
+- **`AssistenteProvider`** (`assistente-context.tsx`): estado da conversa e chamadas à API, com descarte das
+  respostas que chegam após "Nova conversa" ou após o encerramento da sessão.
+- **`TourProvider` e `useTour`** (`tour.tsx`): motor dos roteiros. A cada quadro de animação, localiza os elementos do
+  passo (`[data-tour="<alvo>"]`) e desenha, em portal, uma máscara SVG que escurece a tela, com recortes sobre esses
+  elementos e sobre as camadas flutuantes abertas a partir deles, um contorno de destaque e a legenda (título, o que
+  fazer, "Por quê", passo atual e botões), posicionada à direita, à esquerda, abaixo ou acima do conjunto destacado.
+  A máscara não intercepta o mouse, de modo que a rolagem permanece livre; os cliques fora do destaque são
+  descartados na fase de captura. Nos passos `clicar`, o clique no elemento (ou em `avancaEm`) avança o roteiro;
+  nos passos `preencher` e `observar`, o botão "Próximo". O passo navega até a sua `rota`, rola o elemento para a
+  área visível (descontada a barra superior, por `scroll-margin-top`), dá foco ao controle e, se o elemento não
+  aparecer, exibe a orientação `seAusente` sem bloquear cliques, prosseguindo quando o elemento surgir; passos
+  `opcional` ausentes são pulados. A tecla Esc encerra o roteiro sem fechar o formulário aberto.
+- **`roteiros.ts`**: etapas dos 15 roteiros, com os mesmos identificadores do backend.
 
 ## Componentes de estrutura (`src/components/rooster/*.tsx`, fora de subpastas)
 

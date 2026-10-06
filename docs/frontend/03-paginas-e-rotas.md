@@ -12,6 +12,11 @@ com autenticação própria) foram migrados posteriormente de dados simulados pa
 remanescente é o quadro de avisos do painel do aluno (`NOTICES`, em `student/mock-data.ts`), por inexistir endpoint
 correspondente no backend. Ver `docs/system/02-escopo.md` no repositório do backend.
 
+Em todas as rotas do `AppShell`, o botão do assistente de dúvidas, no canto inferior direito, abre o chat do
+assistente. Os roteiros guiados navegam entre as rotas das tarefas e localizam os elementos das telas pelo atributo
+`data-tour` (ver `04-componentes.md`); por isso, a alteração de uma tela que integra roteiro deve preservar esses
+marcadores, verificados pelo teste `roteiros.test.ts`.
+
 ## Rotas públicas (sem `AppShell` e sem exigência de sessão)
 
 | Rota | Arquivo | Função |

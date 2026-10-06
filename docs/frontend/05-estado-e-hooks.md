@@ -2,7 +2,8 @@
 
 ## Contextos globais (montados em `__root.tsx`)
 
-`QueryClientProvider → ThemeProvider → AuthProvider → RoleProvider`; ver `01-arquitetura.md`.
+`QueryClientProvider → ThemeProvider → AuthProvider → RoleProvider → AssistenteProvider → TourProvider`; ver
+`01-arquitetura.md`.
 
 - **`auth-context.tsx` (`useAuth`)**: sessão: `authed`, `ready`, `usuario`, `login`, `logout`,
   `requestPasswordReset` e `resetPassword`.
@@ -15,6 +16,10 @@
   foco à aba; a marcação como lida é otimista (atualiza a tela de imediato e recarrega em caso de falha da API); a
   caixa é limpa na troca de usuário.
 - **`theme-context.tsx`**: tema claro ou escuro, persistido em `localStorage`.
+- **`assistente/assistente-context.tsx` (`useAssistente`)**: conversa do assistente de dúvidas (mensagens, carregamento,
+  sugestões e painel aberto), mantida durante a navegação entre módulos e descartada no encerramento da sessão.
+- **`assistente/tour.tsx` (`useTour`)**: roteiro guiado em execução (`ativo`, `iniciar` e `encerrar`); o motor e a
+  camada visual são montados pelo próprio provider, apenas enquanto há roteiro ativo.
 
 O portal do Boost possui contexto de autenticação próprio (`src/services/boost-portal/auth-context.tsx`), montado no
 layout `boost-portal.tsx`; ver `07-autenticacao.md`.

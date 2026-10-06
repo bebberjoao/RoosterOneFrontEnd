@@ -18,6 +18,9 @@ src/
       learn/            badges.tsx; questions.tsx (editor, preenchimento e resultado das questões) e questions-utils.ts;
                         submission-modals.tsx (modais de resposta e revisão, compartilhados por Learn e Student)
       boost/            manage/ (abas de gestão do curso: identificação, conteúdo, detalhes, alunos e conversas)
+      assistente/       Assistente de dúvidas: assistente-chat.tsx (botão e painel do chat), assistente-context.tsx
+                        (AssistenteProvider: conversa e TourProvider), tour.tsx (motor dos roteiros guiados) e
+                        roteiros.ts (etapas dos 15 roteiros), com os respectivos testes
       auth-context.tsx        Sessão (login e logout)
       role-context.tsx        Perfil de interface deduzido das permissões efetivas (deriveRole) e useCurrentPerson() (nome do usuário)
       notifications/          Notificações: use-notificacoes.ts (estado compartilhado e consulta periódica),
@@ -74,8 +77,9 @@ src/
       client.ts           Cliente HTTP próprio (token com tipo='boost')
       session.ts          Chaves de localStorage distintas das do Hub
       cursos.service.ts   Catálogo, matrícula, progresso, conversa e verificação de certificado
-    mock-api/           Um "*.service.ts" por módulo. Denominação histórica: os nove serviços comunicam-se com a API
-                        por services/hub/client.ts, e nenhum utiliza dados simulados em execução.
+    mock-api/           Um "*.service.ts" por módulo, além de assistente.service.ts (assistente de dúvidas). Denominação
+                        histórica: os serviços comunicam-se com a API por services/hub/client.ts, e nenhum utiliza dados
+                        simulados em execução.
   test/
     setup.ts            Configuração dos testes (Vitest e Testing Library)
   router.tsx           createRouter() e QueryClient
@@ -86,6 +90,7 @@ src/
 ```
 
 Os testes automatizados residem junto ao código testado, em arquivos `*.test.ts` e `*.test.tsx` (por exemplo,
-`src/services/hub/client.test.ts` e `src/components/shared/acessibilidade.test.tsx`).
+`src/services/hub/client.test.ts`, `src/components/shared/acessibilidade.test.tsx` e os três testes de
+`src/components/rooster/assistente/`).
 
 Situação: implementado (árvore extraída da listagem do repositório).

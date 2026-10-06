@@ -46,10 +46,25 @@ valores `Decimal` chegam como texto; somados sem conversão, eram concatenados (
 patrimonial do Assets). Pelo mesmo motivo, `toISOString().slice(0, 10)` não deve ser utilizado para obter a data
 de hoje, pois calcula a data em UTC. As regras são verificadas por `src/lib/formatacao.test.ts`.
 
+## Inclusão ou alteração de roteiro guiado do assistente
+
+1. No backend, o roteiro é declarado em `src/assistente/roteiros.ts` (identificador, entrada do manual, permissão e
+   frases de exemplo); ver `docs/backend/13-guia-desenvolvedor.md` no repositório do backend.
+2. Em `src/components/rooster/assistente/roteiros.ts`, as etapas recebem o mesmo identificador. Cada passo informa o
+   `alvo`, a `acao` (`clicar`, `preencher` ou `observar`), o `titulo`, o `texto` (o que fazer) e o `porque`
+   (finalidade do campo), em registro formal e impessoal; o primeiro passo informa a `rota`. Para alvos que reúnem
+   vários controles, `avancaEm` restringe os cliques que concluem o passo; `opcional` e `seAusente` tratam elementos
+   que dependem do conteúdo da tela.
+3. Os elementos são marcados pela propriedade `tour` (`Btn`, `Field` e `SectionCard`) ou pelo atributo `data-tour`;
+   o mesmo valor em vários elementos destaca todos eles no passo.
+4. `roteiros.test.ts` verifica a lista de identificadores (cópia da lista do backend) e a existência, no código, de
+   todo alvo citado; recomenda-se ainda percorrer o roteiro no navegador com o perfil que executa a tarefa.
+
 ## Verificação antes da conclusão de alteração no frontend
 
 - [ ] `npx tsc --noEmit` sem erros.
 - [ ] Permissão nova, se houver, com grafia idêntica no backend (`@RequirePermission`) e em `permission-catalog.ts`.
+- [ ] Tela que integra roteiro guiado: marcadores `data-tour` preservados (`roteiros.test.ts`).
 - [ ] `npm test` (Vitest) aprovado. A suíte cobre lógica pura, o cliente HTTP, componentes isolados e acessibilidade,
       mas **não** cobre a jornada completa de telas, razão do item seguinte.
 - [ ] Verificação manual no navegador, com o backend em execução (e não apenas o estado vazio de indisponibilidade).

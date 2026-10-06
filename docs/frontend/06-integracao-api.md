@@ -79,6 +79,14 @@ execução.
   acessados diretamente por `request()`, `uploadFile()` ou `requestBlob()`. É o caso predominante em
   `academy.service.ts`, `learn.service.ts` e `student.service.ts`.
 
+## `assistenteService` (assistente de dúvidas)
+
+`src/services/mock-api/assistente.service.ts` consome `/assistente/*` do backend: `perguntar(pergunta, rotaAtual)`
+(`POST /assistente/perguntas`), `sugestoes()`, `entrada(id)` e `roteiro(id)`. O tipo `RespostaAssistente` reproduz o
+contrato do backend (`resposta`, com `entrada`, `roteiro` e `relacionadas`, ou `saudacao`, `agradecimento` e
+`nao-encontrado`, com `mensagem` e `sugestoes`). A indisponibilidade da API (`ApiUnavailableError`) é apresentada no
+chat como mensagem de erro, sem afetar a tela em uso.
+
 ## `academyService`, `learnService` e `studentService` (Academy, Learn e Student)
 
 `src/services/mock-api/academy.service.ts`, `learn.service.ts` e `student.service.ts` utilizam o mesmo cliente HTTP e

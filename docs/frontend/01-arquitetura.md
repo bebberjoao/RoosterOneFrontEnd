@@ -48,8 +48,14 @@ QueryClientProvider (queryClient do roteador)
   -> ThemeProvider
        -> AuthProvider
             -> RoleProvider
-                 -> <Outlet /> (rotas filhas)
+                 -> AssistenteProvider (conversa do assistente)
+                      -> TourProvider (roteiro guiado em execução)
+                           -> <Outlet /> (rotas filhas)
 ```
+
+O `AssistenteProvider` e o `TourProvider` ficam na raiz, e não no `AppShell`, porque o `AppShell` é montado de novo
+a cada módulo (cada layout de módulo o instancia): na raiz, a conversa e o roteiro guiado sobrevivem à navegação
+entre módulos, que o próprio roteiro realiza. Ambos são esvaziados ao encerrar a sessão.
 
 - `notFoundComponent` e `errorComponent`: páginas de contingência para rota inexistente (404) e para erro não
   capturado por error boundary mais específico. O `errorComponent` também aciona `reportLovableError` (telemetria do
@@ -79,7 +85,9 @@ Parte dos providers é montada apenas em layouts específicos:
    conteúdo), o que evita a exibição momentânea de conteúdo protegido sem deixar a tela vazia;
 3. envolve o conteúdo em `PermissionProvider` → `GlobalSearchProvider` (paleta de comandos Ctrl/Cmd+K) →
    `SidebarProvider` → `AppSidebar`, `AppTopbar` e `<main>` com `RequireAccess route={pathname}`, que bloqueia a
-   tela quando o usuário não possui a permissão de acesso (ver `08-autorizacao.md`).
+   tela quando o usuário não possui a permissão de acesso (ver `08-autorizacao.md`);
+4. monta o `AssistenteChat` (botão flutuante e painel do assistente de dúvidas; ver `04-componentes.md`), presente
+   em todas as telas autenticadas.
 
 As rotas `login.tsx` e `redefinir-senha.tsx` **não** utilizam o `AppShell`, por serem públicas, assim como as rotas
 do portal do Boost (`/boost-portal/*`), que possuem layout e sessão próprios.

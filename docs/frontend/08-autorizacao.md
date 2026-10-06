@@ -54,6 +54,12 @@ faltava (migration `20261005090000_permissoes_acesso_telas`), e o catálogo deix
 Ao salvar, a tela "Acessos e permissões" (`hub.acessos.tsx`) cria no banco a permissão do catálogo que ainda não
 existe, vinculada ao módulo das demais permissões da mesma tela, e só então a concede ao usuário.
 
+`canAccessRoute(route, granted)` é a versão sem hook da mesma regra de `useCanAccess`, utilizada quando a rota é
+conhecida apenas em tempo de execução (por exemplo, o atalho "Abrir a tela" das respostas do assistente de dúvidas).
+O roteiro guiado, por sua vez, é liberado pelo backend: a resposta informa `roteiro.permitido`, calculado pela
+permissão declarada para a tarefa (RN052); sem ela, o chat não oferece "Mostrar na tela". O roteiro apenas conduz o
+usuário pela interface, e toda operação continua sujeita às verificações do backend.
+
 ## `RequireAccess`
 
 Montado no `AppShell` (`app-shell.tsx`), envolvendo o conteúdo com `<RequireAccess route={pathname}>`: **toda** rota
