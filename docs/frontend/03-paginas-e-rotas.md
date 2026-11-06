@@ -184,6 +184,15 @@ A aba **Alunos** (`students-tab.tsx`) segue o padrão de CRUD das demais abas (b
 curso e situação, painel de detalhe, ativação e exclusão); as cinco abas utilizam `academyService` (ver
 `04-componentes.md` e `06-integracao-api.md`).
 
+**Vínculos opcionais** (`disciplines-tab.tsx` e `classes-tab.tsx`): o curso da disciplina e a disciplina da turma são
+opcionais. O formulário de disciplina exige apenas nome e código (campo "Curso (opcional)", com a opção "Sem curso", e
+filtro "Sem curso" na listagem); o de turma exige apenas identificação e período letivo (campo "Disciplina
+(opcional)", com a opção "Sem disciplina"). A disciplina é atribuída depois pelo botão Editar da turma. No
+`academyService`, a ausência de vínculo é representada por string vazia (`courseId: ""`, `disciplineId: ""`) e
+convertida em `null` ao enviar para a API, o que também remove o vínculo na edição. Turma sem disciplina não carrega nem
+aceita documentos acadêmicos (eles pertencem à disciplina), e as telas de frequência e de notas exibem "Sem disciplina"
+no lugar do nome.
+
 **Correção aplicada** (auditoria com os perfis de professor e coordenador): `academy.index.tsx`,
 `academy.attendance.tsx` e `academy.grades.tsx` invocavam `academyService.getAll()` (lista completa de disciplinas,
 que exige `academy.manage.acessar`) no mesmo `Promise.all` de consultas permitidas ao professor; como `Promise.all`

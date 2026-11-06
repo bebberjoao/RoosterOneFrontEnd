@@ -40,9 +40,11 @@ export function DisciplinesTab() {
   }, [refresh]);
 
   const courseById = (id: string) => courses.find((c) => c.id === id);
+  const courseName = (id: string) => (id ? courseById(id)?.name ?? "—" : "Sem curso");
 
   const filtered = useMemo(() => rows.filter((d) => {
-    if (courseFilter !== "todos" && d.courseId !== courseFilter) return false;
+    if (courseFilter === "sem-curso" && d.courseId) return false;
+    if (courseFilter !== "todos" && courseFilter !== "sem-curso" && d.courseId !== courseFilter) return false;
     if (statusFilter !== "todos" && d.status !== statusFilter) return false;
     if (q) {
       const s = q.toLowerCase();
@@ -63,7 +65,7 @@ export function DisciplinesTab() {
         </div>
       </div>
     ) },
-    { key: "course", header: "Curso", cell: (d) => <span className="text-xs text-muted-foreground">{courseById(d.courseId)?.name}</span> },
+    { key: "course", header: "Curso", cell: (d) => <span className="text-xs text-muted-foreground">{courseName(d.courseId)}</span> },
     { key: "workload", header: "CH", sortValue: (d) => d.workload, cell: (d) => <span className="text-xs">{d.workload}h</span> },
     { key: "classes", header: "Turmas", cell: (d) => <span className="text-xs text-muted-foreground">{classes.filter((k) => k.disciplineId === d.id).length}</span> },
     { key: "status", header: "Status", cell: (d) => <DisciplineStatusBadge status={d.status} /> },
@@ -76,7 +78,8 @@ export function DisciplinesTab() {
   }
 
   async function saveNew() {
-    if (!draft.name.trim() || !draft.code.trim() || !draft.courseId) { setError("Preencha nome, código e curso."); return; }
+    // Curso é opcional: a disciplina pode ser cadastrada no catálogo sem vínculo com curso.
+    if (!draft.name.trim() || !draft.code.trim()) { setError("Preencha nome e código."); return; }
     try {
       await academyService.create(draft);
       setModalNew(false);
@@ -134,7 +137,7 @@ export function DisciplinesTab() {
         placeholder="Buscar por nome ou código…"
         filters={
           <>
-            <Select value={courseFilter} onChange={setCourseFilter} options={[{ value: "todos", label: "Todos os cursos" }, ...courses.map((c) => ({ value: c.id, label: c.name }))]} />
+            <Select value={courseFilter} onChange={setCourseFilter} options={[{ value: "todos", label: "Todos os cursos" }, { value: "sem-curso", label: "Sem curso" }, ...courses.map((c) => ({ value: c.id, label: c.name }))]} />
             <Select value={statusFilter} onChange={setStatusFilter} options={[{ value: "todos", label: "Todos status" }, { value: "ativa", label: "Ativa" }, { value: "arquivada", label: "Arquivada" }, { value: "inativa", label: "Inativa" }]} />
           </>
         }
@@ -147,7 +150,7 @@ export function DisciplinesTab() {
         open={!!selected}
         onClose={() => { setSelected(null); setEditing(false); }}
         title={selected?.name ?? ""}
-        subtitle={selected ? `${selected.code} · ${courseById(selected.courseId)?.name}` : undefined}
+        subtitle={selected ? `${selected.code} · ${courseName(selected.courseId)}` : undefined}
         actions={canManage && selected ? (
           editing ? (
             <>
@@ -168,7 +171,7 @@ export function DisciplinesTab() {
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <div><dt className="text-[11px] text-muted-foreground">Código</dt><dd className="font-mono">{selected.code}</dd></div>
                 <div><dt className="text-[11px] text-muted-foreground">Carga horária</dt><dd>{selected.workload}h</dd></div>
-                <div className="col-span-2"><dt className="text-[11px] text-muted-foreground">Curso</dt><dd>{courseById(selected.courseId)?.name}</dd></div>
+                <div className="col-span-2"><dt className="text-[11px] text-muted-foreground">Curso</dt><dd>{courseName(selected.courseId)}</dd></div>
                 <div className="col-span-2"><dt className="text-[11px] text-muted-foreground">Descrição</dt><dd className="text-muted-foreground">{selected.description || "—"}</dd></div>
                 <div><dt className="text-[11px] text-muted-foreground">Status</dt><dd><DisciplineStatusBadge status={selected.status} /></dd></div>
               </dl>
@@ -211,7 +214,7 @@ function DisciplineForm({ draft, setDraft, courses, error }: {
         <Field label="Carga horária"><TextInput type="number" value={draft.workload} onChange={(e) => setDraft({ ...draft, workload: Number(e.target.value) })} /></Field>
       </div>
       <Field label="Descrição"><TextArea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Ementa resumida da disciplina." /></Field>
-      <Field label="Curso"><SelectInput value={draft.courseId} onChange={(e) => setDraft({ ...draft, courseId: e.target.value })} options={courses.map((c) => ({ value: c.id, label: c.name }))} /></Field>
+      <Field label="Curso (opcional)"><SelectInput value={draft.courseId} onChange={(e) => setDraft({ ...draft, courseId: e.target.value })} options={[{ value: "", label: "Sem curso" }, ...courses.map((c) => ({ value: c.id, label: c.name }))]} /></Field>
       <Field label="Status"><SelectInput value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as Discipline["status"] })} options={[{ value: "ativa", label: "Ativa" }, { value: "arquivada", label: "Arquivada" }, { value: "inativa", label: "Inativa" }]} /></Field>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

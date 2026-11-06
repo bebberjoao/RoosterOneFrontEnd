@@ -66,12 +66,19 @@ export function ClassesTab() {
   useEffect(() => {
     if (!selected) { setEnrollments([]); setDocs([]); return; }
     academyService.getEnrollmentsByClass(selected.id).then(setEnrollments);
-    academyService.getDocs({ disciplineId: selected.disciplineId }).then(setDocs);
+    // Documentos pertencem à disciplina: turma sem disciplina não tem documentos.
+    if (selected.disciplineId) academyService.getDocs({ disciplineId: selected.disciplineId }).then(setDocs);
+    else setDocs([]);
   }, [selected?.id, refresh]);
 
   const disciplineById = (id: string) => disciplines.find((d) => d.id === id);
   const teacherById = (id: string) => teachers.find((t) => t.id === id);
   const termById = (id: string) => terms.find((t) => t.id === id);
+  const disciplineLabel = (id: string) => {
+    if (!id) return "Sem disciplina";
+    const d = disciplineById(id);
+    return d ? `${d.code} · ${d.name}` : "—";
+  };
 
   const filtered = useMemo(() => rows.filter((k) => {
     if (shiftFilter !== "todos" && k.shift !== shiftFilter) return false;
@@ -86,11 +93,10 @@ export function ClassesTab() {
 
   const columns: Column<SchoolClass>[] = [
     { key: "code", header: "Turma", sortValue: (k) => k.code, cell: (k) => {
-      const d = disciplineById(k.disciplineId);
       return (
         <div className="min-w-0">
           <div className="truncate text-sm font-medium">{k.code}</div>
-          <div className="truncate text-[11px] text-muted-foreground">{d?.code} · {d?.name}</div>
+          <div className="truncate text-[11px] text-muted-foreground">{disciplineLabel(k.disciplineId)}</div>
         </div>
       );
     } },
@@ -108,7 +114,8 @@ export function ClassesTab() {
   function openNew() { setDraft(EMPTY); setError(null); setModalNew(true); }
 
   async function saveNew() {
-    if (!draft.code.trim() || !draft.disciplineId || !draft.termId) { setError("Preencha identificação, disciplina e período letivo."); return; }
+    // Disciplina é opcional: a turma pode ser criada sem ela e recebê-la depois pela edição.
+    if (!draft.code.trim() || !draft.termId) { setError("Preencha identificação e período letivo."); return; }
     try {
       await academyService.createClass({ ...draft, teacherId: draft.teacherId || undefined });
       setModalNew(false);
@@ -230,7 +237,7 @@ export function ClassesTab() {
         open={!!selected}
         onClose={() => { setSelected(null); setEditing(false); }}
         title={selected ? `Turma ${selected.code}` : ""}
-        subtitle={selected ? disciplineById(selected.disciplineId)?.name : undefined}
+        subtitle={selected ? disciplineLabel(selected.disciplineId) : undefined}
         width={640}
         actions={canManage && selected ? (
           editing ? (
@@ -261,6 +268,7 @@ export function ClassesTab() {
             {innerTab === "detalhes" && (
               <SectionCard title="Detalhes da turma">
                 <dl className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="col-span-2"><dt className="text-[11px] text-muted-foreground">Disciplina</dt><dd>{selected.disciplineId ? disciplineLabel(selected.disciplineId) : "Não atribuída — use Editar para vincular uma disciplina"}</dd></div>
                   <div><dt className="text-[11px] text-muted-foreground">Turno</dt><dd>{selected.shift}</dd></div>
                   <div><dt className="text-[11px] text-muted-foreground">Horário</dt><dd>{selected.schedule || "—"}</dd></div>
                   <div><dt className="text-[11px] text-muted-foreground">Sala</dt><dd>{selected.roomLabel || "—"}</dd></div>
@@ -317,9 +325,9 @@ export function ClassesTab() {
                       {canDocs && <button onClick={() => removeDoc(d.id)} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"><Trash2 className="h-3.5 w-3.5" /></button>}
                     </li>
                   ))}
-                  {classDocs.length === 0 && <li className="text-sm text-muted-foreground">Nenhum documento vinculado.</li>}
+                  {classDocs.length === 0 && <li className="text-sm text-muted-foreground">{selected.disciplineId ? "Nenhum documento vinculado." : "Atribua uma disciplina à turma para anexar documentos."}</li>}
                 </ul>
-                {canDocs && (
+                {canDocs && selected.disciplineId && (
                   <div className="mt-4 space-y-2">
                     <div className="flex flex-wrap gap-2">
                       <SelectInput className="w-44" value={docKind} onChange={(e) => setDocKind(e.target.value as AcademyDoc["kind"])} options={DOC_KIND_OPTIONS} />
@@ -342,7 +350,7 @@ export function ClassesTab() {
         )}
       </Drawer>
 
-      <Modal open={modalNew} onClose={() => setModalNew(false)} title="Nova turma" description="Crie uma turma vinculada a uma disciplina." footer={<><Btn onClick={() => setModalNew(false)}>Cancelar</Btn><Btn variant="solid" onClick={saveNew}>Salvar</Btn></>}>
+      <Modal open={modalNew} onClose={() => setModalNew(false)} title="Nova turma" description="Crie uma turma. A disciplina é opcional e pode ser atribuída depois." footer={<><Btn onClick={() => setModalNew(false)}>Cancelar</Btn><Btn variant="solid" onClick={saveNew}>Salvar</Btn></>}>
         <ClassForm draft={draft} setDraft={setDraft} disciplines={disciplines} terms={terms} teachers={teachers} error={error} />
       </Modal>
 
@@ -360,7 +368,7 @@ function ClassForm({ draft, setDraft, disciplines, terms, teachers, error }: {
         <Field label="Identificação"><TextInput value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="ENG-SW-301-A" /></Field>
         <Field label="Vagas"><TextInput type="number" value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: Number(e.target.value) })} /></Field>
       </div>
-      <Field label="Disciplina"><SelectInput value={draft.disciplineId} onChange={(e) => setDraft({ ...draft, disciplineId: e.target.value })} options={disciplines.map((d) => ({ value: d.id, label: `${d.code} · ${d.name}` }))} /></Field>
+      <Field label="Disciplina (opcional)"><SelectInput value={draft.disciplineId} onChange={(e) => setDraft({ ...draft, disciplineId: e.target.value })} options={[{ value: "", label: "Sem disciplina" }, ...disciplines.map((d) => ({ value: d.id, label: `${d.code} · ${d.name}` }))]} /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Período letivo"><SelectInput value={draft.termId} onChange={(e) => setDraft({ ...draft, termId: e.target.value })} options={terms.map((t) => ({ value: t.id, label: t.name }))} /></Field>
         <Field label="Turno"><SelectInput value={draft.shift} onChange={(e) => setDraft({ ...draft, shift: e.target.value as SchoolClass["shift"] })} options={[{ value: "Matutino", label: "Matutino" }, { value: "Vespertino", label: "Vespertino" }, { value: "Noturno", label: "Noturno" }]} /></Field>

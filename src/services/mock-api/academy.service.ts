@@ -49,6 +49,7 @@ export type Teacher = {
   weeklyHours: number; status: "ativo" | "afastado" | "inativo"; initials: string; tone: string; active: boolean;
 };
 
+/** `courseId` vazio ("") = disciplina sem curso (o vínculo com curso é opcional). */
 export type Discipline = {
   id: string; code: string; name: string; description: string; courseId: string; workload: number;
   status: "ativa" | "arquivada" | "inativa"; accent: string;
@@ -59,6 +60,7 @@ export type Student = {
   courseId: string; semester: number; status: "ativo" | "trancado" | "formado" | "inativo"; active: boolean;
 };
 
+/** `disciplineId` vazio ("") = turma ainda sem disciplina (pode ser atribuída depois). */
 export type SchoolClass = {
   id: string; code: string; disciplineId: string; termId: string; teacherId?: string;
   shift: "Matutino" | "Vespertino" | "Noturno"; capacity: number; roomLabel: string; schedule: string;
@@ -119,18 +121,19 @@ const periodoResource = mapResource<Term, PeriodoBack>(
 
 // ================= Disciplina =================
 type DisciplinaBack = {
-  id: string; codigo: string; nome: string; descricao?: string | null; cursoId: string;
+  id: string; codigo: string; nome: string; descricao?: string | null; cursoId: string | null;
   cargaHoraria: number; status: Discipline["status"];
 };
 function disciplinaToFront(b: DisciplinaBack): Discipline {
-  return { id: b.id, code: b.codigo, name: b.nome, description: b.descricao ?? "", courseId: b.cursoId, workload: b.cargaHoraria, status: b.status, accent: toneFor(b.id) };
+  return { id: b.id, code: b.codigo, name: b.nome, description: b.descricao ?? "", courseId: b.cursoId ?? "", workload: b.cargaHoraria, status: b.status, accent: toneFor(b.id) };
 }
 function disciplinaToDto(f: Partial<Discipline>): Partial<DisciplinaBack> {
   return {
     ...(f.code !== undefined && { codigo: f.code }),
     ...(f.name !== undefined && { nome: f.name }),
     ...(f.description !== undefined && { descricao: f.description }),
-    ...(f.courseId !== undefined && { cursoId: f.courseId }),
+    // Curso é opcional: "" (sem curso) vira null, que também remove o vínculo na edição.
+    ...(f.courseId !== undefined && { cursoId: f.courseId || null }),
     ...(f.workload !== undefined && { cargaHoraria: f.workload }),
     ...(f.status !== undefined && { status: f.status }),
   };
@@ -188,14 +191,14 @@ const alunoResource = createRawResource<AlunoBack>("/alunos", "aluno", []);
 
 // ================= Turma =================
 type TurmaBack = {
-  id: string; codigo: string; disciplinaId: string; periodoLetivoId: string; professorId?: string | null;
+  id: string; codigo: string; disciplinaId: string | null; periodoLetivoId: string; professorId?: string | null;
   turno: SchoolClass["shift"]; capacidade: number; sala?: string | null; horario?: string | null;
   status: SchoolClass["status"]; _count?: { matriculas?: number };
   disciplina?: { id: string; codigo: string; nome: string; cargaHoraria: number };
 };
 function turmaToFront(b: TurmaBack): SchoolClass {
   return {
-    id: b.id, code: b.codigo, disciplineId: b.disciplinaId, termId: b.periodoLetivoId,
+    id: b.id, code: b.codigo, disciplineId: b.disciplinaId ?? "", termId: b.periodoLetivoId,
     teacherId: b.professorId ?? undefined, shift: b.turno, capacity: b.capacidade,
     roomLabel: b.sala ?? "", schedule: b.horario ?? "", status: b.status,
     enrolledCount: b._count?.matriculas ?? 0,
@@ -205,7 +208,8 @@ function turmaToFront(b: TurmaBack): SchoolClass {
 function turmaToDto(f: Partial<SchoolClass>): Partial<TurmaBack> {
   return {
     ...(f.code !== undefined && { codigo: f.code }),
-    ...(f.disciplineId !== undefined && { disciplinaId: f.disciplineId }),
+    // Disciplina é opcional: "" (sem disciplina) vira null; pode ser atribuída depois pela edição.
+    ...(f.disciplineId !== undefined && { disciplinaId: f.disciplineId || null }),
     ...(f.termId !== undefined && { periodoLetivoId: f.termId }),
     ...(f.teacherId !== undefined && { professorId: f.teacherId || null }),
     ...(f.shift !== undefined && { turno: f.shift }),

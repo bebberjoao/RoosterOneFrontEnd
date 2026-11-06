@@ -171,8 +171,8 @@ function Attendance() {
                     <GraduationCap className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{k.disciplineName ?? "—"}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">{k.disciplineCode} · Turma {k.code}</p>
+                    <p className="truncate text-sm font-medium">{k.disciplineName ?? "Sem disciplina"}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{k.disciplineCode ? `${k.disciplineCode} · ` : ""}Turma {k.code}</p>
                   </div>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
@@ -243,7 +243,7 @@ function KlassAttendance({ klass: k, onBack }: { klass: SchoolClass; onBack: () 
       </button>
 
       <PageHeader
-        eyebrow={`Rooster Academy · ${k.disciplineCode ?? ""} · Turma ${k.code}`}
+        eyebrow={`Rooster Academy · ${k.disciplineCode ? `${k.disciplineCode} · ` : ""}Turma ${k.code}`}
         title={k.disciplineName ?? "Chamada"}
         description={`${k.shift} · ${k.schedule || "Horário a definir"} · ${k.enrolledCount} alunos matriculados`}
         actions={
@@ -425,7 +425,7 @@ function RollCall({ klass: k, date: initialDate, onBack }: { klass: SchoolClass;
       </button>
 
       <PageHeader
-        eyebrow={`Rooster Academy · ${k.disciplineCode ?? ""} · Turma ${k.code}`}
+        eyebrow={`Rooster Academy · ${k.disciplineCode ? `${k.disciplineCode} · ` : ""}Turma ${k.code}`}
         title={k.disciplineName ?? "Chamada"}
         description={`${k.shift} · ${k.schedule || "Horário a definir"} · ${roster.length} alunos matriculados`}
         actions={
