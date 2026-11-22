@@ -157,8 +157,9 @@ function professorToFront(b: ProfessorBack): Teacher {
 function professorToDto(f: Partial<Teacher> & { usuarioId?: string }): Partial<ProfessorBack> {
   return {
     ...(f.usuarioId !== undefined && { usuarioId: f.usuarioId }),
-    ...(f.title !== undefined && { titulacao: f.title }),
-    ...(f.department !== undefined && { departamento: f.department }),
+    // Vazio vira null: o backend exige ao menos 2 caracteres quando o campo é enviado, e null limpa o valor.
+    ...(f.title !== undefined && { titulacao: f.title.trim() || null }),
+    ...(f.department !== undefined && { departamento: f.department.trim() || null }),
     ...(f.weeklyHours !== undefined && { cargaHorariaSemanal: f.weeklyHours }),
     ...(f.status !== undefined && { status: f.status }),
   };
@@ -331,6 +332,10 @@ export const academyService = {
   },
   async updateCourse(id: string, dto: Partial<Course>): Promise<Course | undefined> {
     return cursoResource.update(id, dto);
+  },
+  async removeCourse(id: string): Promise<boolean> {
+    await cursoResource.remove(id);
+    return true;
   },
   async getTerms(): Promise<Term[]> {
     return periodoResource.list();

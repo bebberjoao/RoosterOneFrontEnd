@@ -79,9 +79,10 @@ export function DisciplinesTab() {
 
   async function saveNew() {
     // Curso é opcional: a disciplina pode ser cadastrada no catálogo sem vínculo com curso.
-    if (!draft.name.trim() || !draft.code.trim()) { setError("Preencha nome e código."); return; }
+    if (draft.name.trim().length < 2 || draft.code.trim().length < 2) { setError("Preencha nome e código (ao menos 2 caracteres)."); return; }
+    if (!Number.isInteger(draft.workload) || draft.workload < 1) { setError("Informe a carga horária em horas (número inteiro maior que zero)."); return; }
     try {
-      await academyService.create(draft);
+      await academyService.create({ ...draft, name: draft.name.trim(), code: draft.code.trim() });
       setModalNew(false);
       setError(null);
       setRefresh((r) => r + 1);
@@ -101,8 +102,10 @@ export function DisciplinesTab() {
 
   async function saveEdit() {
     if (!selected) return;
+    if (draft.name.trim().length < 2 || draft.code.trim().length < 2) { setError("Preencha nome e código (ao menos 2 caracteres)."); return; }
+    if (!Number.isInteger(draft.workload) || draft.workload < 1) { setError("Informe a carga horária em horas (número inteiro maior que zero)."); return; }
     try {
-      const updated = await academyService.update(selected.id, draft);
+      const updated = await academyService.update(selected.id, { ...draft, name: draft.name.trim(), code: draft.code.trim() });
       if (updated) setSelected(updated);
       setEditing(false);
       setError(null);
@@ -198,7 +201,9 @@ export function DisciplinesTab() {
         <DisciplineForm draft={draft} setDraft={setDraft} courses={courses} error={error} />
       </Modal>
 
-      <ConfirmDialog open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={doDelete} title="Excluir disciplina" description="Esta ação removerá a disciplina do catálogo. Turmas vinculadas não serão excluídas." />
+      <ConfirmDialog open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={doDelete} title="Excluir disciplina" description={disciplineClasses.length > 0
+          ? "Esta disciplina possui turmas vinculadas e não pode ser excluída enquanto houver vínculos. Retire a disciplina das turmas ou altere o status para arquivada."
+          : "Esta ação removerá a disciplina do catálogo."} />
     </div>
   );
 }

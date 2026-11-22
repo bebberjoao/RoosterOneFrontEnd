@@ -2,14 +2,15 @@
 // `/me/*` (identidade sempre resolvida no servidor a partir do JWT — nunca
 // passamos um id de aluno/usuário aqui). Segue o mesmo padrão Back/Front de
 // src/services/mock-api/academy.service.ts.
+import { FREQUENCIA_MINIMA, NOTA_APROVACAO, contaComoPresenca } from "@/lib/regras-academicas";
 import { request } from "@/services/hub/client";
 import { session } from "@/services/hub/session";
 import { toneFor, initialsOf } from "./academy.service";
 
-export type Situation = "aprovado" | "reprovado" | "cursando" | "reprovado-falta" | "trancado";
+export type Situation = "aprovado" | "reprovado" | "cursando" | "reprovado-falta" | "trancado" | "cancelada";
 
 /** Frequência mínima institucional exigida (regra de negócio, não vem do backend). */
-export const MIN_ATTENDANCE = 75;
+export const MIN_ATTENDANCE = FREQUENCIA_MINIMA;
 
 export type StudentProfile = {
   id: string; usuarioId: string; ra: string; name: string; email: string; initials: string;
@@ -61,8 +62,9 @@ function num(v: number | string | null | undefined): number | null {
 }
 
 function situacaoFromMatricula(status: string, media: number | null): Situation {
-  if (status === "concluida") return media !== null && media >= 6 ? "aprovado" : "reprovado";
-  if (status === "cancelada") return "reprovado-falta";
+  if (status === "concluida") return media !== null && media >= NOTA_APROVACAO ? "aprovado" : "reprovado";
+  // Matrícula cancelada não é reprovação: o sistema não reprova por falta (RN023).
+  if (status === "cancelada") return "cancelada";
   if (status === "trancada") return "trancado";
   return "cursando";
 }
@@ -73,7 +75,8 @@ function attendanceSummary(records: FrequenciaBack[]) {
   for (const r of records) {
     const entry = byClass.get(r.turmaId) ?? { total: 0, present: 0, absent: 0 };
     entry.total += 1;
-    if (r.presenca === "presente" || r.presenca === "justificado") entry.present += 1;
+    // Mesmo critério da tela do professor: atraso e falta justificada contam como presença.
+    if (contaComoPresenca(r.presenca)) entry.present += 1;
     if (r.presenca === "falta") entry.absent += 1;
     byClass.set(r.turmaId, entry);
   }

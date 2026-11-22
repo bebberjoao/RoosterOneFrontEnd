@@ -11,6 +11,7 @@ import {
 } from "@/services/mock-api/academy.service";
 import { ApiError } from "@/services/hub/client";
 import { useCan } from "@/components/rooster/hub/permission-context";
+import { NOTA_APROVACAO, mediaPonderada } from "@/lib/regras-academicas";
 import {
   ChevronLeft,
   Plus,
@@ -50,25 +51,16 @@ export const Route = createFileRoute("/academy/grades")({
 });
 
 /** Nota mínima de aprovação (0–10) — mesmo critério usado no portal do aluno (studentService). */
-const PASS_MARK = 6;
+const PASS_MARK = NOTA_APROVACAO;
 
 function errMsg(err: unknown, forbidden = "Você não tem permissão para acessar as notas desta turma.") {
   if (err instanceof ApiError) return err.status === 403 ? forbidden : err.message;
   return err instanceof Error ? err.message : "Ocorreu um erro inesperado.";
 }
 
-/** Média ponderada — replica `calcularMediaTurma` do backend: itens sem nota lançada não entram no cálculo. */
+/** Média do aluno na escala 0–10 — mesma regra do backend (`calcularMediaTurma`), em `@/lib/regras-academicas`. */
 function weightedAverage(items: GradeItemWithScores[], studentId: string): number | null {
-  let somaPesos = 0;
-  let somaPonderada = 0;
-  for (const it of items) {
-    const nota = it.scores[studentId];
-    if (nota == null) continue;
-    somaPesos += it.weight;
-    somaPonderada += nota * it.weight;
-  }
-  if (somaPesos === 0) return null;
-  return +(somaPonderada / somaPesos).toFixed(2);
+  return mediaPonderada(items.map((it) => ({ peso: it.weight, notaMaxima: it.max, nota: it.scores[studentId] })));
 }
 
 function Grades() {
@@ -193,7 +185,7 @@ function KlassGrades({ klass: k, onBack }: { klass: SchoolClass; onBack: () => v
     setLoading(true);
     setError(null);
     Promise.all([academyService.getGradeItemsWithScores(k.id), academyService.getEnrollmentsByClass(k.id)])
-      .then(([its, roster]) => { setItems(its); setRoster(roster); })
+      .then(([its, roster]) => { setItems(its); setRoster(roster.filter((e) => e.status === "ativa" || e.status === "concluida")); })
       .catch((err) => setError(errMsg(err)))
       .finally(() => setLoading(false));
   };
@@ -423,7 +415,7 @@ function KlassGrades({ klass: k, onBack }: { klass: SchoolClass; onBack: () => v
 
           <p className="mt-3 text-[11px] text-muted-foreground">
             Componentes marcados com <Sparkles className="mx-0.5 inline h-3 w-3" style={{ color: "oklch(0.6 0.2 305)" }} /> vêm de atividades do Rooster Learn corrigidas por lá — somente leitura aqui.
-            As notas lançadas manualmente são salvas automaticamente ao sair do campo. Aprovação a partir de {fmtNumero(PASS_MARK, 1)} (escala 0–10).
+            As notas lançadas manualmente são salvas automaticamente ao sair do campo. A média converte cada nota para a escala 0–10 pela nota máxima do item; a situação é uma referência (a partir de {fmtNumero(PASS_MARK, 1)}), e não uma aprovação automática.
             {savedNote && <span className="ml-2 font-medium" style={{ color: "oklch(0.62 0.18 155)" }}>Nota salva</span>}
           </p>
         </>

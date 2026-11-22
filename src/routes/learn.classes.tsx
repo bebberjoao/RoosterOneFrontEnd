@@ -223,7 +223,7 @@ function ActivityMetaModal({
     setError(null);
     const draft: ActivityDraft = {
       title: title.trim(), type, description: description.trim(), classId,
-      weight: Number(weight) || 0, maxGrade: Number(maxGrade) || 10,
+      weight: Math.min(1, Math.max(0, Number(weight) || 0)), maxGrade: Number(maxGrade) || 10,
       opensAt: opensAt ? new Date(opensAt).toISOString() : null,
       dueAt: dueAt ? new Date(dueAt).toISOString() : null,
       timeLimitMin: timeLimitMin ? Number(timeLimitMin) : null,
@@ -256,7 +256,7 @@ function ActivityMetaModal({
         <Field label="Descrição" tour="atividade-descricao"><TextArea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Tipo" tour="atividade-tipo"><SelectInput options={TYPE_OPTIONS} value={type} onChange={(e) => setType(e.target.value as ActivityType)} /></Field>
-          <Field label="Peso" tour="atividade-nota"><TextInput type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} /></Field>
+          <Field label="Peso (0 a 1)" hint="0,3 = 30% da média; 0 = não conta nota" tour="atividade-nota"><TextInput type="number" step="0.05" min={0} max={1} value={weight} onChange={(e) => setWeight(e.target.value)} /></Field>
           <Field label="Nota máxima" tour="atividade-nota"><TextInput type="number" value={maxGrade} onChange={(e) => setMaxGrade(e.target.value)} /></Field>
           <Field label="Tempo máximo (min, opcional)"><TextInput type="number" value={timeLimitMin} onChange={(e) => setTimeLimitMin(e.target.value)} /></Field>
           <Field label="Abertura (opcional)" tour="atividade-prazo"><TextInput type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} /></Field>

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/rooster/page-header";
 import { StatCard, SectionCard, ProgressBar, Avatar, TONE, Chip, EmptyState } from "@/components/rooster/student/ui";
 import { LoadingCards } from "@/components/shared";
 import { NOTICES } from "@/components/rooster/student/mock-data";
+import { NOTA_APROVACAO, NOTA_ATENCAO, notaNaEscala } from "@/lib/regras-academicas";
 import { useNotificacoes } from "@/components/rooster/notifications/use-notificacoes";
 import { studentService, overallAverage, overallAttendance, MIN_ATTENDANCE, type StudentDiscipline, type ClassGrades } from "@/services/mock-api/student.service";
 import { learnService, formatDate, TYPE_LABEL, type Activity } from "@/services/mock-api/learn.service";
@@ -150,7 +151,7 @@ function StudentDashboard() {
                       <p className="truncate text-sm">{g.name}</p>
                       <p className="truncate text-[11px] text-muted-foreground">{g.origin === "learn" ? "Rooster Learn" : "Manual"}</p>
                     </div>
-                    <Chip tone={val >= 7 ? TONE.ok : val >= 5 ? TONE.warn : TONE.danger}>{fmtNumero(val, 1)}</Chip>
+                    <Chip tone={notaNaEscala(val, g.max) >= NOTA_APROVACAO ? TONE.ok : notaNaEscala(val, g.max) >= NOTA_ATENCAO ? TONE.warn : TONE.danger}>{fmtNumero(val, 1)} de {fmtNumero(g.max, 0)}</Chip>
                   </li>
                 );
               })}

@@ -91,7 +91,7 @@ export function StudentsTab() {
       setModalNew(false);
       setError(null);
       setRefresh((r) => r + 1);
-      toast.success("Aluno cadastrado com sucesso");
+      toast.success("Aluno cadastrado — o acesso ao portal do aluno já está liberado");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao cadastrar aluno";
       setError(message);
@@ -202,7 +202,7 @@ export function StudentsTab() {
         open={modalNew}
         onClose={() => setModalNew(false)}
         title="Novo aluno"
-        description="Vincule um usuário já existente do Hub ao cadastro acadêmico do aluno."
+        description="Vincule um usuário já existente do Hub ao cadastro acadêmico do aluno. As permissões do portal do aluno são concedidas automaticamente."
         footer={<><Btn onClick={() => setModalNew(false)}>Cancelar</Btn><Btn variant="solid" onClick={saveNew}>Salvar</Btn></>}
       >
         <StudentForm draft={draft} setDraft={setDraft} courses={courses} error={error} />
@@ -231,7 +231,9 @@ function StudentForm({ draft, setDraft, courses, error, lockUser }: {
         <Field label="RA" required><TextInput value={draft.ra} onChange={(e) => setDraft({ ...draft, ra: e.target.value })} placeholder="2026001" /></Field>
         <Field label="Semestre"><TextInput type="number" min={1} value={draft.semester} onChange={(e) => setDraft({ ...draft, semester: Number(e.target.value) })} /></Field>
       </div>
-      <Field label="Curso" required><SelectInput value={draft.courseId} onChange={(e) => setDraft({ ...draft, courseId: e.target.value })} options={courses.map((c) => ({ value: c.id, label: c.name }))} /></Field>
+      <Field label="Curso" required hint={courses.length === 0 ? "Nenhum curso cadastrado: crie o curso na aba Cursos antes de cadastrar alunos." : undefined}>
+        <SelectInput value={draft.courseId} onChange={(e) => setDraft({ ...draft, courseId: e.target.value })} placeholder="Selecione o curso" disabled={courses.length === 0} options={courses.map((c) => ({ value: c.id, label: c.name }))} />
+      </Field>
       <Field label="Situação"><SelectInput value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as Student["status"] })} options={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))} /></Field>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

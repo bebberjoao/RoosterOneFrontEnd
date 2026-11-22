@@ -37,6 +37,7 @@ export function StatusChip({ status }: { status: string }) {
     aprovado: { tone: TONE.ok, label: "Aprovado" },
     reprovado: { tone: TONE.danger, label: "Reprovado" },
     "reprovado-falta": { tone: TONE.danger, label: "Reprovado por falta" },
+    trancado: { tone: TONE.warn, label: "Trancado" },
     cursando: { tone: TONE.info, label: "Cursando" },
     // atividades
     pendente: { tone: TONE.warn, label: "Pendente" },

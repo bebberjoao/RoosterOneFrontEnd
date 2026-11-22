@@ -174,7 +174,7 @@ abas; quando o usuário não possui vínculo de aluno, exibe "Sem vínculo de al
 | Rota | Arquivo | Função |
 |---|---|---|
 | `/academy` | `academy.index.tsx` | Painel conforme o perfil: coordenação e administração visualizam o painel institucional (oito consultas por `academyService`); o professor visualiza painel próprio, restrito às turmas que leciona (`getClasses({minhas:true})` e `getFrequencia`), pois não possui a permissão `academy.manage.acessar` exigida pelas consultas institucionais |
-| `/academy/manage` | `academy.manage.tsx` | Gestão acadêmica: abas Disciplinas, Turmas, Professores, Alunos e Calendário, todas por `academyService` |
+| `/academy/manage` | `academy.manage.tsx` | Gestão acadêmica: abas Cursos, Disciplinas, Turmas, Professores, Alunos e Calendário, todas por `academyService`. As regras de exibição de notas e de frequência (escala da média, média de referência, frequência mínima e o que conta como presença) ficam em `src/lib/regras-academicas.ts`, compartilhadas por `/academy/grades`, `/academy/attendance` e pelo portal do aluno |
 | `/academy/attendance` | `academy.attendance.tsx` | Registro de frequência (`academyService.getFrequencia` e `registrarFrequencia`); turmas por `{minhas:true}` para o professor e todas para a coordenação e a administração |
 | `/academy/grades` | `academy.grades.tsx` | Composição e lançamento de notas (`academyService.getGradeItemsWithScores` e `setGrade`); itens com `origin:"learn"` são somente leitura; mesma regra de turmas da frequência |
 

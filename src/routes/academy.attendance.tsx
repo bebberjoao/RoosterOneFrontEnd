@@ -363,7 +363,8 @@ function RollCall({ klass: k, date: initialDate, onBack }: { klass: SchoolClass;
 
   useEffect(() => {
     let cancelled = false;
-    academyService.getEnrollmentsByClass(k.id).then((rows) => !cancelled && setRoster(rows)).catch(() => {});
+    // A chamada só inclui matrículas ativas (o backend recusa registro para matrícula cancelada ou trancada).
+    academyService.getEnrollmentsByClass(k.id).then((rows) => !cancelled && setRoster(rows.filter((e) => e.status === "ativa"))).catch(() => {});
     return () => { cancelled = true; };
   }, [k.id]);
 
@@ -401,7 +402,7 @@ function RollCall({ klass: k, date: initialDate, onBack }: { klass: SchoolClass;
       setSaved(true);
       toast.success("Chamada registrada com sucesso");
     } catch (err) {
-      const message = errMsg(err, "Você não tem permissão para registrar a frequência desta turma.");
+      const message = errMsg(err, "Você não tem permissão para registrar a frequência desta turma, ou a chamada desta data já foi lançada e a correção exige a permissão \"Editar chamada anterior\".");
       setError(message);
       toast.error(message);
     } finally {
@@ -449,7 +450,7 @@ function RollCall({ klass: k, date: initialDate, onBack }: { klass: SchoolClass;
       <div className="mb-4 grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[180px_1fr]">
         <div data-tour="chamada-data">
           <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Data da aula</label>
-          <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setSaved(false); }} className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm" />
+          <input type="date" value={date} max={todayIso()} onChange={(e) => { setDate(e.target.value); setSaved(false); }} className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm" />
         </div>
         <div data-tour="chamada-marcar-todos">
           <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Marcar todos</label>

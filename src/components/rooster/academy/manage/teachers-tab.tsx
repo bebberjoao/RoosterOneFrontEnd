@@ -51,7 +51,7 @@ export function TeachersTab() {
   }), [rows, q, deptFilter]);
 
   // Turmas não trazem mais a disciplina "dona" isolada — usamos a disciplina da turma para contar.
-  const teacherDisciplineIds = (teacherId: string) => new Set(classes.filter((k) => k.teacherId === teacherId).map((k) => k.disciplineId));
+  const teacherDisciplineIds = (teacherId: string) => new Set(classes.filter((k) => k.teacherId === teacherId && k.disciplineId).map((k) => k.disciplineId));
 
   const columns: Column<Teacher>[] = [
     { key: "name", header: "Professor", sortValue: (t) => t.name, cell: (t) => (
@@ -79,7 +79,7 @@ export function TeachersTab() {
       setModalNew(false);
       setError(null);
       setRefresh((r) => r + 1);
-      toast.success("Professor cadastrado com sucesso");
+      toast.success("Professor cadastrado — o acesso às próprias turmas já está liberado");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao cadastrar professor";
       setError(message);
@@ -185,11 +185,13 @@ export function TeachersTab() {
         {selected && editing && <TeacherForm draft={draft} setDraft={setDraft} error={error} lockUser />}
       </Drawer>
 
-      <Modal open={modalNew} onClose={() => setModalNew(false)} title="Novo professor" description="Vincule um usuário já existente do Hub ao corpo docente." footer={<><Btn onClick={() => setModalNew(false)}>Cancelar</Btn><Btn variant="solid" onClick={saveNew}>Salvar</Btn></>}>
+      <Modal open={modalNew} onClose={() => setModalNew(false)} title="Novo professor" description="Vincule um usuário já existente do Hub ao corpo docente. As permissões de professor são concedidas automaticamente." footer={<><Btn onClick={() => setModalNew(false)}>Cancelar</Btn><Btn variant="solid" onClick={saveNew}>Salvar</Btn></>}>
         <TeacherForm draft={draft} setDraft={setDraft} error={error} />
       </Modal>
 
-      <ConfirmDialog open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={doDelete} title="Excluir professor" description="Esta ação removerá o professor do corpo docente (o usuário do Hub não é excluído)." />
+      <ConfirmDialog open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={doDelete} title="Excluir professor" description={teacherClasses.length > 0
+          ? `Este professor está atribuído a ${teacherClasses.length} turma(s), que ficarão sem professor. O usuário do Hub e as permissões dele não são excluídos.`
+          : "Esta ação removerá o professor do corpo docente (o usuário do Hub e as permissões dele não são excluídos)."} />
     </div>
   );
 }

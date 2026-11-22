@@ -105,7 +105,7 @@ function StudentHistory() {
           { value: "aprovado", label: "Aprovado" },
           { value: "cursando", label: "Cursando" },
           { value: "reprovado", label: "Reprovado" },
-          { value: "reprovado-falta", label: "Reprovado por falta" },
+          { value: "cancelada", label: "Matrícula cancelada" },
           { value: "trancado", label: "Trancado" },
         ]} />
       </div>

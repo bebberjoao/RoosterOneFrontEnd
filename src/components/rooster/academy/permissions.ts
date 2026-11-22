@@ -2,6 +2,7 @@ import type { Role } from "../role-context";
 
 export type AcademyPerm =
   | "viewDashboard"
+  | "manageCourses"
   | "manageDisciplines"
   | "manageClasses"
   | "manageTeachers"
@@ -17,12 +18,12 @@ export type AcademyPerm =
 
 const MATRIX: Record<Role, AcademyPerm[]> = {
   admin: [
-    "viewDashboard","manageDisciplines","manageClasses","manageTeachers","manageStudents","manageEnrollments",
+    "viewDashboard","manageCourses","manageDisciplines","manageClasses","manageTeachers","manageStudents","manageEnrollments",
     "manageCalendar","launchAttendance","launchContents","launchGrades","viewPerformance",
     "manageTerms","manageDocuments",
   ],
   coordenador: [
-    "viewDashboard","manageDisciplines","manageClasses","manageTeachers","manageStudents","manageEnrollments",
+    "viewDashboard","manageCourses","manageDisciplines","manageClasses","manageTeachers","manageStudents","manageEnrollments",
     "manageCalendar","launchGrades","viewPerformance","manageTerms","manageDocuments",
   ],
   // Professor NÃO tem "manageClasses"/"manageCalendar" — a criação/edição de turmas e

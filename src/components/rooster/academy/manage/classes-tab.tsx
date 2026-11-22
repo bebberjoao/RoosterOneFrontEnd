@@ -104,20 +104,31 @@ export function ClassesTab() {
     { key: "schedule", header: "Horário", cell: (k) => <span className="text-xs text-muted-foreground">{k.schedule || "—"} · {k.shift}</span> },
     { key: "occupancy", header: "Ocupação", sortValue: (k) => k.enrolledCount, cell: (k) => (
       <div className="w-32">
-        <div className="mb-1 text-[11px] text-muted-foreground">{k.enrolledCount}/{k.capacity}</div>
-        <ProgressBar value={Math.round((k.enrolledCount / k.capacity) * 100)} />
+        <div className="mb-1 text-[11px] text-muted-foreground">{k.capacity > 0 ? `${k.enrolledCount}/${k.capacity}` : `${k.enrolledCount} · sem limite`}</div>
+        <ProgressBar value={k.capacity > 0 ? Math.min(100, Math.round((k.enrolledCount / k.capacity) * 100)) : 0} />
       </div>
     ) },
     { key: "status", header: "Status", cell: (k) => <KlassStatusBadge status={k.status} /> },
   ];
 
-  function openNew() { setDraft(EMPTY); setError(null); setModalNew(true); }
+  function openNew() {
+    const vigente = terms.find((t) => t.active) ?? terms[0];
+    setDraft({ ...EMPTY, termId: vigente?.id ?? "" });
+    setError(null);
+    setModalNew(true);
+  }
+
+  function validate(): boolean {
+    if (draft.code.trim().length < 2 || !draft.termId) { setError("Preencha a identificação (ao menos 2 caracteres) e o período letivo."); return false; }
+    if (!Number.isInteger(draft.capacity) || draft.capacity < 0) { setError("Informe o número de vagas (0 = sem limite)."); return false; }
+    return true;
+  }
 
   async function saveNew() {
     // Disciplina é opcional: a turma pode ser criada sem ela e recebê-la depois pela edição.
-    if (!draft.code.trim() || !draft.termId) { setError("Preencha identificação e período letivo."); return; }
+    if (!validate()) return;
     try {
-      await academyService.createClass({ ...draft, teacherId: draft.teacherId || undefined });
+      await academyService.createClass({ ...draft, code: draft.code.trim(), teacherId: draft.teacherId || undefined });
       setModalNew(false);
       setError(null);
       setRefresh((r) => r + 1);
@@ -136,9 +147,9 @@ export function ClassesTab() {
   }
 
   async function saveEdit() {
-    if (!selected) return;
+    if (!selected || !validate()) return;
     try {
-      const updated = await academyService.updateClass(selected.id, { ...draft, teacherId: draft.teacherId || undefined });
+      const updated = await academyService.updateClass(selected.id, { ...draft, code: draft.code.trim() });
       if (updated) setSelected(updated);
       setEditing(false);
       setError(null);
@@ -275,7 +286,7 @@ export function ClassesTab() {
                   <div><dt className="text-[11px] text-muted-foreground">Período letivo</dt><dd>{termById(selected.termId)?.name ?? "—"}</dd></div>
                   <div className="col-span-2"><dt className="text-[11px] text-muted-foreground">Professor</dt><dd>{selected.teacherId ? (() => { const t = teacherById(selected.teacherId!); return t ? `${t.title} ${t.name}` : "—"; })() : "Não atribuído"}</dd></div>
                   <div><dt className="text-[11px] text-muted-foreground">Status</dt><dd><KlassStatusBadge status={selected.status} /></dd></div>
-                  <div><dt className="text-[11px] text-muted-foreground">Ocupação</dt><dd>{selected.enrolledCount}/{selected.capacity}</dd></div>
+                  <div><dt className="text-[11px] text-muted-foreground">Ocupação</dt><dd>{selected.capacity > 0 ? `${selected.enrolledCount}/${selected.capacity}` : `${selected.enrolledCount} (sem limite de vagas)`}</dd></div>
                 </dl>
               </SectionCard>
             )}
@@ -287,7 +298,7 @@ export function ClassesTab() {
                     {roster.map((e) => (
                       <li key={e.id} className="flex items-center gap-3 py-2">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-[11px] font-medium">{e.student?.initials ?? "—"}</div>
-                        <div className="min-w-0 flex-1"><div className="truncate text-sm">{e.student?.name ?? e.studentId}</div><div className="text-[11px] text-muted-foreground">RA {e.student?.ra ?? "—"}</div></div>
+                        <div className="min-w-0 flex-1"><div className="truncate text-sm">{e.student?.name ?? e.studentId}</div><div className="text-[11px] text-muted-foreground">RA {e.student?.ra ?? "—"}{e.status !== "ativa" ? ` · matrícula ${e.status}` : ""}</div></div>
                         {canEnroll && <Btn onClick={() => unenroll(e.id)}><UserMinus className="h-3.5 w-3.5" /> Remover</Btn>}
                       </li>
                     ))}
@@ -295,7 +306,7 @@ export function ClassesTab() {
                   </ul>
                 </SectionCard>
                 {canEnroll && (
-                  <SectionCard title="Matricular aluno" description={`${Math.max(selected.capacity - roster.length, 0)} vaga(s) disponível(is)`}>
+                  <SectionCard title="Matricular aluno" description={selected.capacity > 0 ? `${Math.max(selected.capacity - roster.filter((e) => e.status === "ativa").length, 0)} vaga(s) disponível(is)` : "Turma sem limite de vagas"}>
                     <div className="relative mb-3">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <TextInput className="pl-9" value={studentQuery} onChange={(e) => setStudentQuery(e.target.value)} placeholder="Buscar por nome ou RA…" />
@@ -308,7 +319,7 @@ export function ClassesTab() {
                           <Btn variant="solid" onClick={() => enroll(s.id)}><UserPlus className="h-3.5 w-3.5" /> Matricular</Btn>
                         </li>
                       ))}
-                      {available.length === 0 && <li className="py-4 text-center text-xs text-muted-foreground">Nenhum aluno disponível.</li>}
+                      {available.length === 0 && <li className="py-4 text-center text-xs text-muted-foreground">{students.length === 0 ? "Nenhum aluno cadastrado: cadastre alunos na aba Alunos." : "Nenhum aluno disponível."}</li>}
                     </ul>
                   </SectionCard>
                 )}
@@ -365,15 +376,20 @@ function ClassForm({ draft, setDraft, disciplines, terms, teachers, error }: {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Identificação"><TextInput value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="ENG-SW-301-A" /></Field>
-        <Field label="Vagas"><TextInput type="number" value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: Number(e.target.value) })} /></Field>
+        <Field label="Identificação" required><TextInput value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="ENG-SW-301-A" /></Field>
+        <Field label="Vagas" hint="0 = sem limite"><TextInput type="number" value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: Number(e.target.value) })} /></Field>
       </div>
+      {terms.length === 0 && (
+        <p className="rounded-lg border border-dashed p-2.5 text-xs text-muted-foreground">
+          Nenhum período letivo cadastrado. Crie o período em Calendário → Períodos letivos antes de criar a turma.
+        </p>
+      )}
       <Field label="Disciplina (opcional)"><SelectInput value={draft.disciplineId} onChange={(e) => setDraft({ ...draft, disciplineId: e.target.value })} options={[{ value: "", label: "Sem disciplina" }, ...disciplines.map((d) => ({ value: d.id, label: `${d.code} · ${d.name}` }))]} /></Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Período letivo"><SelectInput value={draft.termId} onChange={(e) => setDraft({ ...draft, termId: e.target.value })} options={terms.map((t) => ({ value: t.id, label: t.name }))} /></Field>
+        <Field label="Período letivo" required><SelectInput value={draft.termId} onChange={(e) => setDraft({ ...draft, termId: e.target.value })} placeholder="Selecione o período" disabled={terms.length === 0} options={terms.map((t) => ({ value: t.id, label: t.active ? `${t.name} (vigente)` : t.name }))} /></Field>
         <Field label="Turno"><SelectInput value={draft.shift} onChange={(e) => setDraft({ ...draft, shift: e.target.value as SchoolClass["shift"] })} options={[{ value: "Matutino", label: "Matutino" }, { value: "Vespertino", label: "Vespertino" }, { value: "Noturno", label: "Noturno" }]} /></Field>
       </div>
-      <Field label="Professor (opcional)"><SelectInput value={draft.teacherId} onChange={(e) => setDraft({ ...draft, teacherId: e.target.value })} placeholder="Sem professor atribuído" options={teachers.map((t) => ({ value: t.id, label: `${t.title} ${t.name}` }))} /></Field>
+      <Field label="Professor (opcional)"><SelectInput value={draft.teacherId} onChange={(e) => setDraft({ ...draft, teacherId: e.target.value })} options={[{ value: "", label: "Sem professor" }, ...teachers.map((t) => ({ value: t.id, label: `${t.title} ${t.name}`.trim() }))]} /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Horário"><TextInput value={draft.schedule} onChange={(e) => setDraft({ ...draft, schedule: e.target.value })} placeholder="Seg/Qua 19:00-22:30" /></Field>
         <Field label="Sala"><TextInput value={draft.roomLabel} onChange={(e) => setDraft({ ...draft, roomLabel: e.target.value })} placeholder="Sala 402 · Bloco B" /></Field>

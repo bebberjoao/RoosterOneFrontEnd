@@ -7,6 +7,7 @@ import { studentService, overallAverage, type StudentDiscipline, type ClassGrade
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
 import { UserX } from "lucide-react";
 import { fmtNumero } from "@/lib/formatacao";
+import { NOTA_APROVACAO, NOTA_ATENCAO, notaNaEscala, pesoEmPercentual } from "@/lib/regras-academicas";
 
 export const Route = createFileRoute("/student/grades")({ component: StudentGrades });
 
@@ -97,7 +98,7 @@ function StudentGrades() {
               description={`${d.teacher} · ${d.workload}h`}
               action={
                 <div className="flex items-center gap-2">
-                  <Chip tone={(d.average ?? 0) >= 7 ? TONE.ok : (d.average ?? 0) >= 5 ? TONE.warn : TONE.danger}>Média {fmtNumero(d.average, 1)}</Chip>
+                  <Chip tone={(d.average ?? 0) >= NOTA_APROVACAO ? TONE.ok : (d.average ?? 0) >= NOTA_ATENCAO ? TONE.warn : TONE.danger}>Média {fmtNumero(d.average, 1)}</Chip>
                   <StatusChip status={d.situation} />
                 </div>
               }
@@ -110,10 +111,10 @@ function StudentGrades() {
                     {items.map((a) => (
                       <tr key={a.id} className="hover:bg-muted/30">
                         <td className="px-3 py-2.5">{a.name}</td>
-                        <td className="px-3 py-2.5 text-muted-foreground">{a.weight}</td>
+                        <td className="px-3 py-2.5 text-muted-foreground">{pesoEmPercentual(a.weight)}</td>
                         <td className="px-3 py-2.5"><Chip tone={a.origin === "learn" ? TONE.purple : TONE.muted}>{a.origin === "learn" ? "Rooster Learn" : "Manual"}</Chip></td>
-                        <td className="px-3 py-2.5 font-medium">{a.value !== null ? fmtNumero(a.value, 1) : "—"}</td>
-                        <td className="px-3 py-2.5">{a.value === null ? <Chip tone={TONE.info}>Aguardando</Chip> : <Chip tone={a.value >= 7 ? TONE.ok : a.value >= 5 ? TONE.warn : TONE.danger}>{a.value >= 7 ? "Suficiente" : a.value >= 5 ? "Atenção" : "Insuficiente"}</Chip>}</td>
+                        <td className="px-3 py-2.5 font-medium">{a.value !== null ? `${fmtNumero(a.value, 1)} de ${fmtNumero(a.max, 0)}` : "—"}</td>
+                        <td className="px-3 py-2.5">{a.value === null ? <Chip tone={TONE.info}>Aguardando</Chip> : <Chip tone={notaNaEscala(a.value, a.max) >= NOTA_APROVACAO ? TONE.ok : notaNaEscala(a.value, a.max) >= NOTA_ATENCAO ? TONE.warn : TONE.danger}>{notaNaEscala(a.value, a.max) >= NOTA_APROVACAO ? "Suficiente" : notaNaEscala(a.value, a.max) >= NOTA_ATENCAO ? "Atenção" : "Insuficiente"}</Chip>}</td>
                       </tr>
                     ))}
                   </Table>

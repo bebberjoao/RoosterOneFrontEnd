@@ -8,6 +8,7 @@ import { AnswerModal, ReviewModal } from "@/components/rooster/learn/submission-
 import { toneFor } from "@/services/mock-api/academy.service";
 import { Search, ClipboardList, Upload, FileText, MessageSquare, UserX } from "lucide-react";
 import { fmtNumero } from "@/lib/formatacao";
+import { NOTA_APROVACAO, NOTA_ATENCAO, notaNaEscala } from "@/lib/regras-academicas";
 
 export const Route = createFileRoute("/student/activities")({ component: StudentActivities });
 
@@ -134,7 +135,7 @@ function StudentActivities() {
                     <StatusChip status={r.display} />
                     <span className={`text-[11px] ${r.display === "atrasada" ? "text-destructive" : "text-muted-foreground"}`}>Prazo {formatDateTime(a.dueAt)}</span>
                     {r.submission?.grade !== null && r.submission?.grade !== undefined ? (
-                      <Chip tone={r.submission.grade >= 7 ? TONE.ok : r.submission.grade >= 5 ? TONE.warn : TONE.danger}>Nota {fmtNumero(r.submission.grade, 1)} / {a.maxGrade}</Chip>
+                      <Chip tone={notaNaEscala(r.submission.grade, a.maxGrade) >= NOTA_APROVACAO ? TONE.ok : notaNaEscala(r.submission.grade, a.maxGrade) >= NOTA_ATENCAO ? TONE.warn : TONE.danger}>Nota {fmtNumero(r.submission.grade, 1)} / {a.maxGrade}</Chip>
                     ) : null}
                   </div>
                 </div>
